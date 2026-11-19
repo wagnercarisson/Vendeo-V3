@@ -151,3 +151,31 @@ describe("AvailableCampaignCard", () => {
       if (originalWidth) Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", originalWidth);
     }
   });
+
+  describe("F60.7 C3 — cartão conjunto", () => {
+    it("mostra chips dos formatos entregues e abre o formato preferido", () => {
+      render(
+        <AvailableCampaignCard
+          id="c1"
+          productName="Tênis Runner"
+          dateLabel="19 de out. de 2026"
+          formatLabel={null}
+          formatLabels={["1:1 quadrado", "9:16 vertical"]}
+          thumbnailUrl={null}
+          openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
+          openLabel="Abrir campanha"
+          openHref="/campanhas/c1?format=1:1"
+        />,
+      );
+
+      expect(screen.getByText("1:1 quadrado")).toBeInTheDocument();
+      expect(screen.getByText("9:16 vertical")).toBeInTheDocument();
+      expect(screen.getByRole("link")).toHaveAttribute(
+        "href",
+        "/campanhas/c1?format=1:1",
+      );
+      // Sem miniatura do preferido ⇒ placeholder, nunca original.
+      expect(document.querySelector("img")).toBeNull();
+      expect(document.querySelector(".lucide-image-off")).not.toBeNull();
+    });
+  });

@@ -16,6 +16,10 @@ import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/or
 import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
 import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
+import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
+import { readTwoFormatDelivery } from "@/lib/product-two-format/delivery-reader";
+import { resolveTwoFormatAccess } from "@/lib/product-two-format/access";
+import { COMPOSITION_ARTIFACT_BUCKET } from "@/lib/campaign/composition-artifacts/artifact-path";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -37,6 +41,90 @@ export const GET = apiHandler(async (
   }
 
   await requireOwnership(campaign.store_id, user.userId);
+
+  // F60.7 C3 — ramo conjunto ANTES dos gates individuais. A autoridade é
+  // `readTwoFormatDelivery` → `resolveTwoFormatAccess`; sem fallback de formato.
+  if (classifyTwoFormatCampaign(campaign.input_snapshot).kind === "two_format") {
+    const operationRow = await supabaseAdmin
+      .from("product_9_16_two_stage_operations")
+      .select("operation_id")
+      .eq("campaign_id", id)
+      .eq("store_id", campaign.store_id)
+      .maybeSingle<{ operation_id: string }>();
+    if (operationRow.error) {
+      return NextResponse.json(
+        { error: { code: "operation_unavailable", message: "Operação indisponível." } },
+        { status: 503 },
+      );
+    }
+    const operationId = operationRow.data?.operation_id;
+    if (!operationId) {
+      return NextResponse.json(
+        { error: { code: "operation_not_found", message: "Operação não encontrada." } },
+        { status: 404 },
+      );
+    }
+    const read = await readTwoFormatDelivery(
+      { campaignId: id, operationId, storeId: campaign.store_id },
+      { client: supabaseAdmin },
+    );
+    if (read.kind !== "found") {
+      return NextResponse.json(
+        {
+          error: {
+            code: read.kind === "read_failed" ? "operation_unavailable" : "artifact_unavailable",
+            message: "Arte indisponível.",
+          },
+        },
+        { status: read.kind === "read_failed" ? 503 : 403 },
+      );
+    }
+    const requested = new URL(_request.url).searchParams.get("format");
+    const preferred =
+      read.view.square.state === "delivered"
+        ? "1:1"
+        : read.view.vertical.state === "delivered"
+          ? "9:16"
+          : null;
+    const target =
+      requested === "1:1" || requested === "9:16"
+        ? requested
+        : preferred;
+    if (!target) {
+      return NextResponse.json(
+        { error: { code: "not_delivered", message: "Formato não entregue." } },
+        { status: 403 },
+      );
+    }
+    const access = resolveTwoFormatAccess({ view: read.view, format: target });
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: { code: access.reason, message: "Download não autorizado." } },
+        { status: 403 },
+      );
+    }
+    const artifact = await supabaseAdmin.storage
+      .from(COMPOSITION_ARTIFACT_BUCKET)
+      .download(access.artifactPath);
+    if (artifact.error || !artifact.data) {
+      return NextResponse.json(
+        { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+        { status: artifact.error ? 502 : 404 },
+      );
+    }
+    const filename = buildSafeDownloadFilename({
+      productName: campaign.product_name,
+      createdAt: campaign.created_at,
+      extension: "jpg",
+    });
+    return new NextResponse(new Blob([await artifact.data.arrayBuffer()], { type: "image/jpeg" }), {
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
 
   // F60.5 — ramo 9:16 por expansao ANTES do gate F56.2b1b/store direto.
   const generationOrigin = resolveCampaignGenerationOrigin(

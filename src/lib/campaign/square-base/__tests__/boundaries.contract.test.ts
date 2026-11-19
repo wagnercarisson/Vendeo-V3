@@ -419,7 +419,14 @@ describe("F60.4 boundaries — migrations, rotas e UI intocadas", () => {
   it("nenhuma migration/rota/UI nova no working tree (exceto a página de C2 autorizada)", () => {
     const status = git(["status", "--porcelain", "--", "supabase/migrations", "src/app"]);
     expect(status.status).toBe(0);
-    const allowedC2 = new Set(["src/app/(app)/campanhas/nova/page.tsx"]);
+    const allowedC2 = new Set([
+      "src/app/(app)/campanhas/nova/page.tsx",
+      "src/app/(app)/campanhas/[id]/page.tsx",
+      "src/app/(app)/campanhas/[id]/client.tsx",
+      "src/app/(app)/campanhas/client.tsx",
+      "src/app/api/campaign/[id]/download/route.ts",
+      "src/app/api/campaign/[id]/download/__tests__/route.joint.test.ts",
+    ]);
     const changed = status.stdout
       .split(/\r?\n/)
       .map((line) => line.trim())

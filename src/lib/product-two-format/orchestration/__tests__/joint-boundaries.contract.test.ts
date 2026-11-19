@@ -35,13 +35,23 @@ const C1_PRODUCTION_CONSUMERS = new Set([
  */
 const C2_PRODUCTION_CONSUMERS = new Set([
   "src/lib/campaign/display.ts",
+  "src/lib/campaign/list.ts",
+  "src/lib/dashboard/campaigns.ts",
   "src/app/(app)/campanhas/nova/page.tsx",
+  "src/app/(app)/campanhas/page.tsx",
+  "src/app/(app)/campanhas/client.tsx",
+  "src/app/(app)/campanhas/[id]/page.tsx",
+  "src/app/(app)/campanhas/[id]/client.tsx",
+  "src/app/api/campaign/[id]/download/route.ts",
+  "src/components/dashboard/available-campaign-card.tsx",
+  "src/components/dashboard/dashboard-campaigns.tsx",
   "src/components/flow/campaign-brief-review.tsx",
   "src/components/flow/campaign-format-selector.tsx",
   "src/components/flow/campaign-input-form.tsx",
   "src/components/flow/generation-progress.tsx",
   "src/components/flow/unknown-result-panel.tsx",
   "src/components/flow/use-campaign-form.ts",
+  "src/components/flow/use-two-format-polling.ts",
 ]);
 
 function walk(directory: string): string[] {

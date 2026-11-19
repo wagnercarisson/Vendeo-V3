@@ -9,9 +9,12 @@ interface AvailableCampaignCardProps {
   productName: string;
   dateLabel: string;
   formatLabel: string | null;
+  formatLabels?: string[];
   thumbnailUrl: string | null;
   openAria: string;
   openLabel: string;
+  /** F60.7 C3 — link com `?format=` do formato preferido. */
+  openHref?: string;
 }
 
 /**
@@ -26,9 +29,11 @@ export function AvailableCampaignCard({
   productName,
   dateLabel,
   formatLabel,
+  formatLabels,
   thumbnailUrl,
   openAria,
   openLabel,
+  openHref,
 }: AvailableCampaignCardProps) {
   const [failed, setFailed] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -79,18 +84,31 @@ export function AvailableCampaignCard({
           </span>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-secondary font-body">
             <span className="whitespace-nowrap">{dateLabel}</span>
-            {formatLabel && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>{formatLabel}</span>
-              </>
+            {formatLabels && formatLabels.length > 0 ? (
+              <span className="flex flex-wrap gap-1">
+                {formatLabels.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full bg-bg-elevated px-2 py-0.5 text-xs text-text-secondary"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              formatLabel && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>{formatLabel}</span>
+                </>
+              )
             )}
           </div>
         </div>
       </div>
 
       <Link
-        href={`/campanhas/${id}`}
+        href={openHref ?? `/campanhas/${id}`}
         aria-label={openAria}
         className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-border-light px-4 text-sm font-semibold text-text-primary transition-colors duration-200 hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep sm:w-auto"
       >

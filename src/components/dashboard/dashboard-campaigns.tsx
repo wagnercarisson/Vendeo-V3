@@ -109,9 +109,27 @@ export function DashboardCampaigns({
                         ? messages.format.vertical
                         : null
                   }
+                  formatLabels={
+                    item.joint
+                      ? (["1:1", "9:16"] as const)
+                          .filter(
+                            (format) => item.formats?.[format] === "delivered",
+                          )
+                          .map((format) =>
+                            format === "1:1"
+                              ? messages.format.square
+                              : messages.format.vertical,
+                          )
+                      : undefined
+                  }
                   thumbnailUrl={item.thumbnailUrl}
                   openAria={openAriaLabels[item.id] ?? item.productName}
                   openLabel={messages.open}
+                  openHref={
+                    item.joint && item.preferredFormat
+                      ? `/campanhas/${item.id}?format=${item.preferredFormat}`
+                      : undefined
+                  }
                 />
               ))}
             </div>

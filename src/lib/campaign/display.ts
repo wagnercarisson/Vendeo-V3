@@ -14,6 +14,7 @@ import {
   type CampaignFormatUnavailableReason,
 } from "./format-resolution";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
+import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -69,7 +70,23 @@ export interface CampaignPageProps {
    * F59/D-12 — formato PERSISTIDO do novo fluxo, resolvido server-side. Ausente
    * em legado/formato indisponível ⇒ tratamento 1:1 atual.
    */
-  newFlowFormat?: "1:1" | "9:16";
+  newFlowFormat?: "1:1" | "9:16" | "1:1+9:16";
+  /** F60.7 C3 — apresentação conjunta (uma linha, dois formatos). */
+  joint?: {
+    readonly formats: Readonly<Record<TwoFormatFormat, TwoFormatDeliveryState>>;
+    readonly preferredFormat: TwoFormatFormat | null;
+    readonly requestedFormat: TwoFormatFormat | null;
+    readonly previewFormat: TwoFormatFormat | null;
+    readonly previewUrl: string | null;
+    readonly state:
+      | "delivered"
+      | "partial_terminal"
+      | "partial_indeterminate"
+      | "finalization_pending"
+      | "refunded"
+      | "unknown"
+      | "processing";
+  };
   /**
    * F56.2b1b (B1B-D7 / REQ-56.2.2-09): estado do NOVO fluxo Product 1:1, derivado
    * da OPERAÇÃO PERSISTIDA (`getCampaignOperation`) — nunca de `campaign.status`.

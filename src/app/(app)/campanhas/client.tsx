@@ -279,6 +279,17 @@ export function CampaignCard({
       : campaign.format === "9:16"
         ? messages.format.vertical
         : null;
+  const jointLabels = campaign.joint
+    ? (["1:1", "9:16"] as const)
+        .filter((format) => campaign.formats?.[format] === "delivered")
+        .map((format) =>
+          format === "1:1" ? messages.format.square : messages.format.vertical,
+        )
+    : [];
+  const preferredQuery =
+    campaign.joint && campaign.preferredFormat
+      ? `?format=${campaign.preferredFormat}`
+      : "";
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(campaign.thumbnailUrl) && !imageFailed;
@@ -321,11 +332,24 @@ export function CampaignCard({
         </h3>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted font-body">
           <span>{formattedDate}</span>
-          {formatLabel && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span>{formatLabel}</span>
-            </>
+          {jointLabels.length > 0 ? (
+            <span className="flex flex-wrap gap-1">
+              {jointLabels.map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full bg-bg-elevated px-2 py-0.5 text-xs text-text-secondary"
+                >
+                  {label}
+                </span>
+              ))}
+            </span>
+          ) : (
+            formatLabel && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{formatLabel}</span>
+              </>
+            )
           )}
         </div>
         <span className={`text-sm font-medium font-heading ${status.className}`}>
@@ -336,7 +360,7 @@ export function CampaignCard({
         <Button
           variant="primary"
           size="sm"
-          onClick={() => router.push(`/campanhas/${campaign.id}`)}
+          onClick={() => router.push(`/campanhas/${campaign.id}${preferredQuery}`)}
         >
           {messages.actions.open}
         </Button>
@@ -344,7 +368,7 @@ export function CampaignCard({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => { window.location.href = `/api/campaign/${campaign.id}/download`; }}
+            onClick={() => { window.location.href = `/api/campaign/${campaign.id}/download${preferredQuery}`; }}
           >
             {messages.actions.download}
           </Button>

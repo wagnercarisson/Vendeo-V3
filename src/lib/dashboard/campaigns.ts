@@ -1,7 +1,9 @@
 import "server-only";
 
 import { createServerClient } from "@/lib/supabase/server";
-import { generateBatchThumbnailUrls } from "@/lib/campaign/list";
+import { generateBatchThumbnailUrls, generateBatchPreferredThumbnailUrls } from "@/lib/campaign/list";
+import { readTwoFormatListSummaries } from "@/lib/product-two-format/list-summary";
+import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
 import { countReadyCampaigns } from "@/lib/campaign/metrics";
 import {
   resolveCampaignFormat,
@@ -21,6 +23,9 @@ export interface EligibleCampaignCard {
   thumbnailUrl: string | null;
   /** Quick 261106-qxn — resolvido no servidor; `null` = indisponível. */
   format: CampaignFormat | null;
+  joint?: boolean;
+  formats?: Readonly<Record<TwoFormatFormat, TwoFormatDeliveryState>>;
+  preferredFormat?: TwoFormatFormat | null;
 }
 
 export interface EligibleCampaignOverview {
@@ -59,6 +64,20 @@ export async function queryEligibleCampaigns(
 
   const rows = (data ?? []) as EligibleCampaignRow[];
 
+  const summaries = await readTwoFormatListSummaries({
+    client: supabase,
+    storeId,
+    campaigns: rows.map((row) => ({
+      id: row.id,
+      input_snapshot: row.input_snapshot,
+    })),
+  });
+  const preferredThumbnails = await generateBatchPreferredThumbnailUrls(
+    [...summaries.values()].map((summary) => ({
+      id: summary.campaignId,
+      preferredThumbnailPath: summary.preferredThumbnailPath,
+    })),
+  );
   const thumbnails = await generateBatchThumbnailUrls(
     rows.map((row) => ({
       id: row.id,
@@ -68,6 +87,19 @@ export async function queryEligibleCampaigns(
   );
 
   return rows.map((row) => {
+    const summary = summaries.get(row.id);
+    if (summary) {
+      return {
+        id: row.id,
+        productName: row.product_name,
+        createdAt: row.created_at,
+        thumbnailUrl: preferredThumbnails[row.id] ?? null,
+        format: null,
+        joint: true,
+        formats: summary.formats,
+        preferredFormat: summary.preferredFormat,
+      };
+    }
     const formatResolution = resolveCampaignFormat(row.input_snapshot);
     return {
       id: row.id,

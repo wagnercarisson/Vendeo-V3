@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockCreateServerClient = vi.fn();
 const mockGenerateBatchThumbnailUrls = vi.fn();
+const mockGenerateBatchPreferredThumbnailUrls = vi.fn(async () => ({}));
+const mockReadTwoFormatListSummaries = vi.fn(async () => new Map());
 const mockCountReadyCampaigns = vi.fn();
 
 vi.mock("server-only", () => ({}));
@@ -14,6 +16,11 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/campaign/list", () => ({
   generateBatchThumbnailUrls: mockGenerateBatchThumbnailUrls,
+  generateBatchPreferredThumbnailUrls: mockGenerateBatchPreferredThumbnailUrls,
+}));
+
+vi.mock("@/lib/product-two-format/list-summary", () => ({
+  readTwoFormatListSummaries: mockReadTwoFormatListSummaries,
 }));
 
 vi.mock("@/lib/campaign/metrics", () => ({
@@ -56,6 +63,8 @@ function buildChain(
 beforeEach(() => {
   vi.clearAllMocks();
   mockGenerateBatchThumbnailUrls.mockResolvedValue({});
+  mockGenerateBatchPreferredThumbnailUrls.mockResolvedValue({});
+  mockReadTwoFormatListSummaries.mockResolvedValue(new Map());
 });
 
 const rows: Row[] = [
@@ -213,6 +222,44 @@ describe("queryEligibleCampaigns", () => {
       "@/lib/dashboard/campaigns"
     );
     await expect(queryEligibleCampaigns("store-1")).rejects.toThrow("DB error");
+  });
+
+  it("campanha conjunta usa uma linha, formatos e miniatura preferida", async () => {
+    buildChain(rows);
+    mockReadTwoFormatListSummaries.mockResolvedValue(
+      new Map([
+        [
+          "campaign-1",
+          {
+            campaignId: "campaign-1",
+            operationId: "operation-1",
+            formats: { "1:1": "delivered", "9:16": "delivered" },
+            preferredFormat: "1:1",
+            preferredThumbnailPath:
+              "store-1/campaign-1/operation-1/square_original.thumb-v1.webp",
+            view: null,
+          },
+        ],
+      ]),
+    );
+    mockGenerateBatchPreferredThumbnailUrls.mockResolvedValue({
+      "campaign-1": "https://signed/joint-thumb",
+    });
+
+    const { queryEligibleCampaigns } = await import(
+      "@/lib/dashboard/campaigns"
+    );
+    const result = await queryEligibleCampaigns("store-1");
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      id: "campaign-1",
+      joint: true,
+      formats: { "1:1": "delivered", "9:16": "delivered" },
+      preferredFormat: "1:1",
+      thumbnailUrl: "https://signed/joint-thumb",
+    });
+    expect(result[1].joint).toBeUndefined();
   });
 });
 

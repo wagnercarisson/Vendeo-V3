@@ -1,12 +1,20 @@
 import "server-only";
 import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
-import { deriveThumbnailPath } from "./thumbnail/thumbnail-path";
+import {
+  deriveThumbnailPath,
+  THUMBNAIL_BUCKET,
+} from "./thumbnail/thumbnail-path";
 import { classifyCampaignFlow } from "./new-flow-marker";
 import {
   resolveCampaignFormat,
   type CampaignFormat,
 } from "./format-resolution";
 import type { CampaignStatus } from "./types";
+import {
+  readTwoFormatListSummaries,
+  type TwoFormatListSummary,
+} from "@/lib/product-two-format/list-summary";
+import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
 
 /** Classificação PERSISTIDA do fluxo (novo fluxo × legado) para exibição. */
 export type CampaignListFlow = "new" | "legacy";
@@ -29,6 +37,12 @@ export interface CampaignListItem {
    * `null` = indisponível (fail-closed); nunca inferido pela imagem ou path.
    */
   format: CampaignFormat | null;
+  /** F60.7 C3 — campanha conjunta (uma única linha). */
+  joint?: boolean;
+  formats?: Readonly<
+    Record<TwoFormatFormat, TwoFormatDeliveryState>
+  >;
+  preferredFormat?: TwoFormatFormat | null;
 }
 
 export interface ListCampaignsParams {
@@ -124,12 +138,36 @@ export async function listCampaigns(
     throw new Error(error.message);
   }
 
-  const items = (data ?? []).map(mapToListItem);
+  const rows = data ?? [];
+  const items = rows.map(mapToListItem);
+  const summaries = await readTwoFormatListSummaries({
+    client: supabase,
+    storeId,
+    campaigns: rows.map((row) => ({
+      id: row.id,
+      input_snapshot: row.input_snapshot,
+    })),
+  });
+  const preferredThumbnails = await generateBatchPreferredThumbnailUrls(
+    [...summaries.values()].map((summary) => ({
+      id: summary.campaignId,
+      preferredThumbnailPath: summary.preferredThumbnailPath,
+    })),
+  );
   const thumbnails = await generateBatchThumbnailUrls(items);
-  const itemsWithThumbnails = items.map((item) => ({
-    ...item,
-    thumbnailUrl: thumbnails[item.id] ?? null,
-  }));
+  const itemsWithThumbnails = items.map((item) => {
+    const summary = summaries.get(item.id);
+    if (summary) {
+      return {
+        ...item,
+        joint: true,
+        formats: summary.formats,
+        preferredFormat: summary.preferredFormat,
+        thumbnailUrl: preferredThumbnails[item.id] ?? null,
+      };
+    }
+    return { ...item, thumbnailUrl: thumbnails[item.id] ?? null };
+  });
 
   const total = count ?? itemsWithThumbnails.length;
 
@@ -208,7 +246,7 @@ export async function generateBatchThumbnailUrls(
   const results = await Promise.allSettled(
     signable.map((item) =>
       supabaseAdmin.storage
-        .from("campaign-images")
+        .from(THUMBNAIL_BUCKET)
         .createSignedUrl(item.thumbnailPath, 3600)
         .then((res) => ({ id: item.id, url: res.data?.signedUrl ?? null })),
     ),
@@ -220,5 +258,36 @@ export async function generateBatchThumbnailUrls(
     }
   }
 
+  return thumbnails;
+}
+
+/**
+ * F60.7 C3 — assina em LOTE as miniaturas do formato preferido das campanhas
+ * conjuntas. Uma única rodada de `createSignedUrl`; path ausente ⇒ placeholder.
+ */
+export async function generateBatchPreferredThumbnailUrls(
+  items: readonly { id: string; preferredThumbnailPath: string | null }[],
+): Promise<Record<string, string | null>> {
+  const thumbnails: Record<string, string | null> = {};
+  const signable: Array<{ id: string; thumbnailPath: string }> = [];
+  for (const item of items) {
+    thumbnails[item.id] = null;
+    if (item.preferredThumbnailPath) {
+      signable.push({ id: item.id, thumbnailPath: item.preferredThumbnailPath });
+    }
+  }
+  const results = await Promise.allSettled(
+    signable.map((item) =>
+      supabaseAdmin.storage
+        .from(THUMBNAIL_BUCKET)
+        .createSignedUrl(item.thumbnailPath, 3600)
+        .then((res) => ({ id: item.id, url: res.data?.signedUrl ?? null })),
+    ),
+  );
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value.url) {
+      thumbnails[result.value.id] = result.value.url;
+    }
+  }
   return thumbnails;
 }

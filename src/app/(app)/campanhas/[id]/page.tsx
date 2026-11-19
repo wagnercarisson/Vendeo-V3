@@ -27,10 +27,15 @@ import type {
   NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
+import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
+import { normalizeTwoFormatOutcome } from "@/lib/campaign/two-format-outcome";
 import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
 import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
+import { readTwoFormatDelivery } from "@/lib/product-two-format/delivery-reader";
+import { resolveTwoFormatAccess } from "@/lib/product-two-format/access";
+import { COMPOSITION_ARTIFACT_BUCKET } from "@/lib/campaign/composition-artifacts/artifact-path";
 import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
 import {
   readCopyDelivery,
@@ -41,12 +46,13 @@ import CampaignPageClient from "./client";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ format?: string | string[] }>;
 }
 
 // F37.2 (R7): teto de staleness do consumo = timeout global de geração + 30s.
 const CORRECTION_GENERATION_STALE_AFTER_MS = IMAGE_GENERATION_GLOBAL_TIMEOUT_MS + 30_000;
 
-export default async function CampaignDetailPage({ params }: PageProps) {
+export default async function CampaignDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
 
   const user = await requirePageUser();
@@ -113,6 +119,117 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   }
 
   if (newFlowState && newFlowOperation) {
+    // F60.7 C3 — campanha conjunta: uma única superfície, dois formatos.
+    if (classifyTwoFormatCampaign(campaign.input_snapshot).kind === "two_format") {
+      const jointRead = await readTwoFormatDelivery(
+        {
+          campaignId: id,
+          operationId: newFlowOperation.operationId,
+          storeId: campaign.store_id,
+        },
+        { client: supabaseAdmin },
+      );
+      if (jointRead.kind !== "found") {
+        props.newFlow = {
+          state: "unknown",
+          supportReference: null,
+          operationId: newFlowOperation.operationId,
+          supportEmail: process.env.SUPPORT_EMAIL,
+        };
+        return (
+          <CampaignPageClient {...props} messages={messages} locale={locale} />
+        );
+      }
+      const view = jointRead.view;
+      const resolvedSearchParams = searchParams ? await searchParams : undefined;
+      const rawFormat = resolvedSearchParams?.format;
+      const requestedFormat =
+        rawFormat === "1:1" || rawFormat === "9:16" ? rawFormat : null;
+      const preferredFormat =
+        view.square.state === "delivered"
+          ? "1:1"
+          : view.vertical.state === "delivered"
+            ? "9:16"
+            : null;
+      const targetFormat = requestedFormat ?? preferredFormat;
+      const access =
+        targetFormat === null
+          ? null
+          : resolveTwoFormatAccess({ view, format: targetFormat });
+      let previewUrl: string | null = null;
+      if (access?.allowed === true) {
+        const signed = await supabaseAdmin.storage
+          .from(COMPOSITION_ARTIFACT_BUCKET)
+          .createSignedUrl(access.artifactPath, 300);
+        previewUrl = signed.data?.signedUrl ?? null;
+      }
+
+      const square = view.square.state;
+      const vertical = view.vertical.state;
+      // Reutiliza o normalizador ÚNICO do C2 para não divergir do formulário.
+      const jointOutcome = normalizeTwoFormatOutcome({
+        formats: {
+          "1:1": { state: square },
+          "9:16": { state: vertical },
+        },
+      });
+      const jointState =
+        jointOutcome.kind === "complete"
+          ? "delivered"
+          : jointOutcome.kind === "error"
+            ? "unknown"
+            : jointOutcome.kind;
+
+      props.imageUrl = previewUrl;
+      props.newFlowFormat = targetFormat ?? undefined;
+      props.downloadUrl =
+        targetFormat !== null
+          ? `/api/campaign/${id}/download?format=${targetFormat}`
+          : `/api/campaign/${id}/download`;
+      props.joint = {
+        formats: {
+          "1:1": square,
+          "9:16": vertical,
+        },
+        preferredFormat,
+        requestedFormat,
+        previewFormat: access?.allowed === true ? targetFormat : null,
+        previewUrl,
+        state: jointState,
+      };
+
+      let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
+      try {
+        newFlowCopy = mapNewFlowCopy(
+          await readCopyDelivery(supabaseAdmin, {
+            campaignId: id,
+            operationId: newFlowOperation.operationId,
+          }),
+          false,
+        );
+      } catch {
+        newFlowCopy = null;
+      }
+      props.newFlow = {
+        state:
+          jointState === "refunded"
+            ? "refunded"
+            : jointState === "unknown"
+              ? "unknown"
+              : jointState === "processing" ||
+                  jointState === "finalization_pending"
+                ? "running"
+                : "delivered",
+        supportReference: newFlowOperation.supportReference ?? null,
+        operationId: newFlowOperation.operationId,
+        supportEmail: process.env.SUPPORT_EMAIL,
+        copy: newFlowCopy,
+      };
+      return (
+        <CampaignPageClient {...props} messages={messages} locale={locale} />
+      );
+    }
+
     // F59/D-12 — formato PERSISTIDO, resolvido server-side. Indisponível ⇒ sem
     // frame vertical e sem URL assinada (fail-closed).
     const formatResolution = resolveCampaignFormat(campaign.input_snapshot);

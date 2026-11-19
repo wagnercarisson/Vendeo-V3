@@ -28,6 +28,7 @@ import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
 import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { CopyRecoveryPanel } from "@/components/flow/copy-recovery-panel";
 import { isDrivingCopyRecovery } from "@/lib/campaign/copy-recovery-driving";
+import { useTwoFormatPolling } from "@/components/flow/use-two-format-polling";
 
 interface CampaignPageClientProps extends CampaignPageProps {
   messages: CampaignDetailMessages;
@@ -89,6 +90,25 @@ function newRequestToken(): string | null {
 
 export default function CampaignPageClient(props: CampaignPageClientProps) {
   const router = useRouter();
+
+  // F60.7 C3 — polling read-only do conjunto. Status não contém URL: quando um
+  // formato passa a delivered, um único router.refresh renova props/URLs.
+  const handleJointDelivered = useCallback(() => {
+    router.refresh();
+  }, [router]);
+  useTwoFormatPolling({
+    campaignId: props.campaignId,
+    operationId: props.newFlow?.operationId ?? null,
+    enabled:
+      props.joint !== undefined &&
+      props.joint.state !== "delivered" &&
+      props.joint.state !== "refunded" &&
+      props.joint.state !== "unknown" &&
+      props.joint.state !== "partial_terminal",
+    formatsSignature: props.joint ? JSON.stringify(props.joint.formats) : "",
+    onDelivered: handleJointDelivered,
+  });
+
 
   const surface = resolveDeliverySurface(props);
   const isReadySurface = surface === "ready";
@@ -355,6 +375,38 @@ function ReadyView(props: CampaignPageClientProps) {
 
   return (
     <div className="space-y-6">
+      {props.joint && (
+        <div className="flex flex-wrap items-center gap-2">
+          {(["1:1", "9:16"] as const)
+            .filter((format) => props.joint?.formats[format] === "delivered")
+            .map((format) => (
+              <a
+                key={format}
+                href={`/campanhas/${props.campaignId}?format=${format}`}
+                className={`rounded-full border px-3 py-1 text-sm font-body ${
+                  props.joint?.previewFormat === format
+                    ? "border-accent-green bg-accent-green/10 text-accent-green"
+                    : "border-border-light text-text-secondary"
+                }`}
+              >
+                {format}
+              </a>
+            ))}
+          {props.joint.state !== "delivered" && (
+            <span className="text-xs text-text-muted font-body">
+              {props.joint.state === "partial_terminal"
+                ? "Entrega parcial: um formato foi estornado."
+                : props.joint.state === "partial_indeterminate"
+                  ? "Entrega parcial: o outro formato ainda não foi confirmado."
+                  : props.joint.state === "finalization_pending"
+                    ? "Finalização pendente: um formato foi estornado e o outro ainda está em processamento."
+                    : props.joint.state === "refunded"
+                      ? "Operação estornada."
+                      : "Processando formatos..."}
+            </span>
+          )}
+        </div>
+      )}
       {props.imageUrl &&
         (props.newFlowFormat === "9:16" ? (
           <div className="mx-auto w-auto max-h-[70vh] aspect-[9/16] rounded-xl bg-bg-elevated overflow-hidden">
@@ -545,7 +597,7 @@ function ReadyView(props: CampaignPageClientProps) {
       <Button
         variant="primary"
         size="md"
-        onClick={() => { window.location.href = `/api/campaign/${props.campaignId}/download`; }}
+        onClick={() => { window.location.href = props.downloadUrl; }}
       >
         <Download className="h-4 w-4" />
         {props.messages.downloadOriginal}
@@ -716,6 +768,38 @@ function NewFlowDeliveredView(props: CampaignPageClientProps) {
 
   return (
     <div className="space-y-6">
+      {props.joint && (
+        <div className="flex flex-wrap items-center gap-2">
+          {(["1:1", "9:16"] as const)
+            .filter((format) => props.joint?.formats[format] === "delivered")
+            .map((format) => (
+              <a
+                key={format}
+                href={`/campanhas/${props.campaignId}?format=${format}`}
+                className={`rounded-full border px-3 py-1 text-sm font-body ${
+                  props.joint?.previewFormat === format
+                    ? "border-accent-green bg-accent-green/10 text-accent-green"
+                    : "border-border-light text-text-secondary"
+                }`}
+              >
+                {format}
+              </a>
+            ))}
+          {props.joint.state !== "delivered" && (
+            <span className="text-xs text-text-muted font-body">
+              {props.joint.state === "partial_terminal"
+                ? "Entrega parcial: um formato foi estornado."
+                : props.joint.state === "partial_indeterminate"
+                  ? "Entrega parcial: o outro formato ainda não foi confirmado."
+                  : props.joint.state === "finalization_pending"
+                    ? "Finalização pendente: um formato foi estornado e o outro ainda está em processamento."
+                    : props.joint.state === "refunded"
+                      ? "Operação estornada."
+                      : "Processando formatos..."}
+            </span>
+          )}
+        </div>
+      )}
       {props.imageUrl &&
         (props.newFlowFormat === "9:16" ? (
           <div className="mx-auto w-auto max-h-[70vh] aspect-[9/16] rounded-xl bg-bg-elevated overflow-hidden">
