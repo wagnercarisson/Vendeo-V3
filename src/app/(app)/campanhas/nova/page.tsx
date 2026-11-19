@@ -161,6 +161,7 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
     restoredForm !== null &&
     (campaignFormatUnavailable ||
       ((restoredForm.campaignFormat === "9:16" ||
+        restoredForm.campaignFormat === "1:1+9:16" ||
         restoredFormatResolution?.kind === "9:16") &&
         !verticalEnabled));
 

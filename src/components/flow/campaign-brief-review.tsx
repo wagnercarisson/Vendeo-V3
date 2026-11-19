@@ -9,8 +9,9 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import type { CampaignFormFields, PreparedCampaignImage } from "./use-campaign-form";
+import type { CampaignFormFields, CampaignFormatValue, PreparedCampaignImage } from "./use-campaign-form";
 import { buildValidityDisplayText, inferIntent } from "./use-campaign-form";
+import { TWO_FORMAT_CAMPAIGN_CREDITS } from "@/lib/campaign/two-format-credits";
 import { formatCurrencyBRL } from "@/lib/formatters";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 import { MANDATORY_ARTWORK_LABEL } from "@/lib/campaign/field-guidance";
@@ -37,7 +38,7 @@ interface CampaignBriefReviewProps {
   supportEmail?: string;
   /** F59 — a linha `Formato` só existe no fluxo novo elegível. */
   eligible?: boolean;
-  campaignFormat?: "1:1" | "9:16";
+  campaignFormat?: CampaignFormatValue;
   onBack: () => void;
   onConfirm: () => Promise<void>;
 }
@@ -58,13 +59,17 @@ export function CampaignBriefReview({
 }: CampaignBriefReviewProps) {
   const { costs, status: costStatus } = useOperationCosts();
   const campaignCost = costs?.campaign_generation;
+  const isJoint = campaignFormat === "1:1+9:16";
+  const requiredCredits = isJoint
+    ? TWO_FORMAT_CAMPAIGN_CREDITS
+    : campaignCost?.costCredits;
   const costUnavailable = costStatus !== "loaded";
   const costDisabled = costStatus === "loaded" && campaignCost !== undefined && !campaignCost.enabled;
   const insufficientBalance =
     balance !== undefined &&
     balance !== null &&
-    campaignCost !== undefined &&
-    balance < campaignCost.costCredits;
+    requiredCredits !== undefined &&
+    balance < requiredCredits;
   const confirmDisabled =
     preparing ||
     !preparedImages ||
@@ -92,9 +97,10 @@ export function CampaignBriefReview({
     if (costStatus === "loading") return "Verificando custo...";
     if (costStatus === "unavailable") return "Serviço indisponível no momento";
     if (campaignCost && !campaignCost.enabled) return "Operação desativada";
+    if (isJoint) return `Vai consumir ${TWO_FORMAT_CAMPAIGN_CREDITS} créditos`;
     if (campaignCost) return `Vai consumir ${campaignCost.costCredits} crédito(s)`;
     return "Custo: …";
-  }, [costStatus, campaignCost]);
+  }, [costStatus, campaignCost, isJoint]);
 
   if (preparing) {
     return (
@@ -164,9 +170,18 @@ export function CampaignBriefReview({
             <div className="flex items-center gap-2">
               <dt className="text-text-muted text-sm font-body w-32 shrink-0">Formato</dt>
               <dd className="min-w-0 break-words text-text-primary text-sm font-body">
-                {campaignFormat === "9:16" ? "Vertical 9:16" : "Quadrado 1:1"}
+                {campaignFormat === "1:1+9:16"
+                  ? "Quadrado 1:1 + Vertical 9:16"
+                  : campaignFormat === "9:16"
+                    ? "Vertical 9:16"
+                    : "Quadrado 1:1"}
                 {campaignFormat === "9:16" && (
                   <span className="ml-1 text-text-muted">1080 × 1920 px</span>
+                )}
+                {campaignFormat === "1:1+9:16" && (
+                  <span className="ml-1 text-text-muted">
+                    1024 × 1024 px + 1080 × 1920 px
+                  </span>
                 )}
               </dd>
             </div>

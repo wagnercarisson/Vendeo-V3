@@ -1,42 +1,64 @@
 "use client";
 
-const FORMAT_OPTIONS = [
-  { value: "1:1" as const, label: "Quadrado 1:1 - feed" },
+import type { CampaignFormatValue } from "./use-campaign-form";
+
+const FORMAT_OPTIONS: ReadonlyArray<{
+  value: CampaignFormatValue;
+  label: string;
+}> = [
+  { value: "1:1", label: "Quadrado 1:1 - feed" },
   {
-    value: "9:16" as const,
+    value: "9:16",
     label: "Vertical 9:16 - Stories e Reels (imagem estática)",
+  },
+  {
+    value: "1:1+9:16",
+    label: "Dois formatos - Quadrado 1:1 + Vertical 9:16",
   },
 ];
 
 export const CAMPAIGN_FORMAT_HELPER =
   "Imagem estática, sem vídeo. As áreas seguras seguem a política do Vendeo e podem variar conforme a plataforma.";
 
+export const CAMPAIGN_FORMAT_JOINT_HELPER =
+  "Dois formatos usam dois créditos: o quadrado para o feed e o vertical para Stories/Reels.";
+
 export const CAMPAIGN_FORMAT_VERTICAL_DISABLED_HELPER =
   "O formato Vertical 9:16 está temporariamente indisponível. O formato 1:1 continua disponível.";
 
+export const CAMPAIGN_FORMAT_JOINT_DISABLED_HELPER =
+  "Os dois formatos estão temporariamente indisponíveis. Você pode manter o formato já escolhido ou usar o 1:1.";
+
 interface CampaignFormatSelectorProps {
-  value: "1:1" | "9:16";
-  onChange: (format: "1:1" | "9:16") => void;
+  value: CampaignFormatValue;
+  onChange: (format: CampaignFormatValue) => void;
   disabled?: boolean;
   /**
-   * Quando `false`, o seletor permanece visível, mas apenas o 9:16 fica
-   * desabilitado. Evita que o controle “desapareça” quando a flag está OFF.
+   * Quando `false`, o seletor permanece visível, mas o 9:16 fica desabilitado.
+   * Evita que o controle “desapareça” quando a flag está OFF.
    */
   verticalEnabled?: boolean;
+  /**
+   * C2 — a opção conjunta permanece VISÍVEL no fluxo elegível e fica
+   * desabilitada quando a flag vertical está OFF. O valor restaurado não é
+   * trocado silenciosamente.
+   */
+  jointEnabled?: boolean;
 }
 
 /**
- * F59/D-03 — seletor de formato do fluxo NOVO. Montado sob elegibilidade; a
- * opção vertical só fica habilitada quando a flag está ON (ou há rascunho
- * vertical restaurado, caso em que o formulário inteiro fica pausado).
+ * F59/D-03 / F60.7 C2 — seletor de formato do fluxo NOVO. Montado sob
+ * elegibilidade; opções verticais só ficam habilitadas quando a flag está ON.
  */
 export function CampaignFormatSelector({
   value,
   onChange,
   disabled = false,
   verticalEnabled = true,
+  jointEnabled = true,
 }: CampaignFormatSelectorProps) {
   const verticalUnavailable = !verticalEnabled && !disabled;
+  const jointUnavailable = !jointEnabled && !disabled;
 
   return (
     <section
@@ -55,7 +77,9 @@ export function CampaignFormatSelector({
         <div className="space-y-2">
           {FORMAT_OPTIONS.map((option) => {
             const optionDisabled =
-              disabled || (option.value === "9:16" && !verticalEnabled);
+              disabled ||
+              (option.value === "9:16" && !verticalEnabled) ||
+              (option.value === "1:1+9:16" && !jointEnabled);
             return (
               <label
                 key={option.value}
@@ -88,6 +112,14 @@ export function CampaignFormatSelector({
         >
           {CAMPAIGN_FORMAT_HELPER}
         </p>
+        {value === "1:1+9:16" && (
+          <p
+            data-testid="flow-campaign-format-joint-helper"
+            className="text-xs font-body text-text-secondary"
+          >
+            {CAMPAIGN_FORMAT_JOINT_HELPER}
+          </p>
+        )}
         {verticalUnavailable && (
           <p
             role="status"
@@ -95,6 +127,15 @@ export function CampaignFormatSelector({
             className="text-xs font-body text-amber-800"
           >
             {CAMPAIGN_FORMAT_VERTICAL_DISABLED_HELPER}
+          </p>
+        )}
+        {jointUnavailable && (
+          <p
+            role="status"
+            data-testid="flow-campaign-format-joint-disabled"
+            className="text-xs font-body text-amber-800"
+          >
+            {CAMPAIGN_FORMAT_JOINT_DISABLED_HELPER}
           </p>
         )}
       </fieldset>

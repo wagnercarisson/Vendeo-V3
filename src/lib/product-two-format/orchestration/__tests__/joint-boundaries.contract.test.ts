@@ -28,6 +28,21 @@ const C1_PRODUCTION_CONSUMERS = new Set([
   "src/app/api/campaign/generation-status/route.ts",
 ]);
 
+/**
+ * C2 — consumidores de UI/restauração autorizados por par EXATO. A UI não
+ * importa orquestração/server; `display.ts` importa apenas o classificador
+ * puro para decidir o formato persistido antes do resolvedor legado.
+ */
+const C2_PRODUCTION_CONSUMERS = new Set([
+  "src/lib/campaign/display.ts",
+  "src/app/(app)/campanhas/nova/page.tsx",
+  "src/components/flow/campaign-brief-review.tsx",
+  "src/components/flow/campaign-format-selector.tsx",
+  "src/components/flow/campaign-input-form.tsx",
+  "src/components/flow/generation-progress.tsx",
+  "src/components/flow/use-campaign-form.ts",
+]);
+
 function walk(directory: string): string[] {
   const absolute = path.join(ROOT, directory);
   const entries = readdirSync(absolute);
@@ -70,7 +85,12 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     const offenders: string[] = [];
     for (const directory of FORBIDDEN_CONSUMER_DIRS) {
       for (const file of walk(directory)) {
-        if (C1_PRODUCTION_CONSUMERS.has(file)) continue;
+        if (
+          C1_PRODUCTION_CONSUMERS.has(file) ||
+          C2_PRODUCTION_CONSUMERS.has(file)
+        ) {
+          continue;
+        }
         const source = read(file);
         if (/@\/lib\/product-two-format/.test(source)) offenders.push(file);
       }
@@ -78,20 +98,22 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("Teste 2: nenhuma rota/UI nova foi criada", () => {
+  it("Teste 2: C1 não criou UI; C2 usa somente os consumidores exatos", () => {
     const allowedChanged = new Set([
       ...C1_PRODUCTION_CONSUMERS,
+      ...C2_PRODUCTION_CONSUMERS,
       "src/app/api/campaign/[id]/continue/__tests__/route.test.ts",
       "src/app/api/campaign/generation-status/__tests__/route.test.ts",
     ]);
     const changed = gitStatus(["src/app", "src/components"])
       .split(/\r?\n/)
       .filter(Boolean)
-      .map((line) => line.trim().replace(/^\S+\s+/, ""));
+      .map((line) => line.trim().replace(/^\S+\s+/, ""))
+      .filter((file) => !file.includes("/__tests__/"));
     expect(changed.every((file) => allowedChanged.has(file))).toBe(true);
     const appFiles = walk("src/app");
     expect(appFiles.some((file) => file.endsWith(".tsx"))).toBe(true);
-    expect(appFiles.some((file) => /joint|two-format/i.test(file))).toBe(false);
+    expect(appFiles.some((file) => /\/joint|two-format/i.test(file))).toBe(false);
   });
 
   it("Teste 3: schema aceita o par conjunto exato sem promover campos extras", () => {

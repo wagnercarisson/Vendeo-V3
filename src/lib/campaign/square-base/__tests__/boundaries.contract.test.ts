@@ -416,10 +416,16 @@ describe("F60.4 boundaries — nenhum efeito proibido em nenhum caminho", () => 
 });
 
 describe("F60.4 boundaries — migrations, rotas e UI intocadas", () => {
-  it("nenhuma migration/rota/UI nova no working tree", () => {
+  it("nenhuma migration/rota/UI nova no working tree (exceto a página de C2 autorizada)", () => {
     const status = git(["status", "--porcelain", "--", "supabase/migrations", "src/app"]);
     expect(status.status).toBe(0);
-    expect(status.stdout.trim()).toBe("");
+    const allowedC2 = new Set(["src/app/(app)/campanhas/nova/page.tsx"]);
+    const changed = status.stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => line.replace(/^\S+\s+/, ""));
+    expect(changed.filter((file) => !allowedC2.has(file))).toEqual([]);
   });
 
   it('nenhuma referência a "square-base" em src/app', () => {

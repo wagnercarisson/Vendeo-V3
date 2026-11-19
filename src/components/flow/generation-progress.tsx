@@ -28,7 +28,7 @@ interface GenerationProgressProps {
    */
   variant?: "running" | "unknown" | "processing";
   /** F60.5 — detector explícito do fluxo de duas etapas. */
-  flowKind?: "one_to_one" | "two_stage_9_16";
+  flowKind?: "one_to_one" | "two_stage_9_16" | "two_format_two_stage";
 }
 
 const PHASE_LABELS: Record<string, { label: string; running: string }> = {
@@ -73,6 +73,13 @@ const PHASE_FRIENDLY_LABELS: Record<string, string> = {
   campaign_image: "Geração da imagem com IA",
   campaign_copy: "Geração do texto da campanha",
   campaign_delivery: "Entrega da campanha",
+  // F60.7 C2 — fases conjuntas.
+  square_base: "Geração da base quadrada",
+  square_delivery: "Entrega do quadrado",
+  vertical_preparation: "Preparação do vertical",
+  vertical_expansion: "Expansão para o vertical 9:16",
+  vertical_delivery: "Entrega do vertical",
+  projection: "Projeção da campanha",
 };
 
 /** F56.2b2c — ordem e rótulos das fases do NOVO fluxo (separada do legado). */
@@ -114,6 +121,32 @@ export const TWO_STAGE_PHASE_LABELS: Record<
   campaign_delivery: { label: "Entrega", running: "Entregando a campanha..." },
 };
 
+/** F60.7 C2 — ordem e rótulos das fases conjuntas (1:1 + 9:16). */
+export const TWO_FORMAT_PHASE_ORDER = [
+  "square_base",
+  "square_delivery",
+  "vertical_expansion",
+  "vertical_delivery",
+  "projection",
+] as const;
+
+export const TWO_FORMAT_PHASE_LABELS: Record<
+  string,
+  { label: string; running: string }
+> = {
+  square_base: { label: "Quadrado", running: "Gerando a base quadrada..." },
+  square_delivery: { label: "1:1", running: "Entregando o quadrado..." },
+  vertical_expansion: { label: "Expansão", running: "Expandindo para 9:16..." },
+  vertical_delivery: { label: "9:16", running: "Entregando o vertical..." },
+  projection: { label: "Projeção", running: "Projetando a campanha..." },
+};
+
+function isTwoFormatPhases(phases: GenerationPhaseEvent[]): boolean {
+  return phases.some((p) =>
+    (TWO_FORMAT_PHASE_ORDER as readonly string[]).includes(p.phase),
+  );
+}
+
 function isTwoStagePhases(phases: GenerationPhaseEvent[]): boolean {
   return phases.some(
     (p) => p.phase === "campaign_base" || p.phase === "campaign_expansion",
@@ -143,18 +176,26 @@ export function GenerationProgress({ phases, error, onRetry, variant = "running"
   const latestPhase = phases.length > 0 ? phases[phases.length - 1] : null;
   const currentMessage = latestPhase?.message || GENERATION_STATE_MESSAGES.running;
 
-  const isTwoStage = flowKind === "two_stage_9_16" || isTwoStagePhases(phases);
-  const isNewFlow = !isTwoStage && isNewFlowPhases(phases);
-  const phaseOrder: readonly string[] = isTwoStage
-    ? TWO_STAGE_PHASE_ORDER
-    : isNewFlow
-      ? NEW_FLOW_PHASE_ORDER
-      : ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
-  const phaseLabels = isTwoStage
-    ? TWO_STAGE_PHASE_LABELS
-    : isNewFlow
-      ? NEW_FLOW_PHASE_LABELS
-      : PHASE_LABELS;
+  const isTwoFormat =
+    flowKind === "two_format_two_stage" || isTwoFormatPhases(phases);
+  const isTwoStage =
+    !isTwoFormat &&
+    (flowKind === "two_stage_9_16" || isTwoStagePhases(phases));
+  const isNewFlow = !isTwoFormat && !isTwoStage && isNewFlowPhases(phases);
+  const phaseOrder: readonly string[] = isTwoFormat
+    ? TWO_FORMAT_PHASE_ORDER
+    : isTwoStage
+      ? TWO_STAGE_PHASE_ORDER
+      : isNewFlow
+        ? NEW_FLOW_PHASE_ORDER
+        : ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
+  const phaseLabels = isTwoFormat
+    ? TWO_FORMAT_PHASE_LABELS
+    : isTwoStage
+      ? TWO_STAGE_PHASE_LABELS
+      : isNewFlow
+        ? NEW_FLOW_PHASE_LABELS
+        : PHASE_LABELS;
 
   const phaseStatus = buildPhaseStatus(phases);
 

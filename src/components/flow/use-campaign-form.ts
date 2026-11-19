@@ -105,6 +105,14 @@ export type ValidityMode = "" | "until-date" | "range" | "today" | "stock" | "cu
 
 /** F60.5 — teto de continuacoes EFETIVAMENTE iniciadas por operacao. */
 const MAX_CONTINUATIONS = 3;
+/** F60.7 C2 — conveniência do fluxo conjunto (base + quadrado + expansão + vertical). */
+const MAX_CONTINUATIONS_JOINT = 4;
+
+export type CampaignFormatValue = "1:1" | "9:16" | "1:1+9:16";
+export type CampaignFlowKind =
+  | "one_to_one"
+  | "two_stage_9_16"
+  | "two_format_two_stage";
 
 type ProcessingState = {
   campaignId: string | null;
@@ -112,14 +120,180 @@ type ProcessingState = {
   canContinue: boolean;
   stepInProgress: boolean;
   continuationsExhausted?: boolean;
+  /** C2 — resultado parcial preservado sem apagar a operação ativa. */
+  partial?: "indeterminate" | "finalization_pending" | null;
+  nextStep?: string | null;
 };
 
 type StatusOutcome =
   | "delivered"
+  | "partial_terminal"
+  | "partial_indeterminate"
   | "refunded"
   | "unknown"
   | "processing"
+  | "unavailable"
+  | "error";
+
+export type TwoFormatClientFormatState =
+  | "delivered"
+  | "processing"
+  | "absent"
+  | "unknown"
   | "unavailable";
+
+export type TwoFormatClientFormats = Record<
+  "1:1" | "9:16",
+  { readonly state: TwoFormatClientFormatState }
+>;
+
+export type NormalizedTwoFormatOutcome =
+  | { readonly kind: "complete"; readonly formats: TwoFormatClientFormats }
+  | { readonly kind: "partial_terminal"; readonly formats: TwoFormatClientFormats }
+  | {
+      readonly kind: "partial_indeterminate";
+      readonly formats: TwoFormatClientFormats;
+    }
+  | {
+      readonly kind: "finalization_pending";
+      readonly formats: TwoFormatClientFormats;
+      readonly canContinue: boolean;
+      readonly nextStep: string | null;
+    }
+  | { readonly kind: "refunded"; readonly formats: TwoFormatClientFormats }
+  | { readonly kind: "unknown"; readonly formats: TwoFormatClientFormats }
+  | {
+      readonly kind: "processing";
+      readonly formats: TwoFormatClientFormats;
+      readonly canContinue: boolean;
+      readonly nextStep: string | null;
+    }
+  | { readonly kind: "error"; readonly formats: TwoFormatClientFormats };
+
+/**
+ * F60.7 C2 — normaliza o terminal conjunto (NDJSON inicial, continuação e
+ * status) em UMA decisão. `result` nunca é sucesso por si só: o estado dos dois
+ * formatos e `operationTerminal` é que decidem.
+ */
+export function normalizeTwoFormatOutcome(input: {
+  readonly formats: TwoFormatClientFormats;
+  readonly operationTerminal?: boolean;
+  readonly canContinue?: boolean;
+  readonly nextStep?: string | null;
+  readonly event?: "result" | "processing" | "unknown" | "error";
+  readonly refunded?: boolean;
+}): NormalizedTwoFormatOutcome {
+  const { formats } = input;
+  const square = formats["1:1"].state;
+  const vertical = formats["9:16"].state;
+  const delivered =
+    (square === "delivered" ? 1 : 0) + (vertical === "delivered" ? 1 : 0);
+
+  if (input.event === "unknown") return { kind: "unknown", formats };
+  if (input.event === "error") {
+    return input.refunded === true
+      ? { kind: "refunded", formats }
+      : { kind: "error", formats };
+  }
+
+  if (delivered === 2) return { kind: "complete", formats };
+
+  if (delivered === 1) {
+    const other = square === "delivered" ? vertical : square;
+    if (other === "absent") return { kind: "partial_terminal", formats };
+    if (other === "processing") {
+      return {
+        kind: "processing",
+        formats,
+        canContinue: input.canContinue === true,
+        nextStep: input.nextStep ?? null,
+      };
+    }
+    // unknown/unavailable: parcial não terminal, identidade preservada.
+    return { kind: "partial_indeterminate", formats };
+  }
+
+  if (square === "absent" && vertical === "absent") {
+    return { kind: "refunded", formats };
+  }
+
+  const anyUnknown =
+    square === "unknown" ||
+    vertical === "unknown" ||
+    square === "unavailable" ||
+    vertical === "unavailable";
+  if (anyUnknown) return { kind: "unknown", formats };
+
+  const finalizationPending =
+    (square === "absent" && vertical === "processing") ||
+    (vertical === "absent" && square === "processing");
+  if (finalizationPending) {
+    return {
+      kind: "finalization_pending",
+      formats,
+      canContinue: input.canContinue === true,
+      nextStep: input.nextStep ?? null,
+    };
+  }
+
+  return {
+    kind: "processing",
+    formats,
+    canContinue: input.canContinue === true,
+    nextStep: input.nextStep ?? null,
+  };
+}
+
+function maxContinuationsFor(flowKind: CampaignFlowKind): number {
+  return flowKind === "two_format_two_stage"
+    ? MAX_CONTINUATIONS_JOINT
+    : MAX_CONTINUATIONS;
+}
+
+export function flowKindForFields(
+  eligible: boolean,
+  format: CampaignFormatValue | undefined,
+): CampaignFlowKind {
+  if (!eligible) return "one_to_one";
+  if (format === "1:1+9:16") return "two_format_two_stage";
+  if (format === "9:16") return "two_stage_9_16";
+  return "one_to_one";
+}
+
+function parseFlowKind(value: unknown): CampaignFlowKind | undefined {
+  return value === "one_to_one" ||
+    value === "two_stage_9_16" ||
+    value === "two_format_two_stage"
+    ? value
+    : undefined;
+}
+
+function eventFormats(event: Record<string, unknown>): TwoFormatClientFormats | null {
+  const raw = event.formats as
+    | Record<string, { state?: unknown }>
+    | undefined;
+  const square = raw?.["1:1"]?.state;
+  const vertical = raw?.["9:16"]?.state;
+  const valid = new Set<TwoFormatClientFormatState>([
+    "delivered",
+    "processing",
+    "absent",
+    "unknown",
+    "unavailable",
+  ]);
+  if (
+    typeof square !== "string" ||
+    typeof vertical !== "string" ||
+    !valid.has(square as TwoFormatClientFormatState) ||
+    !valid.has(vertical as TwoFormatClientFormatState)
+  ) {
+    return null;
+  }
+  return {
+    "1:1": { state: square as TwoFormatClientFormatState },
+    "9:16": { state: vertical as TwoFormatClientFormatState },
+  };
+}
 
 /** Chave escopada da identidade da operacao (reidratacao no reload). */
 function scopedIdentityDraftKey(campaignId: string): string {
@@ -133,7 +307,12 @@ function activeOperationKey(storeId?: string): string {
     : "campaign_active_operation";
 }
 
-type PendingOperationIdentity = { campaignId: string; operationId: string };
+type PendingOperationIdentity = {
+  campaignId: string;
+  operationId: string;
+  /** Dica de reload; a autoridade continua sendo `operation.origin`. */
+  flowKind?: CampaignFlowKind;
+};
 
 /**
  * F56.2b2b (P1) — copy do aviso quando a direção de fundo NÃO pôde ser
@@ -211,7 +390,7 @@ export interface CampaignFormFields {
    */
   backgroundDirection?: ProductOneToOneBackgroundDirection;
   /** F59/D-03 — formato do fluxo novo; default `1:1`. */
-  campaignFormat?: "1:1" | "9:16";
+  campaignFormat?: CampaignFormatValue;
 }
 
 export type FieldErrors = Partial<
@@ -300,9 +479,11 @@ export interface UseCampaignFormReturn {
     canContinue: boolean;
     stepInProgress: boolean;
     continuationsExhausted?: boolean;
+    partial?: "indeterminate" | "finalization_pending" | null;
+    nextStep?: string | null;
   } | null;
-  /** F60.5 — fluxo efetivo da submissao/restauracao (decide UI e status). */
-  flowKind: "one_to_one" | "two_stage_9_16";
+  /** F60.5/F60.7 — fluxo efetivo da submissao/restauracao (decide UI e status). */
+  flowKind: CampaignFlowKind;
   continueGeneration: () => Promise<void>;
   retryProcessingStatus: () => Promise<void>;
   /** Recorte 2 (Plano 09): invalida a identidade terminal (não reenvia os IDs estornados). */
@@ -764,8 +945,11 @@ export function buildCampaignGenerationBody(
   // byte-compatível com o legado (mesmas chaves, mesma ordem).
   if (options?.eligible) {
     body.backgroundDirection = fields.backgroundDirection ?? "studio";
-    if (fields.campaignFormat === "9:16") {
-      body.campaignFormat = "9:16";
+    if (
+      fields.campaignFormat === "9:16" ||
+      fields.campaignFormat === "1:1+9:16"
+    ) {
+      body.campaignFormat = fields.campaignFormat;
     }
     if (options.identity) {
       body.campaignId = options.identity.campaignId;
@@ -804,7 +988,11 @@ function restoredFormToFields(
     fields.backgroundDirection = restored.backgroundDirection;
   }
   // F59/D-03 — hidrata o formato PERSISTIDO. Vertical NUNCA cai para 1:1.
-  if (restored.campaignFormat === "9:16" || restored.campaignFormat === "1:1") {
+  if (
+    restored.campaignFormat === "9:16" ||
+    restored.campaignFormat === "1:1" ||
+    restored.campaignFormat === "1:1+9:16"
+  ) {
     fields.campaignFormat = restored.campaignFormat;
   }
   return fields;
@@ -887,7 +1075,11 @@ export function useCampaignForm(
   const continueInFlightRef = useRef(false);
   const autoContinueRef = useRef(0);
   const pendingContinuationRef = useRef<ProcessingState | null>(null);
-  const flowKindRef = useRef<"one_to_one" | "two_stage_9_16">("one_to_one");
+  const flowKindRef = useRef<CampaignFlowKind>("one_to_one");
+  /** `true` quando `flowKindRef` veio do submit/confirm ou de `operation.origin`. */
+  const flowKindResolvedRef = useRef(false);
+  /** C2 — requestId da continuação lógica corrente (mesmo ID no retry ambíguo). */
+  const jointRequestIdRef = useRef<string | null>(null);
   const rehydratedRef = useRef(false);
   const continueOnceRef = useRef<
     (current: ProcessingState, options?: { manual?: boolean }) => Promise<boolean>
@@ -953,15 +1145,20 @@ export function useCampaignForm(
       snapshotFields: CampaignFormFields,
       imageDataUrl: string | null,
       operationId?: string | null,
+      flowKind?: CampaignFlowKind,
     ) => {
       if (!id) return;
       try {
         sessionStorage.setItem(scopedDraftKey(id), JSON.stringify(snapshotFields));
         if (imageDataUrl) sessionStorage.setItem(scopedImageDraftKey(id), imageDataUrl);
-        // F60.5 — identidade duravel da operacao: permite reidratar o estado no
-        // reload sem iniciar geracao.
+        // F60.5/F60.7 — identidade duravel da operacao + dica de fluxo para o
+        // reload. A autoridade do fluxo continua sendo `operation.origin`.
         if (typeof operationId === "string" && operationId.length > 0) {
-          const identity = JSON.stringify({ campaignId: id, operationId });
+          const identity = JSON.stringify({
+            campaignId: id,
+            operationId,
+            ...(flowKind === undefined ? {} : { flowKind }),
+          });
           sessionStorage.setItem(scopedIdentityDraftKey(id), identity);
           // Ponteiro de escopo da LOJA: o reload de /campanhas/nova nao recebe
           // `restoredForm`, entao esta e a unica forma de achar a operacao ativa.
@@ -989,6 +1186,94 @@ export function useCampaignForm(
       }
     },
     [storeId],
+  );
+
+  /**
+   * C2 — aplica o resultado normalizado do fluxo conjunto. Só `complete` e
+   * `partial_terminal` encerram/navegam; `partial_indeterminate`,
+   * `finalization_pending`, `processing` e `unknown` preservam a operação ativa.
+   */
+  const applyJointOutcome = useCallback(
+    (
+      outcome: NormalizedTwoFormatOutcome,
+      target: { campaignId: string | null; operationId: string | null },
+    ): StatusOutcome => {
+      switch (outcome.kind) {
+        case "complete":
+          setProcessingResult(null);
+          jointRequestIdRef.current = null;
+          clearActiveOperation(target.campaignId);
+          if (target.campaignId) {
+            router.push(`/campanhas/${target.campaignId}`);
+          }
+          return "delivered";
+        case "partial_terminal":
+          // Terminal parcial: o formato entregue permanece acessível; não é
+          // sucesso pleno e a operação ativa pode ser encerrada.
+          setProcessingResult(null);
+          jointRequestIdRef.current = null;
+          clearActiveOperation(target.campaignId);
+          if (target.campaignId) {
+            router.push(`/campanhas/${target.campaignId}`);
+          }
+          return "partial_terminal";
+        case "refunded":
+          setProcessingResult(null);
+          jointRequestIdRef.current = null;
+          clearActiveOperation(target.campaignId);
+          confirmedBodyRef.current = null;
+          setSubmitError("A geração foi encerrada e o crédito devolvido.");
+          if (target.campaignId) {
+            router.push(`/campanhas/${target.campaignId}`);
+          }
+          return "refunded";
+        case "unknown":
+          setProcessingResult(null);
+          jointRequestIdRef.current = null;
+          setUnknownResult({
+            supportReference: null,
+            operationId: target.operationId,
+            campaignId: target.campaignId,
+          });
+          return "unknown";
+        case "partial_indeterminate":
+          // Não terminal: não apaga identidade/operação; sem auto-continuação.
+          setProcessingResult({
+            campaignId: target.campaignId,
+            operationId: target.operationId,
+            canContinue: false,
+            stepInProgress: false,
+            partial: "indeterminate",
+            nextStep: null,
+          });
+          return "partial_indeterminate";
+        case "finalization_pending":
+          setProcessingResult({
+            campaignId: target.campaignId,
+            operationId: target.operationId,
+            canContinue: outcome.canContinue,
+            stepInProgress: false,
+            partial: "finalization_pending",
+            nextStep: outcome.nextStep,
+          });
+          return "processing";
+        case "processing":
+          setProcessingResult({
+            campaignId: target.campaignId,
+            operationId: target.operationId,
+            canContinue: outcome.canContinue,
+            stepInProgress: false,
+            partial: null,
+            nextStep: outcome.nextStep,
+          });
+          return "processing";
+        case "error":
+          setProcessingResult(null);
+          setSubmitError("Erro ao gerar imagem.");
+          return "error";
+      }
+    },
+    [clearActiveOperation, router],
   );
   const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);  // F56.2b2b (B2B-D9): aviso HONESTO de que a imagem do produto/referências
   // (client-only) pode precisar ser re-adicionada quando o texto foi restaurado
@@ -1027,7 +1312,9 @@ export function useCampaignForm(
       // não trouxer um formato válido, o formato PERSISTIDO do restore é o
       // fallback; NUNCA o default 1:1 do formulário.
       const savedFormat =
-        saved.campaignFormat === "1:1" || saved.campaignFormat === "9:16"
+        saved.campaignFormat === "1:1" ||
+        saved.campaignFormat === "9:16" ||
+        saved.campaignFormat === "1:1+9:16"
           ? saved.campaignFormat
           : undefined;
       const resolvedFormat = savedFormat ?? restoredForm?.campaignFormat;
@@ -1396,8 +1683,10 @@ export function useCampaignForm(
           operationId?: string;
           state?: string;
           canContinue?: boolean;
+          nextStep?: string | null;
+          formats?: unknown;
         };
-        const nextProcessing = {
+        const jointTarget = {
           campaignId:
             typeof processing.campaignId === "string"
               ? processing.campaignId
@@ -1406,6 +1695,57 @@ export function useCampaignForm(
             typeof processing.operationId === "string"
               ? processing.operationId
               : lastOperationId,
+        };
+        if (flowKindRef.current === "two_format_two_stage") {
+          const formats = eventFormats(event) ?? {
+            "1:1": { state: "unknown" as const },
+            "9:16": { state: "unknown" as const },
+          };
+          const normalized = normalizeTwoFormatOutcome({
+            formats,
+            event: "processing",
+            canContinue: processing.canContinue === true,
+            nextStep: processing.nextStep ?? null,
+          });
+          applyJointOutcome(normalized, jointTarget);
+          setIsSubmitting(false);
+          // Resposta terminal recebida: a próxima continuação lógica usa um
+          // requestId novo; retry ambíguo mantém o atual.
+          jointRequestIdRef.current = null;
+          const canContinue =
+            normalized.kind === "processing" ||
+            normalized.kind === "finalization_pending"
+              ? normalized.canContinue
+              : false;
+          const nextProcessing: ProcessingState = {
+            ...jointTarget,
+            canContinue,
+            stepInProgress: false,
+            partial:
+              normalized.kind === "finalization_pending"
+                ? "finalization_pending"
+                : null,
+            nextStep:
+              normalized.kind === "processing" ||
+              normalized.kind === "finalization_pending"
+                ? normalized.nextStep
+                : null,
+          };
+          const max = maxContinuationsFor("two_format_two_stage");
+          if (canContinue && autoContinueRef.current < max) {
+            setProcessingResult((prev) =>
+              prev ? { ...prev, continuationsExhausted: false } : prev,
+            );
+            void continueOnceRef.current(nextProcessing);
+          } else if (canContinue && autoContinueRef.current >= max) {
+            setProcessingResult((prev) =>
+              prev ? { ...prev, continuationsExhausted: true } : prev,
+            );
+          }
+          return true;
+        }
+        const nextProcessing = {
+          ...jointTarget,
           canContinue: processing.canContinue === true,
           stepInProgress: processing.state === "step_in_progress",
         };
@@ -1460,6 +1800,29 @@ export function useCampaignForm(
           }
         }
 
+        if (flowKindRef.current === "two_format_two_stage") {
+          const formats = eventFormats(event) ?? {
+            "1:1": { state: "unknown" as const },
+            "9:16": { state: "unknown" as const },
+          };
+          const normalized = normalizeTwoFormatOutcome({
+            formats,
+            event: "result",
+            operationTerminal: event.operationTerminal === true,
+            canContinue: event.canContinue === true,
+            nextStep:
+              typeof event.nextStep === "string" ? event.nextStep : null,
+          });
+          applyJointOutcome(normalized, {
+            campaignId: result.campaignId,
+            operationId:
+              lastOperationId ??
+              (typeof body.operationId === "string" ? body.operationId : null),
+          });
+          setIsSubmitting(false);
+          return true;
+        }
+
         // Navigate to campaign page — draft data preserved in sessionStorage
         clearActiveOperation(result.campaignId);
         router.push(result.campaignUrl);
@@ -1467,6 +1830,37 @@ export function useCampaignForm(
       }
 
       if (event.type === "error") {
+        if (flowKindRef.current === "two_format_two_stage") {
+          const refunded = (event as { refunded?: boolean }).refunded === true;
+          const formats = eventFormats(event) ?? {
+            "1:1": { state: refunded ? "absent" : "unknown" },
+            "9:16": { state: refunded ? "absent" : "unknown" },
+          };
+          const normalized = normalizeTwoFormatOutcome({
+            formats,
+            event: "error",
+            refunded,
+          });
+          applyJointOutcome(normalized, {
+            campaignId:
+              typeof event.campaignId === "string"
+                ? event.campaignId
+                : lastCampaignId,
+            operationId:
+              typeof event.operationId === "string"
+                ? event.operationId
+                : lastOperationId,
+          });
+          if (!refunded) {
+            setSubmitError(
+              typeof event.message === "string"
+                ? event.message
+                : "Erro ao gerar imagem.",
+            );
+          }
+          setIsSubmitting(false);
+          return true;
+        }
         // Recorte 2 (Plano 09): estorno CONFIRMADO ⇒ encaminha ao DETALHE
         // (reutiliza o `RefundedPanel`) e REMOVE o retry da identidade terminal.
         if ((event as { refunded?: boolean }).refunded === true) {
@@ -1727,18 +2121,20 @@ export function useCampaignForm(
 
       // Recorte 3 (Plano 10): persiste o snapshot/imagem ENVIADOS sob a identidade
       // B ANTES da requisição (identidade já no corpo no novo fluxo).
-      flowKindRef.current =
-        eligible && (frozenFields.campaignFormat ?? "1:1") === "9:16"
-          ? "two_stage_9_16"
-          : "one_to_one";
+      flowKindRef.current = flowKindForFields(
+        eligible,
+        frozenFields.campaignFormat,
+      );
+      flowKindResolvedRef.current = true;
       persistSubmittedDraft(
         typeof body.campaignId === "string" ? body.campaignId : null,
         frozenFields,
         resolvedImages[0]?.dataUrl ?? restoredImageDataUrl ?? null,
-        flowKindRef.current === "two_stage_9_16" &&
+        flowKindRef.current !== "one_to_one" &&
           typeof body.operationId === "string"
           ? body.operationId
           : null,
+        flowKindRef.current,
       );
 
       await consumeStream(body, abortController);
@@ -1758,6 +2154,8 @@ export function useCampaignForm(
     autoContinueRef.current = 0;
     pendingContinuationRef.current = null;
     confirmedBodyRef.current = null;
+    jointRequestIdRef.current = null;
+    flowKindResolvedRef.current = false;
     prePersistedIdentityRef.current = false;
     draftIdentityRef.current = null;
     setFields(EMPTY_FIELDS);
@@ -2027,10 +2425,20 @@ export function useCampaignForm(
     });
     // Recorte 3 (Plano 10): persiste o snapshot/imagem ENVIADOS sob a identidade B
     // ANTES da requisição (não depende de evento do stream nem do autosave).
+    flowKindRef.current = flowKindForFields(
+      eligible,
+      frozenFields.campaignFormat,
+    );
+    flowKindResolvedRef.current = true;
     persistSubmittedDraft(
       typeof body.campaignId === "string" ? body.campaignId : null,
       frozenFields,
       frozenPrepared[0]?.dataUrl ?? null,
+      flowKindRef.current !== "one_to_one" &&
+        typeof body.operationId === "string"
+        ? body.operationId
+        : null,
+      flowKindRef.current,
     );
     // F43 (mini-fix): guarda o body confirmado para o retry pós-falha repetir a
     // MESMA tentativa (não reativar a validação vision via handleSubmit legado).
@@ -2094,12 +2502,53 @@ export function useCampaignForm(
         }
         const data = (await response.json()) as {
           operation?: {
+            origin?: string;
             state?: string;
             canContinue?: boolean;
             processingPhase?: string;
+            operationTerminal?: boolean;
+            nextStep?: string | null;
+            formats?: Record<
+              "1:1" | "9:16",
+              { state?: TwoFormatClientFormatState }
+            >;
           };
         };
-        const state = data.operation?.state;
+        const operation = data.operation;
+
+        // C2 — a AUTORIDADE do tipo de fluxo é `operation.origin`, não o
+        // `flowKind` persistido. Nunca montar continuação 9:16 por padrão.
+        if (operation?.origin === "two_format_two_stage") {
+          flowKindRef.current = "two_format_two_stage";
+          flowKindResolvedRef.current = true;
+          const square = operation.formats?.["1:1"]?.state;
+          const vertical = operation.formats?.["9:16"]?.state;
+          if (!square || !vertical) return "unavailable";
+          const normalized = normalizeTwoFormatOutcome({
+            formats: {
+              "1:1": { state: square },
+              "9:16": { state: vertical },
+            },
+            operationTerminal: operation.operationTerminal === true,
+            canContinue: operation.canContinue === true,
+            nextStep: operation.nextStep ?? null,
+          });
+          return applyJointOutcome(normalized, target);
+        }
+        if (operation?.origin === "9_16_two_stage") {
+          flowKindRef.current = "two_stage_9_16";
+          flowKindResolvedRef.current = true;
+        } else if (typeof operation?.processingPhase === "string") {
+          // Status 9:16 legado (sem `origin`) traz a fase de processamento.
+          flowKindRef.current = "two_stage_9_16";
+          flowKindResolvedRef.current = true;
+        } else if (operation?.state !== undefined) {
+          // Status legado 1:1 também é autoridade de fluxo.
+          flowKindRef.current = "one_to_one";
+          flowKindResolvedRef.current = true;
+        }
+
+        const state = operation?.state;
         if (state === "delivered") {
           setProcessingResult(null);
           clearActiveOperation(target.campaignId);
@@ -2124,17 +2573,19 @@ export function useCampaignForm(
         }
         setProcessingResult({
           ...target,
-          canContinue: data.operation?.canContinue === true,
-          stepInProgress:
-            data.operation?.processingPhase === "step_in_progress",
-          continuationsExhausted: autoContinueRef.current >= MAX_CONTINUATIONS,
+          canContinue: operation?.canContinue === true,
+          stepInProgress: operation?.processingPhase === "step_in_progress",
+          partial: null,
+          continuationsExhausted:
+            autoContinueRef.current >=
+            maxContinuationsFor(flowKindRef.current),
         });
         return "processing";
       } catch {
         return "unavailable";
       }
     },
-    [clearActiveOperation, router],
+    [applyJointOutcome, clearActiveOperation, router],
   );
 
   /**
@@ -2158,7 +2609,9 @@ export function useCampaignForm(
       }
       // Limite da CADEIA AUTOMATICA (a acao manual autorizada nao e bloqueada
       // por ele; apos uma consulta favoravel o usuario pode retomar).
-      if (!options.manual && autoContinueRef.current >= MAX_CONTINUATIONS) {
+      const flowKind = flowKindRef.current;
+      const maxContinuations = maxContinuationsFor(flowKind);
+      if (!options.manual && autoContinueRef.current >= maxContinuations) {
         setProcessingResult((prev) =>
           prev ? { ...prev, continuationsExhausted: true } : prev,
         );
@@ -2172,15 +2625,21 @@ export function useCampaignForm(
           base: crypto.randomUUID(),
           expansion: crypto.randomUUID(),
         };
+        let body: Record<string, unknown>;
+        if (flowKind === "two_format_two_stage") {
+          const requestId =
+            jointRequestIdRef.current ?? crypto.randomUUID();
+          jointRequestIdRef.current = requestId;
+          body = { operationId: current.operationId, requestId };
+        } else {
+          body = { operationId: current.operationId, requestIds };
+        }
         const response = await fetch(
           `/api/campaign/${current.campaignId}/continue`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              operationId: current.operationId,
-              requestIds,
-            }),
+            body: JSON.stringify(body),
           },
         );
         if (!response.ok) {
@@ -2213,7 +2672,7 @@ export function useCampaignForm(
             }
             if (event.type === "processing") {
               terminalSeen = true;
-              const next: ProcessingState = {
+              const target = {
                 campaignId:
                   typeof event.campaignId === "string"
                     ? event.campaignId
@@ -2222,6 +2681,48 @@ export function useCampaignForm(
                   typeof event.operationId === "string"
                     ? event.operationId
                     : current.operationId,
+              };
+              if (flowKind === "two_format_two_stage") {
+                const formats = eventFormats(event) ?? {
+                  "1:1": { state: "unknown" as const },
+                  "9:16": { state: "unknown" as const },
+                };
+                const normalized = normalizeTwoFormatOutcome({
+                  formats,
+                  event: "processing",
+                  canContinue: event.canContinue === true,
+                  nextStep:
+                    typeof event.nextStep === "string" ? event.nextStep : null,
+                });
+                applyJointOutcome(normalized, target);
+                // Resposta terminal recebida: a PRÓXIMA continuação lógica usa
+                // um requestId novo; retry ambíguo mantém o atual.
+                jointRequestIdRef.current = null;
+                const canContinue =
+                  normalized.kind === "processing" ||
+                  normalized.kind === "finalization_pending"
+                    ? normalized.canContinue
+                    : false;
+                const next: ProcessingState = {
+                  ...target,
+                  canContinue,
+                  stepInProgress: false,
+                  partial:
+                    normalized.kind === "finalization_pending"
+                      ? "finalization_pending"
+                      : null,
+                  nextStep:
+                    normalized.kind === "processing" ||
+                    normalized.kind === "finalization_pending"
+                      ? normalized.nextStep
+                      : null,
+                };
+                pendingContinuationRef.current =
+                  canContinue ? next : null;
+                continue;
+              }
+              const next: ProcessingState = {
+                ...target,
                 canContinue: event.canContinue === true,
                 stepInProgress: event.state === "step_in_progress",
               };
@@ -2237,6 +2738,25 @@ export function useCampaignForm(
             }
             if (event.type === "result") {
               terminalSeen = true;
+              if (flowKind === "two_format_two_stage") {
+                const formats = eventFormats(event) ?? {
+                  "1:1": { state: "unknown" as const },
+                  "9:16": { state: "unknown" as const },
+                };
+                const normalized = normalizeTwoFormatOutcome({
+                  formats,
+                  event: "result",
+                  operationTerminal: event.operationTerminal === true,
+                  canContinue: event.canContinue === true,
+                  nextStep:
+                    typeof event.nextStep === "string" ? event.nextStep : null,
+                });
+                applyJointOutcome(normalized, {
+                  campaignId: current.campaignId,
+                  operationId: current.operationId,
+                });
+                return true;
+              }
               setProcessingResult(null);
               clearActiveOperation(current.campaignId);
               router.push(
@@ -2248,6 +2768,22 @@ export function useCampaignForm(
             }
             if (event.type === "unknown") {
               terminalSeen = true;
+              if (flowKind === "two_format_two_stage") {
+                applyJointOutcome(
+                  {
+                    kind: "unknown",
+                    formats: {
+                      "1:1": { state: "unknown" },
+                      "9:16": { state: "unknown" },
+                    },
+                  },
+                  {
+                    campaignId: current.campaignId,
+                    operationId: current.operationId,
+                  },
+                );
+                return true;
+              }
               setProcessingResult(null);
               setUnknownResult({
                 supportReference:
@@ -2259,6 +2795,29 @@ export function useCampaignForm(
             }
             if (event.type === "error") {
               terminalSeen = true;
+              if (flowKind === "two_format_two_stage") {
+                applyJointOutcome(
+                  {
+                    kind: event.refunded === true ? "refunded" : "error",
+                    formats: {
+                      "1:1": { state: "unknown" },
+                      "9:16": { state: "unknown" },
+                    },
+                  },
+                  {
+                    campaignId: current.campaignId,
+                    operationId: current.operationId,
+                  },
+                );
+                if (event.refunded !== true) {
+                  setSubmitError(
+                    typeof event.message === "string"
+                      ? event.message
+                      : "A geração falhou.",
+                  );
+                }
+                return true;
+              }
               setProcessingResult(null);
               if (event.refunded === true) {
                 confirmedBodyRef.current = null;
@@ -2285,7 +2844,7 @@ export function useCampaignForm(
         const pending = pendingContinuationRef.current;
         pendingContinuationRef.current = null;
         if (pending) {
-          if (autoContinueRef.current < MAX_CONTINUATIONS) {
+          if (autoContinueRef.current < maxContinuations) {
             // Agora sim (inFlight liberado): agenda a proxima continuacao.
             void continueOnceRef.current(pending);
           } else {
@@ -2325,13 +2884,20 @@ export function useCampaignForm(
         const parsed = JSON.parse(raw) as {
           campaignId?: unknown;
           operationId?: unknown;
+          flowKind?: unknown;
         };
         if (
           parsed.campaignId === campaignId &&
           typeof parsed.operationId === "string" &&
           parsed.operationId.length > 0
         ) {
-          return { campaignId, operationId: parsed.operationId };
+          return {
+            campaignId,
+            operationId: parsed.operationId,
+            ...(parseFlowKind(parsed.flowKind) === undefined
+              ? {}
+              : { flowKind: parseFlowKind(parsed.flowKind) }),
+          };
         }
       } catch {
         /* storage indisponível */
@@ -2349,6 +2915,7 @@ export function useCampaignForm(
           const parsed = JSON.parse(raw) as {
             campaignId?: unknown;
             operationId?: unknown;
+            flowKind?: unknown;
           };
           if (
             typeof parsed.campaignId === "string" &&
@@ -2359,6 +2926,9 @@ export function useCampaignForm(
             identity = {
               campaignId: parsed.campaignId,
               operationId: parsed.operationId,
+              ...(parseFlowKind(parsed.flowKind) === undefined
+                ? {}
+                : { flowKind: parseFlowKind(parsed.flowKind) }),
             };
           }
         }
@@ -2368,7 +2938,8 @@ export function useCampaignForm(
     }
     if (!identity) return;
     rehydratedRef.current = true;
-    flowKindRef.current = "two_stage_9_16";
+    // Dica persistida; `refreshStatus` sobrescreve com `operation.origin`.
+    if (identity.flowKind) flowKindRef.current = identity.flowKind;
     void refreshStatus({
       ...identity,
       canContinue: false,
@@ -2389,6 +2960,7 @@ export function useCampaignForm(
    */
   const invalidateTerminalIdentity = useCallback(() => {
     confirmedBodyRef.current = null;
+    jointRequestIdRef.current = null;
   }, []);
 
   return {
@@ -2429,11 +3001,13 @@ export function useCampaignForm(
     resetUnknownResult,
     processingResult,
     flowKind:
-      eligible &&
-      (flowKindRef.current === "two_stage_9_16" ||
-        (fields.campaignFormat ?? "1:1") === "9:16")
-        ? "two_stage_9_16"
-        : "one_to_one",
+      flowKindResolvedRef.current
+        ? flowKindRef.current
+        : eligible && fields.campaignFormat === "1:1+9:16"
+          ? "two_format_two_stage"
+          : eligible && fields.campaignFormat === "9:16"
+            ? "two_stage_9_16"
+            : "one_to_one",
     continueGeneration,
     retryProcessingStatus,
     restorationNotice,

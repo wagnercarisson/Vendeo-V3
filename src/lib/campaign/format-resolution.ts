@@ -32,7 +32,8 @@ export type CampaignFormatUnavailableReason =
   | "missing_version"
   | "unsupported_version"
   | "incoherent_pair"
-  | "explicit_one_to_one";
+  | "explicit_one_to_one"
+  | "two_format_inconsistent";
 
 /**
  * Contrato versionado dos formatos conhecidos. Hoje apenas `9:16` possui

@@ -107,6 +107,35 @@ describe("F59/59-08 — restore do formato persistido (display.ts)", () => {
     ).toBeNull();
   });
 
+  it("snapshot conjunto consistente reconhece 1:1+9:16", () => {
+    expect(
+      restored({
+        campaignFormat: "1:1+9:16",
+        formatContractVersion: "f60.7-two-format-v1",
+        generationOrigin: "two_format_two_stage",
+        generationContractVersion: "f60.7-two-format-v1",
+      }),
+    ).toMatchObject({
+      campaignFormat: "1:1+9:16",
+      formatContractVersion: "f60.7-two-format-v1",
+      formatUnavailable: false,
+    });
+  });
+
+  it("snapshot conjunto inconsistente bloqueia e não cai em 1:1/9:16", () => {
+    expect(
+      restored({
+        campaignFormat: "1:1+9:16",
+        formatContractVersion: "f60.7-two-format-v1",
+      }),
+    ).toMatchObject({
+      campaignFormat: "1:1+9:16",
+      formatContractVersion: null,
+      formatUnavailable: true,
+      formatUnavailableReason: "two_format_inconsistent",
+    });
+  });
+
   it("display.ts usa a tabela neutra e NÃO importa o módulo vertical", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/lib/campaign/display.ts"),

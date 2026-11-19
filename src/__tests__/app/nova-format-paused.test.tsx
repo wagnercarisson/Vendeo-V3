@@ -52,6 +52,7 @@ const { mockIsProduct9x16Enabled } = vi.hoisted(() => ({
 vi.mock("@/lib/feature-flags/feature-flag-service", () => ({
   FeatureFlagService: class {
     isProduct9x16Enabled = mockIsProduct9x16Enabled;
+    isProduct9_16TwoStageEnabled = mockIsProduct9x16Enabled;
   },
 }));
 
@@ -142,6 +143,51 @@ describe("F59/59-08 — página nova pausa o rascunho vertical", () => {
       ...RESTORE,
       formatUnavailable: true,
       formatUnavailableReason: "incoherent_pair",
+    });
+    const element = await renderPage();
+    expect(element.props.children.props).toMatchObject({
+      campaignFormatPaused: true,
+      campaignFormatUnavailable: true,
+    });
+  });
+
+  it("rascunho conjunto + flag OFF ⇒ pausa sem trocar de formato", async () => {
+    mockMapRestoredForm.mockReturnValue({
+      ...RESTORE,
+      campaignFormat: "1:1+9:16",
+      formatContractVersion: "f60.7-two-format-v1",
+      formatUnavailable: false,
+    });
+    const element = await renderPage();
+    expect(element.props.children.props).toMatchObject({
+      verticalEnabled: false,
+      campaignFormatPaused: true,
+      campaignFormatUnavailable: false,
+      restoredForm: { campaignFormat: "1:1+9:16" },
+    });
+  });
+
+  it("rascunho conjunto + flag ON ⇒ não pausa", async () => {
+    mockIsProduct9x16Enabled.mockResolvedValue(true);
+    mockMapRestoredForm.mockReturnValue({
+      ...RESTORE,
+      campaignFormat: "1:1+9:16",
+      formatContractVersion: "f60.7-two-format-v1",
+      formatUnavailable: false,
+    });
+    const element = await renderPage();
+    expect(element.props.children.props).toMatchObject({
+      verticalEnabled: true,
+      campaignFormatPaused: false,
+    });
+  });
+
+  it("rascunho conjunto inconsistente ⇒ pausa/bloqueia", async () => {
+    mockMapRestoredForm.mockReturnValue({
+      ...RESTORE,
+      campaignFormat: "1:1+9:16",
+      formatUnavailable: true,
+      formatUnavailableReason: "two_format_inconsistent",
     });
     const element = await renderPage();
     expect(element.props.children.props).toMatchObject({

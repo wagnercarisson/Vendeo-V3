@@ -156,12 +156,16 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
               <p className="font-semibold">
                 {campaignFormatUnavailable
                   ? "Formato indisponível"
-                  : "Novo envio vertical pausado"}
+                  : fields.campaignFormat === "1:1+9:16"
+                    ? "Envio de dois formatos pausado"
+                    : "Novo envio vertical pausado"}
               </p>
               <p className="mt-1">
                 {campaignFormatUnavailable
                   ? "Não foi possível confirmar o formato desta campanha. Nada foi cobrado."
-                  : "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada."}
+                  : fields.campaignFormat === "1:1+9:16"
+                    ? "Este rascunho usa dois formatos. O envio conjunto está temporariamente indisponível. Sua escolha de formato foi preservada."
+                    : "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada."}
               </p>
             </div>
           )}
@@ -170,6 +174,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             onChange={(format) => setField("campaignFormat", format)}
             disabled={isSubmitting || campaignFormatPaused}
             verticalEnabled={verticalEnabled && !campaignFormatPaused}
+            jointEnabled={verticalEnabled && !campaignFormatPaused}
           />
         </div>
       )}
@@ -185,6 +190,24 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
           variant="processing"
           flowKind={flowKind}
         />
+        {processingResult.partial === "indeterminate" && (
+          <div
+            role="alert"
+            className="mx-auto mb-4 max-w-md rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
+          >
+            Um formato foi entregue e o outro ainda não pôde ser confirmado. A
+            operação foi preservada para consulta; verifique novamente.
+          </div>
+        )}
+        {processingResult.partial === "finalization_pending" && (
+          <div
+            role="status"
+            className="mx-auto mb-4 max-w-md rounded-lg border border-border-light bg-bg-surface p-3 text-sm text-text-secondary"
+          >
+            A entrega de um formato já foi encerrada; a finalização do outro está
+            pendente. Você pode verificar novamente ou retomar quando autorizado.
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 justify-center pb-8">
           <button
             type="button"
@@ -256,7 +279,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             supportEmail={supportEmail}
             campaignId={unknownResult.campaignId}
             operationId={unknownResult.operationId}
-            imageRecoveryAvailable={flowKind !== "two_stage_9_16"}
+            imageRecoveryAvailable={flowKind === "one_to_one"}
             onResolved={handleUnknownResolved}
           />
         </div>

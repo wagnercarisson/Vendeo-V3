@@ -13,6 +13,7 @@ import {
   resolveCampaignFormat,
   type CampaignFormatUnavailableReason,
 } from "./format-resolution";
+import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -459,7 +460,7 @@ export interface CampaignFormRestore {
    * F59/D-03 — formato PERSISTIDO do rascunho. Ausência das duas chaves no
    * snapshot ⇒ `1:1` (contrato histórico). Nunca inferido pelo cliente.
    */
-  readonly campaignFormat?: "1:1" | "9:16";
+  readonly campaignFormat?: "1:1" | "9:16" | "1:1+9:16";
   readonly formatContractVersion?: string | null;
   /**
    * `true` quando o par formato/versão persistido é malformado/incoerente. O
@@ -513,31 +514,48 @@ export function mapRestoredForm(
   const name = typeof product?.name === "string" ? product.name : "";
   if (!name.trim()) return null;
 
-  // F59 — MESMA tabela neutra usada pela criação/recuperação. Nenhuma variante
-  // local: pares malformados/incoerentes viram `formatUnavailable` (bloqueio).
+  // F59/F60.7 — MESMA tabela neutra usada pela criação/recuperação. A
+  // classificação CONJUNTA vem ANTES do resolvedor legado: joint consistente
+  // preserva o formato; joint inconsistente bloqueia (nunca cai em 1:1/9:16).
+  const jointClassification = classifyTwoFormatCampaign(snap);
   const formatResolution = resolveCampaignFormat(snap);
   const rawFormat = snap[CAMPAIGN_FORMAT_KEY];
-  const displayFormat: "1:1" | "9:16" | undefined =
-    rawFormat === "9:16" || rawFormat === "1:1" ? rawFormat : undefined;
+  const displayFormat: "1:1" | "9:16" | "1:1+9:16" | undefined =
+    rawFormat === "9:16" || rawFormat === "1:1" || rawFormat === "1:1+9:16"
+      ? rawFormat
+      : undefined;
   const formatFields =
-    formatResolution.kind === "9:16"
+    jointClassification.kind === "two_format"
       ? {
-          campaignFormat: "9:16" as const,
-          formatContractVersion: formatResolution.contractVersion,
+          campaignFormat: "1:1+9:16" as const,
+          formatContractVersion: "f60.7-two-format-v1",
           formatUnavailable: false,
         }
-      : formatResolution.kind === "1:1"
+      : jointClassification.kind === "inconsistent"
         ? {
-            campaignFormat: "1:1" as const,
-            formatContractVersion: null,
-            formatUnavailable: false,
-          }
-        : {
             ...(displayFormat ? { campaignFormat: displayFormat } : {}),
             formatContractVersion: null,
             formatUnavailable: true,
-            formatUnavailableReason: formatResolution.reason,
-          };
+            formatUnavailableReason: "two_format_inconsistent" as const,
+          }
+        : formatResolution.kind === "9:16"
+          ? {
+              campaignFormat: "9:16" as const,
+              formatContractVersion: formatResolution.contractVersion,
+              formatUnavailable: false,
+            }
+          : formatResolution.kind === "1:1"
+            ? {
+                campaignFormat: "1:1" as const,
+                formatContractVersion: null,
+                formatUnavailable: false,
+              }
+            : {
+                ...(displayFormat ? { campaignFormat: displayFormat } : {}),
+                formatContractVersion: null,
+                formatUnavailable: true,
+                formatUnavailableReason: formatResolution.reason,
+              };
 
   const commercial = asRecord(snap.commercial) ?? {};
   const creative = asRecord(snap.creativeContext) ?? {};
