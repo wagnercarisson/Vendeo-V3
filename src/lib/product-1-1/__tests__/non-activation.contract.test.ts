@@ -440,6 +440,15 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/orchestration/attempt-start-client",
     ],
   },
+  // F60.7 C4 — composição de produção da resolução administrativa conjunta.
+  // Pares EXATOS; nenhum prefixo.
+  ["src/lib/product-two-format/admin/joint-admin-deps.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+    ],
+  },
   // F60.7 C1 — snapshot inicial usa a copy/preço e o bloco de identidade já
   // aceitos do novo fluxo. Pares EXATOS; nenhum runtime de geração.
   ["src/lib/product-two-format/orchestration/joint-initial-snapshot.ts"]: {

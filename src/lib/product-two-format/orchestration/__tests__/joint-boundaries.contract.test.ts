@@ -54,6 +54,11 @@ const C2_PRODUCTION_CONSUMERS = new Set([
   "src/components/flow/use-two-format-polling.ts",
 ]);
 
+/** C4 — única rota administrativa conjunta autorizada (sem UI). */
+const C4_PRODUCTION_CONSUMERS = new Set([
+  "src/app/api/admin/product-two-format-pending/route.ts",
+]);
+
 function walk(directory: string): string[] {
   const absolute = path.join(ROOT, directory);
   const entries = readdirSync(absolute);
@@ -98,7 +103,8 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
       for (const file of walk(directory)) {
         if (
           C1_PRODUCTION_CONSUMERS.has(file) ||
-          C2_PRODUCTION_CONSUMERS.has(file)
+          C2_PRODUCTION_CONSUMERS.has(file) ||
+          C4_PRODUCTION_CONSUMERS.has(file)
         ) {
           continue;
         }
@@ -113,6 +119,7 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     const allowedChanged = new Set([
       ...C1_PRODUCTION_CONSUMERS,
       ...C2_PRODUCTION_CONSUMERS,
+      ...C4_PRODUCTION_CONSUMERS,
       "src/app/api/campaign/[id]/continue/__tests__/route.test.ts",
       "src/app/api/campaign/generation-status/__tests__/route.test.ts",
     ]);
@@ -124,7 +131,9 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     expect(changed.every((file) => allowedChanged.has(file))).toBe(true);
     const appFiles = walk("src/app");
     expect(appFiles.some((file) => file.endsWith(".tsx"))).toBe(true);
-    expect(appFiles.some((file) => /\/joint|two-format/i.test(file))).toBe(false);
+    expect(
+      appFiles.filter((file) => /\/joint|two-format/i.test(file) && file.endsWith(".tsx")),
+    ).toEqual([]);
   });
 
   it("Teste 3: schema aceita o par conjunto exato sem promover campos extras", () => {
@@ -185,6 +194,7 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     }
     expect(serverImports.sort()).toEqual(
       [
+        "src/lib/product-two-format/admin/joint-admin-deps.ts",
         "src/lib/product-two-format/control-reader.ts",
         "src/lib/product-two-format/delivery-reader.ts",
         "src/lib/product-two-format/joint-financial-client.ts",
@@ -204,6 +214,7 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     const entries = jointImporterEntries(guard);
     expect(entries.sort()).toEqual(
       [
+        "src/lib/product-two-format/admin/joint-admin-deps.ts",
         "src/lib/product-two-format/orchestration/deliver-joint-vertical.ts",
         "src/lib/product-two-format/orchestration/deliver-square.ts",
         "src/lib/product-two-format/orchestration/finalize-joint-failure.ts",

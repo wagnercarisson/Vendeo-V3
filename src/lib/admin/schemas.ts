@@ -452,6 +452,27 @@ export type ProductOneToOnePendingResolution = z.infer<
   typeof ProductOneToOnePendingResolutionSchema
 >;
 
+/**
+ * F60.7 C4 — resolução administrativa CONJUNTA por formato.
+ *
+ * Schema dedicado e estrito: a rota legada de 1:1 não é alterada e o cliente
+ * nunca envia evidência/path/token/ator. `operationId` é a operação de CONTROLE;
+ * o serviço resolve a identidade financeira do formato.
+ */
+export const ProductTwoFormatPendingResolutionSchema = z
+  .object({
+    campaignId: z.string().uuid(),
+    operationId: z.string().uuid(),
+    format: z.enum(["1:1", "9:16"]),
+    action: z.enum(["deliver", "refund"]),
+    reason: z.string().trim().min(1),
+  })
+  .strict();
+
+export type ProductTwoFormatPendingResolution = z.infer<
+  typeof ProductTwoFormatPendingResolutionSchema
+>;
+
 // ─── Assinatura Visual — configuração dedicada (F47.3-lh9) ───────────────────
 // Schemas estritos da superfície administrativa do card
 // `visual_signature_image`. A gravação ocorre apenas pelas RPCs dedicadas

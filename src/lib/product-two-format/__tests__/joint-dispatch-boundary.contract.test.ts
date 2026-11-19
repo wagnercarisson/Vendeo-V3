@@ -152,14 +152,25 @@ describe("F60.7-09 — fronteira do dispatch administrativo", () => {
     });
   });
 
-  it("Teste 4: nenhum arquivo de `src/app` referencia o dispatch conjunto", () => {
+  it("Teste 4: somente a rota administrativa C4 referencia o dispatch conjunto; nenhuma UI", () => {
     const appFiles = walk("src/app");
     expect(appFiles.length).toBeGreaterThan(0);
+    const allowed = new Set([
+      "src/app/api/admin/product-two-format-pending/route.ts",
+    ]);
+    const jointDispatchFiles: string[] = [];
     for (const file of appFiles) {
+      if (file.includes("__tests__")) continue;
       const source = readFileSync(path.resolve(process.cwd(), file), "utf8");
-      expect(source, file).not.toContain("resolve-joint-pending");
       expect(source, file).not.toContain("pending-recognition");
+      if (source.includes("resolve-joint-pending")) {
+        jointDispatchFiles.push(file.replace(/\\/g, "/"));
+      }
     }
+    expect(jointDispatchFiles.sort()).toEqual([...allowed].sort());
+    expect(
+      jointDispatchFiles.some((file) => file.endsWith(".tsx")),
+    ).toBe(false);
   });
 
   it("Teste 5: o schema administrativo continua sem o campo proibido", () => {
