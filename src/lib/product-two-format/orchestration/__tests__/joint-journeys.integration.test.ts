@@ -7,6 +7,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import { openJointOperation } from "../joint-operation-service";
+import { preflightJointSelection } from "../preflight";
 import { runJointBase } from "../joint-base";
 import { deliverJointSquare } from "../deliver-square";
 import { deliverTwoFormatVertical } from "../deliver-joint-vertical";
@@ -76,9 +77,15 @@ async function openBaseSquare(
   const world = createJointOfflineWorld();
   world.seedScenario();
   const deps = await createJointWorldDeps(world, options);
-  const opened = await openJointOperation(jointOpenInput(), {
-    openJointDelivery: (input) => deps.joint.jointClient.openJointDelivery(input),
-  });
+  const preflight = await preflightJointSelection(deps.joint.preflight);
+  expect(preflight.ok).toBe(true);
+  if (!preflight.ok) throw new Error("preflight_failed");
+  const opened = await openJointOperation(
+    jointOpenInput({ selection: preflight.selection }),
+    {
+      openJointDelivery: (input) => deps.joint.jointClient.openJointDelivery(input),
+    },
+  );
   expect(opened.kind).toBe("opened");
   const base = await runJointBase(jointBaseInput(), deps.baseDeps);
   expect(base).toEqual({ kind: "completed" });
@@ -89,8 +96,6 @@ async function openBaseSquare(
 
 async function fullSuccess() {
   const { world, deps } = await openBaseSquare();
-  const preflight = await deps.nine.deps.preflightExpansion();
-  expect(preflight.ok).toBe(true);
   const vertical = await deliverTwoFormatVertical(
     jointVerticalInput(),
     deps.verticalDeps,
@@ -311,6 +316,12 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     expect(campaign(world)?.status).toBe("ready");
     const callsAfterFirst = deps.thumbnailCalls();
     expect(callsAfterFirst).toBeGreaterThan(0);
+    expect(deps.thumbnailStatuses()).toContain("created");
+    expect(
+      world.base.handles.uploads.some(
+        (upload) => upload.bucket === "campaign-images",
+      ),
+    ).toBe(true);
     const second = await deps.resumeDeps.repairProjection({
       storeId: STORE_ID,
       campaignId: CAMPAIGN_ID,
@@ -437,5 +448,22 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     }
     expect(creditStatus(world, SQUARE_DELIVERY_ID)).toBe("delivered");
     expect(rpcCount(world, "product_two_format_refund_format", "1:1")).toBe(1);
+  });
+
+  it("Teste 18: falha de configuração no preflight não abre, reserva nem chama provider", async () => {
+    const world = createJointOfflineWorld();
+    world.seedScenario();
+    for (let index = world.rows.length - 1; index >= 0; index -= 1) {
+      if (world.rows[index].__table === "nine_sixteen_expansion_model_config") {
+        world.rows.splice(index, 1);
+      }
+    }
+    const deps = await createJointWorldDeps(world);
+    const preflight = await preflightJointSelection(deps.joint.preflight);
+    expect(preflight.ok).toBe(false);
+    expect(world.rpcCounts["product_two_format_open_delivery"] ?? 0).toBe(0);
+    expect(world.creditRowFor(OPERATION_ID)).toBeNull();
+    expect(deps.counters.baseProviderCalls).toBe(0);
+    expect(deps.counters.expansionProviderCalls).toBe(0);
   });
 });

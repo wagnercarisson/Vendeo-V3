@@ -441,4 +441,92 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
     );
     expect(projection.error?.message).toBe("delivery_links_inconsistent");
   });
+
+  it("Teste 11: entrega valida arte canônica, par estrito e replay de refund antes de arte/publicação", async () => {
+    const delivery = await setup();
+    const publication = await delivery.deps.joint.credit.beginPublication(
+      CAMPAIGN_ID,
+      SQUARE_DELIVERY_ID,
+    );
+    expect(publication.acquired).toBe(true);
+    delivery.world.base.removeObject(
+      `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/square_original.jpg`,
+    );
+    const invalidArtifact = await delivery.world.client.rpc(
+      "product_two_format_deliver_format",
+      {
+        p_store_id: STORE_ID,
+        p_campaign_id: CAMPAIGN_ID,
+        p_operation_id: OPERATION_ID,
+        p_format: "1:1",
+        p_publication_token: publication.token,
+      },
+    );
+    expect(invalidArtifact.data).toMatchObject({
+      success: false,
+      reason: "artifact_incompatible",
+    });
+    expect(delivery.world.creditRowFor(SQUARE_DELIVERY_ID)?.status).toBe("reserved");
+
+    const duplicate = createJointOfflineWorld();
+    duplicate.seedScenario();
+    duplicate.seedJointState();
+    duplicate.rows.push({
+      __table: "product_two_format_deliveries",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      store_id: STORE_ID,
+      format: "1:1",
+      delivery_operation_id: SQUARE_DELIVERY_ID,
+      artifact_role: "square_original",
+      created_at: "2026-11-19T00:00:00.000Z",
+    });
+    const duplicated = await duplicate.client.rpc(
+      "product_two_format_project_campaign",
+      { p_campaign_id: CAMPAIGN_ID },
+    );
+    expect(duplicated.error?.message).toBe("delivery_links_inconsistent");
+
+    const mixed = createJointOfflineWorld();
+    mixed.seedScenario();
+    mixed.seedJointState();
+    mixed.rows.push({
+      __table: "product_two_format_deliveries",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: "99999999-9999-4999-8999-999999999999",
+      store_id: STORE_ID,
+      format: "1:1",
+      delivery_operation_id: SQUARE_DELIVERY_ID,
+      artifact_role: "square_original",
+      created_at: "2026-11-19T00:00:00.000Z",
+    });
+    const mixedResult = await mixed.client.rpc(
+      "product_two_format_project_campaign",
+      { p_campaign_id: CAMPAIGN_ID },
+    );
+    expect(mixedResult.error?.message).toBe("delivery_links_inconsistent");
+
+    const replay = await setup({
+      state: { sharedOutcome: "failed" },
+      squareArtifact: true,
+    });
+    const credit = replay.world.creditRowFor(SQUARE_DELIVERY_ID);
+    if (credit) {
+      credit.status = "refunded";
+      credit.publication_state = "published";
+    }
+    const replayed = await replay.world.client.rpc(
+      "product_two_format_refund_format",
+      {
+        p_store_id: STORE_ID,
+        p_campaign_id: CAMPAIGN_ID,
+        p_operation_id: OPERATION_ID,
+        p_format: "1:1",
+        p_art_kind: "absent",
+        p_observed_epoch: 0,
+        p_reason: "motivo",
+      },
+    );
+    expect(replayed.data).toMatchObject({ success: true, idempotent: true });
+  });
 });

@@ -41,6 +41,9 @@ import { preflightExpansionToNineSixteen } from "@/lib/campaign/vertical-expansi
 import { runPreparationStep } from "@/lib/product-9-16-two-stage/orchestration/preparation-step";
 import { runExpansionStep } from "@/lib/product-9-16-two-stage/orchestration/expansion-step";
 import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
+import { runNewFlowPreflight } from "@/lib/product-1-1/orchestration/preflight";
+import { ImageModelPairConfigService } from "@/lib/ai/image-model-pair-config-service";
+import { ImagePairPricingService } from "@/lib/ai-cost/image-pair-pricing";
 import { readSquareBaseFrozenState } from "@/lib/campaign/square-base/frozen-state";
 import { projectClosedCampaign } from "@/lib/product-1-1/orchestration/project-closed-campaign";
 import { projectDeliveredCampaign } from "@/lib/product-1-1/orchestration/project-delivered-campaign";
@@ -456,6 +459,49 @@ export function createJointOfflineWorld() {
         output_token_usd_per_1m: 2,
         cached_input_token_usd_per_1m: 0.5,
         image_unit_usd: 0.05,
+        image_token_usd_per_1m: 4,
+        image_input_token_usd_per_1m: 3,
+        image_cached_input_token_usd_per_1m: 5,
+      },
+      {
+        __table: "image_model_pair_config",
+        scope: "new_flow",
+        primary_model: "gpt-image-2.5-sunburst",
+        primary_quality: "medium",
+        fallback_model: "gpt-image-2",
+        fallback_quality: "low",
+        config_version_id: "cfg-1",
+        reason: null,
+        updated_by: null,
+        updated_at: "2026-11-18T00:00:00.000Z",
+        created_at: "2026-11-18T00:00:00.000Z",
+      },
+      {
+        __table: "ai_model_pricing",
+        id: "pricing-primary",
+        provider: "openai",
+        model: "gpt-image-2.5-sunburst",
+        quality: "medium",
+        effective_until: null,
+        input_token_usd_per_1m: 1,
+        output_token_usd_per_1m: 2,
+        cached_input_token_usd_per_1m: 0.5,
+        image_unit_usd: 0.05,
+        image_token_usd_per_1m: 4,
+        image_input_token_usd_per_1m: 3,
+        image_cached_input_token_usd_per_1m: 5,
+      },
+      {
+        __table: "ai_model_pricing",
+        id: "pricing-fallback",
+        provider: "openai",
+        model: "gpt-image-2",
+        quality: "low",
+        effective_until: null,
+        input_token_usd_per_1m: 1,
+        output_token_usd_per_1m: 2,
+        cached_input_token_usd_per_1m: 0.5,
+        image_unit_usd: 0.04,
         image_token_usd_per_1m: 4,
         image_input_token_usd_per_1m: 3,
         image_cached_input_token_usd_per_1m: 5,
@@ -1518,18 +1564,46 @@ export function createJointOfflineWorld() {
   }
 
   function assertJointPair(): void {
-    const squareLink = jointLink("1:1");
-    const verticalLink = jointLink("9:16");
+    const links = tableRows("product_two_format_deliveries").filter(
+      (row) => row.campaign_id === CAMPAIGN_ID,
+    );
+    const squares = links.filter((row) => row.format === "1:1");
+    const verticals = links.filter((row) => row.format === "9:16");
     if (
-      !squareLink ||
-      !verticalLink ||
-      squareLink.delivery_operation_id !== SQUARE_DELIVERY_ID ||
-      verticalLink.delivery_operation_id !== OPERATION_ID ||
+      links.length !== 2 ||
+      squares.length !== 1 ||
+      verticals.length !== 1 ||
+      links.some((row) => row.operation_id !== OPERATION_ID) ||
+      squares[0].delivery_operation_id !== SQUARE_DELIVERY_ID ||
+      verticals[0].delivery_operation_id !== OPERATION_ID ||
       !creditRowFor(SQUARE_DELIVERY_ID) ||
       !creditRowFor(OPERATION_ID)
     ) {
       throw new Error("delivery_links_inconsistent");
     }
+  }
+
+  function formatArtifactIssue(format: string): string | null {
+    const role = format === "1:1" ? "square_original" : "vertical";
+    const expectedWidth = format === "1:1" ? 1024 : 1080;
+    const expectedHeight = format === "1:1" ? 1024 : 1920;
+    const expectedPath = `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/${role}.jpg`;
+    const rows = base
+      .rowsForTable("campaign_composition_artifacts")
+      .filter((row) => row.operation_id === OPERATION_ID && row.role === role);
+    if (rows.length !== 1) return "artifact_incompatible";
+    const row = rows[0];
+    if (
+      row.format !== format ||
+      row.width !== expectedWidth ||
+      row.height !== expectedHeight ||
+      row.mime_type !== "image/jpeg" ||
+      row.storage_path !== expectedPath ||
+      !base.hasObject(expectedPath)
+    ) {
+      return "artifact_incompatible";
+    }
+    return null;
   }
 
   function hasFormatArtifact(format: string): boolean {
@@ -1704,6 +1778,10 @@ export function createJointOfflineWorld() {
     assertJointPair();
     assertOwnToken(credit, params.p_publication_token);
     if (credit.status === "refunded") return { success: false, reason: "operation_terminal" };
+    const artifactIssue = formatArtifactIssue(format);
+    if (artifactIssue !== null) {
+      return { success: false, reason: artifactIssue };
+    }
     if (credit.status === "delivered") {
       return {
         success: true,
@@ -1759,12 +1837,6 @@ export function createJointOfflineWorld() {
       throw new Error("publication_in_progress");
     }
     if (credit.status === "delivered") return { success: false, reason: "delivered_not_refundable" };
-    if (["in_flight", "result_unknown", "published"].includes(credit.publication_state)) {
-      throw new Error("publication_in_progress");
-    }
-    if (hasFormatArtifact(format)) {
-      return { success: false, reason: "artifact_present" };
-    }
     if (credit.status === "refunded") {
       return {
         success: true,
@@ -1781,6 +1853,12 @@ export function createJointOfflineWorld() {
         projected: false,
         already_projected: true,
       };
+    }
+    if (["in_flight", "result_unknown", "published"].includes(credit.publication_state)) {
+      throw new Error("publication_in_progress");
+    }
+    if (hasFormatArtifact(format)) {
+      return { success: false, reason: "artifact_present" };
     }
     if (claims().some((claim) => claim.status === "in_progress")) {
       throw new Error("operation_in_progress");
@@ -2281,15 +2359,13 @@ export async function createOfflineDeps(
     clock: () => now,
     callIdFactory: () => `base-call-${counters.baseProviderCalls + 1}`,
     runCopy: runSquareBaseCopy,
-    runPreflight: async () => ({
-      config: {
-        primary: { model: "gpt-image-2.5-sunburst", quality: "medium" },
-        fallback: { model: "gpt-image-2", quality: "low" },
-        origin: "selection",
-        configVersionId: "cfg-1",
-      },
-      pricing: {} as never,
-    }),
+    runPreflight: () =>
+      runNewFlowPreflight({
+        resolveConfig: () =>
+          new ImageModelPairConfigService(world.client).resolveImageModelPairConfig(),
+        assertExecutable: (pair) =>
+          new ImagePairPricingService(world.client).assertExecutable(pair),
+      }),
     readFrozenState: (async (
       input: { campaignId: string; operationId: string },
       deps?: { client?: SupabaseClient },
@@ -2577,6 +2653,7 @@ export async function createJointWorldDeps(
   };
 
   const thumbnails = new Set<string>();
+  const thumbnailStatuses: unknown[] = [];
   let thumbnailCalls = 0;
   const resumeDeps = {
     readDelivery: (input: {
@@ -2642,6 +2719,11 @@ export async function createJointWorldDeps(
         generateThumbnail: async (thumbnailInput) => {
           const result = await joint.generateThumbnail(thumbnailInput);
           thumbnailCalls += 1;
+          thumbnailStatuses.push(
+            typeof result === "object" && result !== null
+              ? (result as { status?: unknown }).status
+              : undefined,
+          );
           if (
             typeof result === "object" &&
             result !== null &&
@@ -2814,6 +2896,7 @@ export async function createJointWorldDeps(
     adminDeps,
     counters: nine.counters,
     thumbnailCalls: () => thumbnailCalls,
+    thumbnailStatuses: () => [...thumbnailStatuses],
   };
 }
 
