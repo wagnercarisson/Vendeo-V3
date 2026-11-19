@@ -32,30 +32,32 @@
 
 > Entrega técnica intermediária. A opção conjunta ainda não fica disponível ao lojista.
 
-- [ ] 3.1 Implementar o preflight estrito da seleção administrativa antes da abertura conjunta, reutilizando catálogo/pricing e sem provider, reserva ou operação.
-- [ ] 3.2 Implementar a abertura conjunta no serviço dedicado, com idempotência, conflito de seleção/origem e leitura dos dois IDs financeiros.
-- [ ] 3.3 Implementar a etapa de base reutilizando `runSquareBase`/`runBaseStep` com a identidade da operação conjunta, sem duplicar briefing, copy ou imagem.
-- [ ] 3.4 Implementar a sonda de integridade do `square_original` (papel, formato, 1024×1024, JPEG, checksum) e a liquidação da entrega quadrada imediatamente após a base, na ordem artefato persistido/verificado → token de publicação → RPC de confirmação + projeção, sem novo upload.
-- [ ] 3.5 Implementar a projeção e a miniatura quadrada após a confirmação do quadrado, antes de preparação/expansão.
-- [ ] 3.6 Implementar `deliverTwoFormatVertical` dedicado, sem usar `deliverVertical` como confirmador; reutilizar `control.resume`, sonda vertical, `beginPublication` após o artefato persistido/verificado e a RPC atômica de entrega por formato, sem novo upload.
-- [ ] 3.7 Implementar a finalização de falha da base: ausência comprovada estorna os dois formatos, gravando o desfecho `failed` da identidade financeira do quadrado pela RPC existente (`product_1_1_record_generation_outcome`) antes do estorno, conforme handoff já previsto em A; indeterminação não estorna nem repete; arte íntegra liquida a entrega; falha entre desfecho e estorno e falha entre os dois estornos permanecem seguras e retomáveis.
-- [ ] 3.8 Implementar a falha definitiva de preparação/expansão com estorno somente do vertical e preservação do quadrado entregue.
-- [ ] 3.9 Implementar a recuperação que atua somente no formato faltante: não refaz base/copy/quadrado entregue, não reabre estorno e não cria cobrança silenciosa.
-- [ ] 3.10 Implementar a liquidação de artefato existente com confirmação pendente, sem chamada de provider.
-- [ ] 3.11 Implementar o reparo idempotente de projeção e miniatura em replay/reload, cobrindo falha entre confirmação, projeção e leitura.
-- [ ] 3.12 Reconhecer o vínculo conjunto na lista de pendências, exibindo campanha, formato e operação de entrega.
-- [ ] 3.13 Usar a sonda `square_original` para a pendência quadrada e a sonda vertical existente para o vertical, nunca a sonda 1:1 legada para o quadrado conjunto.
-- [ ] 3.14 Implementar o bloqueio de resolução incompatível e a resolução de entrega/estorno por formato com evidência server-side, auditoria, projeção conjunta e bloqueio de etapa ativa; o estorno do quadrado grava o desfecho `failed` da própria identidade antes do refund, e `unknown` persistido bloqueia sem sobrescrita.
-- [ ] 3.15 Garantir que ausência/indeterminação não autorize estorno presumido e que o formato já entregue não seja estornado.
-- [ ] 3.16 Cobrir com testes integrados offline pelos componentes reais, com fakes apenas nas fronteiras de banco/provider: percurso completo, base única, entrega quadrada, vertical dedicado, entrega parcial, estorno por formato, indeterminação, replay, concorrência, resposta tardia, reload, recuperação somente do faltante, ordem artefato persistido/verificado → token → RPC sem novo upload/duplicação da imagem, handoff `record_generation_outcome → refund` e as janelas de falha entre desfecho e estorno e entre os dois estornos.
-- [ ] 3.17 Cobrir a proteção administrativa: pendência quadrada correta, pendência vertical, entrega com artefato íntegro, estorno sem evidência recusado, etapa ativa bloqueada e formato entregue não estornado.
-- [ ] 3.18 Confirmar que a Subfatia B não possui entrypoint público/UI da opção conjunta e que a atomicidade de confirmação+projeção é exercida pela RPC, não por chamadas separadas.
+- [x] 3.1 Implementar o preflight estrito da seleção administrativa antes da abertura conjunta, reutilizando catálogo/pricing e sem provider, reserva ou operação.
+- [x] 3.2 Implementar a abertura conjunta no serviço dedicado, com idempotência, conflito de seleção/origem e leitura dos dois IDs financeiros.
+- [x] 3.3 Implementar a etapa de base reutilizando `runSquareBase`/`runBaseStep` com a identidade da operação conjunta, sem duplicar briefing, copy ou imagem.
+- [x] 3.4 Implementar a sonda de integridade do `square_original` (papel, formato, 1024×1024, JPEG, checksum) e a liquidação da entrega quadrada imediatamente após a base, na ordem artefato persistido/verificado → token de publicação → RPC de confirmação + projeção, sem novo upload.
+- [x] 3.5 Implementar a projeção e a miniatura quadrada após a confirmação do quadrado, antes de preparação/expansão.
+- [x] 3.6 Implementar `deliverTwoFormatVertical` dedicado, sem usar `deliverVertical` como confirmador; reutilizar `control.resume`, sonda vertical, `beginPublication` após o artefato persistido/verificado e a RPC atômica de entrega por formato, sem novo upload.
+- [x] 3.7 Implementar a finalização de falha da base: ausência comprovada estorna os dois formatos, gravando o desfecho `failed` da identidade financeira do quadrado pela RPC existente (`product_1_1_record_generation_outcome`) antes do estorno, conforme handoff já previsto em A; indeterminação não estorna nem repete; arte íntegra liquida a entrega; falha entre desfecho e estorno e falha entre os dois estornos permanecem seguras e retomáveis.
+- [x] 3.8 Implementar a falha definitiva de preparação/expansão com estorno somente do vertical e preservação do quadrado entregue.
+- [x] 3.9 Implementar a recuperação que atua somente no formato faltante: não refaz base/copy/quadrado entregue, não reabre estorno e não cria cobrança silenciosa.
+- [x] 3.10 Implementar a liquidação de artefato existente com confirmação pendente, sem chamada de provider.
+- [x] 3.11 Implementar o reparo idempotente de projeção e miniatura em replay/reload, cobrindo falha entre confirmação, projeção e leitura.
+- [x] 3.12 Reconhecer o vínculo conjunto na lista de pendências, exibindo campanha, formato e operação de entrega **no serviço/read model; a UI administrativa não é entregue nesta subfatia**.
+- [x] 3.13 Usar a sonda `square_original` para a pendência quadrada e a sonda vertical existente para o vertical, nunca a sonda 1:1 legada para o quadrado conjunto.
+- [x] 3.14 Implementar o bloqueio de resolução incompatível e a resolução de entrega/estorno por formato com evidência server-side, auditoria, projeção pela RPC/07 (não no serviço de resolução) e bloqueio de etapa ativa; o estorno do quadrado grava o desfecho `failed` da própria identidade antes do refund, e `unknown` persistido bloqueia sem sobrescrita.
+- [x] 3.15 Garantir que ausência/indeterminação não autorize estorno presumido e que o formato já entregue não seja estornado.
+- [x] 3.16 Cobrir com testes integrados offline pelos componentes reais, com fakes apenas nas fronteiras de banco/provider: percurso completo, base única, entrega quadrada, vertical dedicado, entrega parcial, estorno por formato, indeterminação, replay, concorrência, resposta tardia, reload, recuperação somente do faltante, ordem artefato persistido/verificado → token → RPC sem novo upload/duplicação da imagem, handoff `record_generation_outcome → refund` e as janelas de falha entre desfecho e estorno e entre os dois estornos.
+- [x] 3.17 Cobrir a proteção administrativa: pendência quadrada correta, pendência vertical, entrega com artefato íntegro, estorno sem evidência recusado, etapa ativa bloqueada e formato entregue não estornado.
+- [x] 3.18 Confirmar que a Subfatia B não possui entrypoint público/UI da opção conjunta e que a atomicidade de confirmação+projeção é exercida pela RPC, não por chamadas separadas.
 
 ## 4. Gate B — Revisão e aceite da orquestração
 
-- [ ] 4.1 Executar typecheck/lint/diff e as suítes integradas offline da Subfatia B; validar OpenSpec strict.
-- [ ] 4.2 Revisar orquestração, entrega parcial, recuperação e proteção administrativa antes de qualquer validação real de banco.
-- [ ] 4.3 Registrar aceite ou correções da Subfatia B; confirmar que a opção conjunta permanece indisponível ao lojista.
+- [x] 4.1 Executar typecheck/lint/diff e as suítes integradas offline da Subfatia B; validar OpenSpec strict.
+- [x] 4.2 Revisar orquestração, entrega parcial, recuperação e proteção administrativa antes de qualquer validação real de banco.
+- [x] 4.3 Registrar aceite ou correções da Subfatia B; confirmar que a opção conjunta permanece indisponível ao lojista.
+
+> **Aceite local/offline de B (2026-11-19):** `3.1–3.18` e `4.1–4.3` concluídos no escopo local/offline, com o histórico de correções preservado nos SUMMARYs e em `60.7-B-VERIFICATION.md`. **Wiring administrativo/UI continua ADIADO** — `3.12`/`3.14` entregam serviço, read model e resolução server-side, não uma tela. A opção conjunta permanece indisponível ao lojista. O Gate de banco (`5.x`) permanece **pendente e não autorizado**; este aceite não aplica migration, não valida PostgreSQL/PostgREST/Storage/provider e não aprova produção ou Subfatia C.
 
 ## 5. Gate de banco — Validação real da migration
 
