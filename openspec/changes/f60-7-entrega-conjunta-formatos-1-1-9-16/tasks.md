@@ -57,7 +57,7 @@
 - [x] 4.2 Revisar orquestração, entrega parcial, recuperação e proteção administrativa antes de qualquer validação real de banco.
 - [x] 4.3 Registrar aceite ou correções da Subfatia B; confirmar que a opção conjunta permanece indisponível ao lojista.
 
-> **Aceite local/offline de B (2026-11-19):** `3.1–3.18` e `4.1–4.3` concluídos no escopo local/offline, com o histórico de correções preservado nos SUMMARYs e em `60.7-B-VERIFICATION.md`. **Wiring administrativo/UI continua ADIADO** — `3.12`/`3.14` entregam serviço, read model e resolução server-side, não uma tela. A opção conjunta permanece indisponível ao lojista. O Gate de banco (`5.x`) permanece **pendente e não autorizado**; este aceite não aplica migration, não valida PostgreSQL/PostgREST/Storage/provider e não aprova produção ou Subfatia C.
+> **Aceite local/offline de B (2026-11-19):** `3.1–3.18` e `4.1–4.3` concluídos no escopo local/offline, com o histórico de correções preservado nos SUMMARYs e em `60.7-B-VERIFICATION.md`. **Wiring administrativo/UI continua ADIADO** — `3.12`/`3.14` entregam serviço, read model e resolução server-side, não uma tela. A opção conjunta permanece indisponível ao lojista. O Gate de banco (`5.x`) foi **executado no homolog em 2026-11-19** com **20/20 PASS** e evidências em `60.7-GATE-B-DB-APPLY.md`; **o aceite do gate aguarda revisão e não é automático**. Este relatório não aprova produção ou Subfatia C.
 
 ## 5. Gate de banco — Validação real da migration
 
@@ -68,6 +68,8 @@
 - [ ] 5.3 Validar no PostgreSQL: abertura atômica das duas reservas, saldo insuficiente sem estado parcial, idempotência, conflito de seleção, concorrência, entrega/estorno por formato, projeção e resposta tardia.
 - [ ] 5.4 Validar que as RPCs/consultas dos fluxos 1:1/9:16 individuais e históricos permanecem intactas.
 - [ ] 5.5 Registrar evidência e limitações; se a autorização não existir, bloquear a liberação da Subfatia C e não declarar a migration validada.
+
+> **Execução do Gate de banco (2026-11-19):** `5.1–5.5` **executados** no homolog autorizado, com backup, aplicação transacional, ledger 156→157, 20/20 cenários PASS, regressão 1:1/9:16 e fixtures preservadas/inventariadas. Evidência em `60.7-GATE-B-DB-APPLY.md`. **Os checkboxes permanecem abertos até o aceite formal da revisão** — a execução não aprova o gate nem libera a Subfatia C.
 
 ## 6. Subfatia C — Jornada e apresentação
 

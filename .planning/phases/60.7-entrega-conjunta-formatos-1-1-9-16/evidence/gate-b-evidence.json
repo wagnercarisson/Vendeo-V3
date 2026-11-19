@@ -1,0 +1,1022 @@
+{
+  "kind": "f60.7-gate-b-db",
+  "run_id": "f607-gate-b-20261119",
+  "generated_at": "2026-11-19T15:59:11.937Z",
+  "execution_mode": "incremental-merged-by-scenario",
+  "target": {
+    "database": "postgres",
+    "version": "PostgreSQL 17.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "connection": "postgres://<redacted>@127.0.0.1:57782/postgres",
+    "container": "supabase_db_vendeo-homolog",
+    "ledger": 157,
+    "f607Ledger": 1,
+    "legalLedger": 0,
+    "table": "product_two_format_deliveries"
+  },
+  "scenarios": [
+    {
+      "id": "S01",
+      "name": "Abertura nova com saldo suficiente",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.265Z",
+      "finished_at": "2026-11-19T15:35:03.292Z",
+      "status": "PASS",
+      "result": {
+        "links": 2,
+        "ledger": {
+          "deductions": 2,
+          "refunds": 0,
+          "net": -2
+        },
+        "balanceBefore": 10,
+        "balanceAfter": 8
+      }
+    },
+    {
+      "id": "S02",
+      "name": "Abertura com saldo insuficiente",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.292Z",
+      "finished_at": "2026-11-19T15:35:03.318Z",
+      "status": "PASS",
+      "result": {
+        "error": "credit_reservation_missing_tx",
+        "links": 0,
+        "operations": 0,
+        "balance": 1
+      }
+    },
+    {
+      "id": "S03",
+      "name": "Replay de abertura equivalente",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.318Z",
+      "finished_at": "2026-11-19T15:35:03.343Z",
+      "status": "PASS",
+      "result": {
+        "idempotent": true,
+        "links": 2,
+        "ledger": {
+          "deductions": 2,
+          "refunds": 0,
+          "net": -2
+        },
+        "model": "gpt-image-2.5-flare"
+      }
+    },
+    {
+      "id": "S04",
+      "name": "Replay de abertura divergente",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.343Z",
+      "finished_at": "2026-11-19T15:35:03.369Z",
+      "status": "PASS",
+      "result": {
+        "reason": "operation_config_conflict",
+        "frozenModel": "gpt-image-2.5-flare",
+        "ledger": {
+          "deductions": 2,
+          "refunds": 0,
+          "net": -2
+        }
+      }
+    },
+    {
+      "id": "S05",
+      "name": "Entrega 1:1 concorrente com estorno do quadrado",
+      "mode": "concurrent",
+      "started_at": "2026-11-19T15:34:21.416Z",
+      "finished_at": "2026-11-19T15:34:22.030Z",
+      "status": "PASS",
+      "result": {
+        "overlapObserved": true,
+        "refundResult": {
+          "reason": "delivered_not_refundable",
+          "success": false
+        },
+        "squareStatus": "delivered",
+        "ledger": {
+          "deductions": 2,
+          "refunds": 0,
+          "net": -2
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "name": "Entrega por formato concorrente/repetida",
+      "mode": "concurrent",
+      "started_at": "2026-11-19T15:34:22.030Z",
+      "finished_at": "2026-11-19T15:34:22.623Z",
+      "status": "PASS",
+      "result": {
+        "overlapObserved": true,
+        "secondIdempotent": true,
+        "repeatIdempotent": true,
+        "ledger": {
+          "deductions": 2,
+          "refunds": 0,
+          "net": -2
+        }
+      }
+    },
+    {
+      "id": "S07",
+      "name": "Estorno vertical com arte ausente/finalidade",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.369Z",
+      "finished_at": "2026-11-19T15:35:03.415Z",
+      "status": "PASS",
+      "result": {
+        "vertical": "refunded",
+        "square": "reserved",
+        "refunds": 1,
+        "artifactRefusal": "artifact_present"
+      }
+    },
+    {
+      "id": "S08",
+      "name": "Estorno do quadrado com handoff failed",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.415Z",
+      "finished_at": "2026-11-19T15:35:03.454Z",
+      "status": "PASS",
+      "result": {
+        "missingOwnFinality": "finality_not_recorded",
+        "staleEpoch": "evidence_stale",
+        "square": "refunded",
+        "vertical": "reserved",
+        "refunds": 1
+      }
+    },
+    {
+      "id": "S09",
+      "name": "Unknown persistido bloqueia sem sobrescrever",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.454Z",
+      "finished_at": "2026-11-19T15:35:03.484Z",
+      "status": "PASS",
+      "result": {
+        "outcome": "unknown",
+        "acquireReason": "operation_unknown",
+        "refunds": 0
+      }
+    },
+    {
+      "id": "S10",
+      "name": "Falha entre outcome e refund",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.484Z",
+      "finished_at": "2026-11-19T15:35:03.529Z",
+      "status": "PASS",
+      "result": {
+        "failedAttempt": "evidence_stale",
+        "refunds": 1,
+        "idempotentReplay": true,
+        "outcomes": {
+          "joint": 1,
+          "square": 1
+        }
+      }
+    },
+    {
+      "id": "S11",
+      "name": "Falha entre os dois estornos",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.529Z",
+      "finished_at": "2026-11-19T15:35:03.573Z",
+      "status": "PASS",
+      "result": {
+        "vertical": "refunded",
+        "square": "refunded",
+        "refunds": 2,
+        "campaign": "error"
+      }
+    },
+    {
+      "id": "S12",
+      "name": "Projeção concorrente/tardia",
+      "mode": "concurrent",
+      "started_at": "2026-11-19T15:42:23.861Z",
+      "finished_at": "2026-11-19T15:42:24.370Z",
+      "status": "PASS",
+      "result": {
+        "resumed": true,
+        "deliveries": {
+          "vertical": "delivered",
+          "square": "delivered"
+        },
+        "overlapObserved": true,
+        "projectionA": {
+          "success": true,
+          "projected": false,
+          "campaign_id": "f6071201-0000-4000-8000-000000000003",
+          "storage_path": "f6071201-0000-4000-8000-000000000002/f6071201-0000-4000-8000-000000000003/f6071201-0000-4000-8000-000000000004/square_original.jpg",
+          "campaign_status": "ready",
+          "preferred_format": "1:1",
+          "already_projected": true
+        },
+        "projectionB": {
+          "success": true,
+          "projected": false,
+          "campaign_id": "f6071201-0000-4000-8000-000000000003",
+          "storage_path": "f6071201-0000-4000-8000-000000000002/f6071201-0000-4000-8000-000000000003/f6071201-0000-4000-8000-000000000004/square_original.jpg",
+          "campaign_status": "ready",
+          "preferred_format": "1:1",
+          "already_projected": true
+        },
+        "late": {
+          "success": true,
+          "projected": false,
+          "campaign_id": "f6071201-0000-4000-8000-000000000003",
+          "storage_path": "f6071201-0000-4000-8000-000000000002/f6071201-0000-4000-8000-000000000003/f6071201-0000-4000-8000-000000000004/square_original.jpg",
+          "campaign_status": "ready",
+          "preferred_format": "1:1",
+          "already_projected": true
+        },
+        "finalCampaign": {
+          "status": "ready",
+          "storage_path": "f6071201-0000-4000-8000-000000000002/f6071201-0000-4000-8000-000000000003/f6071201-0000-4000-8000-000000000004/square_original.jpg",
+          "error_message": null
+        }
+      }
+    },
+    {
+      "id": "S13",
+      "name": "Resolução administrativa concorrente",
+      "mode": "concurrent",
+      "started_at": "2026-11-19T15:42:24.370Z",
+      "finished_at": "2026-11-19T15:42:24.859Z",
+      "status": "PASS",
+      "result": {
+        "resumed": true,
+        "reservedState": {
+          "square": {
+            "status": "reserved",
+            "publication_state": "none",
+            "state_epoch": 0,
+            "credit_tx_id": "27bf87a0-a53e-4968-9575-c44ffe2c8a86",
+            "refund_tx_id": null
+          },
+          "vertical": {
+            "status": "reserved",
+            "publication_state": "none",
+            "state_epoch": 0,
+            "credit_tx_id": "db0951a7-0f7d-43b4-ae8f-ccdf1f51f5f0",
+            "refund_tx_id": null
+          }
+        },
+        "overlapObserved": true,
+        "first": {
+          "flow": "legacy",
+          "stage": null,
+          "action": "refund_once",
+          "reason": "[F60.7 Gate B] S13 concurrent admin",
+          "status": "refunded",
+          "success": true,
+          "art_kind": "absent",
+          "idempotent": false,
+          "campaign_id": "f6071301-0000-4000-8000-000000000003",
+          "operation_id": "f6071301-0000-4000-8000-000000000005"
+        },
+        "second": {
+          "flow": "legacy",
+          "stage": null,
+          "action": "refund_once",
+          "reason": "[F60.7 Gate B] S13 concurrent admin",
+          "status": "refunded",
+          "success": true,
+          "art_kind": "absent",
+          "idempotent": true,
+          "campaign_id": "f6071301-0000-4000-8000-000000000003",
+          "operation_id": "f6071301-0000-4000-8000-000000000005"
+        },
+        "audits": 1,
+        "square": "refunded",
+        "refunds": 1
+      }
+    },
+    {
+      "id": "S14",
+      "name": "Auditoria divergente/falha",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.573Z",
+      "finished_at": "2026-11-19T15:35:03.599Z",
+      "status": "PASS",
+      "result": {
+        "divergentReason": "operation_identity_conflict",
+        "audits": 1,
+        "square": "reserved",
+        "refunds": 0,
+        "auditUnavailable": "não simulável sem indispor o banco; coberto no contrato offline (S17)"
+      }
+    },
+    {
+      "id": "S15",
+      "name": "Disputa shared_operation_not_final/delivery_links_inconsistent",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:03.599Z",
+      "finished_at": "2026-11-19T15:35:03.636Z",
+      "status": "PASS",
+      "result": {
+        "notFinal": "shared_operation_not_final",
+        "inconsistent": "delivery_links_inconsistent",
+        "links": 3
+      }
+    },
+    {
+      "id": "S16",
+      "name": "RLS/grants",
+      "mode": "standalone",
+      "started_at": "2026-11-19T15:35:03.636Z",
+      "finished_at": "2026-11-19T15:35:03.649Z",
+      "status": "PASS",
+      "result": {
+        "privileges": {
+          "anon_select": false,
+          "anon_insert": false,
+          "auth_select": false,
+          "auth_insert": false,
+          "service_select": true,
+          "service_insert": false,
+          "service_update": false,
+          "service_delete": false,
+          "anon_exec": false,
+          "auth_exec": false,
+          "service_exec": true
+        },
+        "rls": true,
+        "anonSelect": "permission denied for table product_two_format_deliveries"
+      }
+    },
+    {
+      "id": "S17",
+      "name": "Erros PostgREST mapeados no cliente",
+      "mode": "offline",
+      "started_at": "2026-11-19T15:35:03.649Z",
+      "finished_at": "2026-11-19T15:35:05.773Z",
+      "status": "PASS",
+      "result": {
+        "testFile": "src/lib/product-two-format/__tests__/joint-financial-client.contract.test.ts",
+        "exitCode": 0,
+        "tail": [
+          " RUN  v4.1.9 C:/Projetos/Vendeo V3",
+          "···············",
+          " Test Files  1 passed (1)",
+          "      Tests  15 passed (15)",
+          "   Start at  12:35:05",
+          "   Duration  690ms (transform 75ms, setup 0ms, import 102ms, tests 19ms, environment 0ms)"
+        ]
+      }
+    },
+    {
+      "id": "S18",
+      "name": "Regressão 1:1/9:16/histórico",
+      "mode": "rollback",
+      "started_at": "2026-11-19T15:35:05.773Z",
+      "finished_at": "2026-11-19T15:35:05.810Z",
+      "status": "PASS",
+      "result": {
+        "legacy11": "delivered",
+        "legacy916": "delivered",
+        "close": "refunded",
+        "read": "f6071801-0000-4000-8000-000000000004",
+        "newFunctions": 4
+      }
+    },
+    {
+      "id": "S19",
+      "name": "Aquisição da base vence × estorno do quadrado",
+      "mode": "concurrent",
+      "started_at": "2026-11-19T15:44:25.583Z",
+      "finished_at": "2026-11-19T15:44:26.232Z",
+      "status": "PASS",
+      "result": {
+        "resumed": false,
+        "acquired": {
+          "stage": "base",
+          "reason": null,
+          "target": "primary",
+          "acquired": true,
+          "attempt_token": "b75c399c-1c23-446f-973c-d3ca42e33a11",
+          "authorization": "execute",
+          "attempt_number": 1
+        },
+        "overlapObserved": true,
+        "duringAcquire": "operation_in_progress",
+        "beforeFinality": "shared_operation_not_final",
+        "finalRefund": {
+          "format": "1:1",
+          "success": true,
+          "projected": false,
+          "idempotent": false,
+          "campaign_id": "f6071902-0000-4000-8000-000000000003",
+          "operation_id": "f6071902-0000-4000-8000-000000000004",
+          "storage_path": "f607/f6071902-0000-4000-8000-000000000003",
+          "artifact_role": "square_original",
+          "credit_status": "refunded",
+          "campaign_status": "generating",
+          "preferred_format": null,
+          "already_projected": true,
+          "delivery_operation_id": "f6071902-0000-4000-8000-000000000005"
+        },
+        "square": "refunded",
+        "vertical": "reserved",
+        "refunds": 1,
+        "claim": {
+          "stage": "base",
+          "attempt_number": 1,
+          "target": "primary",
+          "status": "failed",
+          "failure_class": "definitive",
+          "attempt_token": "b75c399c-1c23-446f-973c-d3ca42e33a11"
+        }
+      }
+    },
+    {
+      "id": "S20",
+      "name": "Finalidade compartilhada vence × nova aquisição",
+      "mode": "concurrent",
+      "started_at": "2026-11-19T15:44:31.293Z",
+      "finished_at": "2026-11-19T15:44:31.739Z",
+      "status": "PASS",
+      "result": {
+        "failedOutcome": {
+          "reason": "operation_terminal",
+          "claims": 0,
+          "ledger": {
+            "deductions": 2,
+            "refunds": 0,
+            "net": -2
+          }
+        },
+        "sharedRefunded": {
+          "reason": "operation_terminal",
+          "secondReason": "operation_terminal",
+          "claims": 0,
+          "ledger": {
+            "deductions": 2,
+            "refunds": 1,
+            "net": -1
+          }
+        }
+      }
+    }
+  ],
+  "passed": 20,
+  "failed": 0,
+  "blocked": 0,
+  "inventory": {
+    "run_id": "f607-gate-b-20261119",
+    "generated_at": "2026-11-19T15:59:11.910Z",
+    "policy": "Fixtures commitadas preservadas no homolog; proibido DELETE/TRUNCATE/desabilitar trigger/restore. Integridade = zero alteração fora do inventário.",
+    "config_version_id": "f6070008-0000-4000-8000-000000000001",
+    "synthetic_prefix": "f607",
+    "committed_codes": [
+      "0501",
+      "0601",
+      "1201",
+      "1301",
+      "1901",
+      "1902",
+      "2001",
+      "2002"
+    ],
+    "scenario_fixtures": {
+      "S05": "0501",
+      "S06": "0601",
+      "S12": "1201",
+      "S13": "1301",
+      "S19": "1902",
+      "S19_aborted_first_attempt": "1901",
+      "S20a": "2001",
+      "S20b": "2002"
+    },
+    "notes": [
+      "1901 é fixture preservada da primeira tentativa do S19, interrompida por bug do harness (SAVEPOINT fora de bloco de transação) depois da fase de aquisição; contém claim base failed/definitive, sem outcome e sem estorno. O S19 foi reexecutado do zero em 1902.",
+      "S12 e S13 foram retomados sobre fixtures já commitadas após o processo do harness ser interrompido; o estado entregue/projetado do S12 foi verificado no banco e a resolução administrativa concorrente do S13 executou integralmente na retomada.",
+      "Fixtures imutáveis (artefatos, transações, outcomes) não são removidas; a integridade é provada por zero alteração fora do inventário e por baseline + delta."
+    ],
+    "stores": [
+      "f6070501-0000-4000-8000-000000000002",
+      "f6070601-0000-4000-8000-000000000002",
+      "f6071201-0000-4000-8000-000000000002",
+      "f6071301-0000-4000-8000-000000000002",
+      "f6071901-0000-4000-8000-000000000002",
+      "f6071902-0000-4000-8000-000000000002",
+      "f6072001-0000-4000-8000-000000000002",
+      "f6072002-0000-4000-8000-000000000002"
+    ],
+    "campaigns": [
+      "f6070501-0000-4000-8000-000000000003",
+      "f6070601-0000-4000-8000-000000000003",
+      "f6071201-0000-4000-8000-000000000003",
+      "f6071301-0000-4000-8000-000000000003",
+      "f6071901-0000-4000-8000-000000000003",
+      "f6071902-0000-4000-8000-000000000003",
+      "f6072001-0000-4000-8000-000000000003",
+      "f6072002-0000-4000-8000-000000000003"
+    ],
+    "tables": {
+      "auth.users": [
+        "f6070501-0000-4000-8000-000000000001",
+        "f6070601-0000-4000-8000-000000000001",
+        "f6071201-0000-4000-8000-000000000001",
+        "f6071301-0000-4000-8000-000000000001",
+        "f6071901-0000-4000-8000-000000000001",
+        "f6071902-0000-4000-8000-000000000001",
+        "f6072001-0000-4000-8000-000000000001",
+        "f6072002-0000-4000-8000-000000000001"
+      ],
+      "public.stores": [
+        "f6070501-0000-4000-8000-000000000002",
+        "f6070601-0000-4000-8000-000000000002",
+        "f6071201-0000-4000-8000-000000000002",
+        "f6071301-0000-4000-8000-000000000002",
+        "f6071901-0000-4000-8000-000000000002",
+        "f6071902-0000-4000-8000-000000000002",
+        "f6072001-0000-4000-8000-000000000002",
+        "f6072002-0000-4000-8000-000000000002"
+      ],
+      "public.campaigns": [
+        "f6070501-0000-4000-8000-000000000003",
+        "f6070601-0000-4000-8000-000000000003",
+        "f6071201-0000-4000-8000-000000000003",
+        "f6071301-0000-4000-8000-000000000003",
+        "f6071901-0000-4000-8000-000000000003",
+        "f6071902-0000-4000-8000-000000000003",
+        "f6072001-0000-4000-8000-000000000003",
+        "f6072002-0000-4000-8000-000000000003"
+      ],
+      "public.credit_balances": [
+        "f6070501-0000-4000-8000-000000000002",
+        "f6070601-0000-4000-8000-000000000002",
+        "f6071201-0000-4000-8000-000000000002",
+        "f6071301-0000-4000-8000-000000000002",
+        "f6071901-0000-4000-8000-000000000002",
+        "f6071902-0000-4000-8000-000000000002",
+        "f6072001-0000-4000-8000-000000000002",
+        "f6072002-0000-4000-8000-000000000002"
+      ],
+      "public.credit_transactions": [
+        "0196045e-7f38-4e3f-83a2-a59e3ea033a6",
+        "02bc3706-23c6-4b6d-8d1f-0c7066608bf8",
+        "064441e3-db23-4120-ad8a-f4cef8fb1ea6",
+        "0a1aec19-0c22-45c6-9816-f3d7d73054fa",
+        "22088e6e-9720-4d71-b5a5-395b9865e783",
+        "22374609-d7a2-4369-9c43-1c6f73ca5adc",
+        "2461a1e3-e064-4d21-a1a1-6e0933d4c839",
+        "27bf87a0-a53e-4968-9575-c44ffe2c8a86",
+        "29207b0b-c674-4f7c-a2c0-ee084a752313",
+        "3cd29792-b300-4ab1-8707-a71dee483b90",
+        "43e65ae2-02a7-4915-9b19-8ff82cdf1c67",
+        "49ab7ee1-ce28-498a-91eb-0831bca1f153",
+        "4fa026ad-60ae-486e-a02a-990826d3815e",
+        "7e80e300-d870-44d6-a823-72458687b32c",
+        "81ae9a38-8d1e-415d-9283-01fe8130a058",
+        "82d0bb21-d8ff-4af7-bef4-9d33b0e8983b",
+        "90338b15-3790-4d43-a681-084567b929f0",
+        "912b7760-1820-43c0-be3d-2953933bfe3b",
+        "94a1e077-2dee-473c-bf19-305974b664ac",
+        "ab595099-9790-4b5f-987f-8e7f413f6bd5",
+        "b2694917-dd78-454f-82e4-6d326fa8c73b",
+        "c3f2a876-65de-40d7-99d7-552132761eaf",
+        "d540c5db-639b-4f56-82c0-c8180aa84eba",
+        "d935207c-8685-4ef8-b77a-b4f194c100b9",
+        "db0951a7-0f7d-43b4-ae8f-ccdf1f51f5f0",
+        "e1c2ded6-38b3-40e3-860a-586d0dd7145f",
+        "ed95d6fd-dc33-4c4a-b930-15839b2b546b"
+      ],
+      "public.product_1_1_campaign_credit_operations": [
+        "0f8118eb-1234-49d8-95b3-f930de66ad06",
+        "17669d52-cb8d-4aea-aab5-f9ab84245e95",
+        "2cfc959c-5fe0-4798-bb2a-16c6d7e3732a",
+        "2dd43ae8-0957-41e3-90cf-4c7955e211ce",
+        "2e0f9409-4b42-4d62-8e06-46df67c908b4",
+        "4a9dafcb-0547-4859-933d-8afa4e2a6abb",
+        "4ff336b8-6833-4335-8c1e-d463e0c77648",
+        "58df50bb-6cd3-4525-99ab-2c31fc7423bd",
+        "66ef9140-8b87-4985-87e6-4dfe0005181a",
+        "79b4630b-09e7-4510-8592-8b8762a707b5",
+        "9ba5a9c7-3ff8-467d-bbb3-cbf7ccd92593",
+        "9bebb1be-6ff6-4d09-9bb4-0d7ec8c09095",
+        "bbafdbe3-d8ab-4fb9-b1bf-863b7db8eb9e",
+        "c7c0c035-0bc4-4423-8748-49901b07601a",
+        "cfbc1b58-8c3e-4ea7-8718-257cf8b68c29",
+        "d3436dd3-e74c-4faa-8fdd-510041712568"
+      ],
+      "public.product_1_1_generation_attempt_claims": [],
+      "public.product_1_1_generation_outcomes": [
+        "5b8a6895-fd33-4a35-a8f8-65b565aef558"
+      ],
+      "public.product_9_16_two_stage_operations": [
+        "51565fc7-f364-4339-a247-42564f8eb7c1",
+        "8d8f7ba3-40d7-44f1-9b63-aee29f87fca9",
+        "8e522aa9-5a93-4183-accb-7f639e6293e7",
+        "8f3d540e-91c4-4664-acbd-aebf966ba382",
+        "941531c4-b613-404c-a2fb-80beb8e2f614",
+        "9927c38e-9ce4-408e-881a-2dd4ca3e8d4b",
+        "b186176f-54b5-4e39-9305-89d2f345df6e",
+        "b96560b3-bbc8-49c8-9800-6a781fc4f2a2"
+      ],
+      "public.product_9_16_two_stage_steps": [
+        "0bb7be40-3305-498c-bdf0-6d671da5575d",
+        "0f0ef9a4-e00e-4cef-8b4e-57385a751ca8",
+        "3b1e4b35-adec-4ad9-8afe-004031f4b23a",
+        "4935ba5c-6343-4ce3-b961-21c999d5602d",
+        "4a198e60-6365-415c-a7a7-2e64381280d7",
+        "50dd458a-fcc9-4af9-92cc-d3e358a39587",
+        "61d3f8fe-b22e-436f-a855-b5798b4227c0",
+        "78f2f8eb-6a13-4396-9339-99c1bb1f9906",
+        "837bdce7-7f90-4132-9110-851e294f4f04",
+        "8e0ae648-2ce1-4173-b3c1-28fb3e2daa5d",
+        "978fb7ca-ffba-40e7-a236-a4a804fca2a5",
+        "a7e10722-73e9-418a-83ae-da81c7510bcb",
+        "b6c25260-4edf-4b0a-af0c-a6eddf3bdffd",
+        "b9956b26-07d5-4ce7-91b9-b3171029eece",
+        "e6c65b93-1322-49b6-b2f3-0f3c18395341",
+        "fb09fb9a-6602-4560-8b28-94e7be8db66d"
+      ],
+      "public.product_9_16_two_stage_attempt_claims": [
+        "617b08d8-5c5f-432e-8ea0-fda345b41c3f",
+        "649ce74a-03c5-4b35-a487-d21bb840343b"
+      ],
+      "public.product_9_16_two_stage_outcomes": [
+        "9ee6915e-aaca-4a7d-b48f-420c8747d00d",
+        "bbc3277d-a626-45eb-abf7-7bddd4c41978",
+        "d901ed16-0ab9-4f66-b227-52d2173b07c5"
+      ],
+      "public.product_two_format_deliveries": [
+        "005319de-6d0c-4cd2-834f-1d0171978ba3",
+        "1b1f0b83-dbe6-4e5e-a29b-7109c954529a",
+        "236d41ed-2c0a-4d5a-83a3-35f997c11b0a",
+        "58f3cc3a-e886-4933-aaa5-d86d4134dd77",
+        "62c79784-0494-40e3-b68d-d57abdedb16d",
+        "6fa819d0-c3d5-48df-aaa0-9bd486e05c65",
+        "7951187e-af7c-4e0a-ade1-7872f55c594e",
+        "7e6acf3c-659c-4b0d-ab77-5cd3f7435991",
+        "8180516a-c53b-483a-ac7a-9420481403aa",
+        "8b3e5d9b-b2c9-475e-8355-12331f1b82c4",
+        "94f84d4d-d771-40c0-8454-36e2f0893587",
+        "9901114a-6f2a-42ff-937d-3d48402dafd4",
+        "bb6b8b46-bdbd-4476-9f15-172491ae336c",
+        "c004bebb-5521-4cc5-8e9e-c2b9b774c7cd",
+        "cc52bd4f-0912-418d-b6bd-788da12a4e21",
+        "d467e374-ba56-48fa-a417-945852d632ed"
+      ],
+      "public.campaign_composition_artifacts": [
+        "f6070501-0000-4000-8000-000000000006",
+        "f6070601-0000-4000-8000-000000000006",
+        "f6071201-0000-4000-8000-000000000006",
+        "f6071201-0000-4000-8000-000000000009"
+      ],
+      "public.admin_audit_log": [
+        "68b8ae08-79fc-4e2f-8391-481621dbb1b0"
+      ]
+    },
+    "counts": {
+      "public.stores": 32,
+      "public.campaigns": 126,
+      "public.product_1_1_campaign_credit_operations": 73,
+      "public.credit_transactions": 203,
+      "public.credit_balances": 29,
+      "public.campaign_composition_artifacts": 27,
+      "public.product_1_1_generation_outcomes": 6,
+      "public.product_9_16_two_stage_outcomes": 8,
+      "public.admin_audit_log": 102,
+      "storage.objects": 345
+    },
+    "baseline": {
+      "public.stores": 24,
+      "public.campaigns": 118,
+      "public.product_1_1_campaign_credit_operations": 57,
+      "public.credit_transactions": 176,
+      "public.credit_balances": 21,
+      "public.campaign_composition_artifacts": 23,
+      "public.product_1_1_generation_outcomes": 5,
+      "public.product_9_16_two_stage_outcomes": 5,
+      "public.admin_audit_log": 101,
+      "storage.objects": 345
+    },
+    "delta": {
+      "public.stores": 8,
+      "public.campaigns": 8,
+      "public.product_1_1_campaign_credit_operations": 16,
+      "public.credit_transactions": 27,
+      "public.credit_balances": 8,
+      "public.campaign_composition_artifacts": 4,
+      "public.product_1_1_generation_outcomes": 1,
+      "public.product_9_16_two_stage_outcomes": 3,
+      "public.admin_audit_log": 1,
+      "storage.objects": 0
+    },
+    "expected_delta": {
+      "public.stores": 8,
+      "public.campaigns": 8,
+      "public.product_1_1_campaign_credit_operations": 16,
+      "public.credit_transactions": 27,
+      "public.credit_balances": 8,
+      "public.campaign_composition_artifacts": 4,
+      "public.product_1_1_generation_outcomes": 1,
+      "public.product_9_16_two_stage_outcomes": 3,
+      "public.admin_audit_log": 1,
+      "storage.objects": 0
+    },
+    "counts_match_baseline_plus_inventory": true,
+    "outside_inventory": {
+      "stores": 24,
+      "campaigns": 118,
+      "credit_ops": 57,
+      "transactions": 176,
+      "balances": 21,
+      "artifacts": 23,
+      "outcomes11": 5,
+      "outcomes916": 5,
+      "audit": 101
+    },
+    "outside_matches_baseline": true,
+    "preserved_in_homolog": true
+  },
+  "structure": {
+    "table": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "gen_random_uuid()"
+        },
+        {
+          "column_name": "campaign_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "operation_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "store_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "format",
+          "data_type": "text",
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "delivery_operation_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "artifact_role",
+          "data_type": "text",
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": "NO",
+          "column_default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "ck_p2f_format",
+          "contype": "c",
+          "definition": "CHECK ((format = ANY (ARRAY['1:1'::text, '9:16'::text])))"
+        },
+        {
+          "conname": "ck_p2f_format_role",
+          "contype": "c",
+          "definition": "CHECK ((((format = '1:1'::text) AND (artifact_role = 'square_original'::text)) OR ((format = '9:16'::text) AND (artifact_role = 'vertical'::text))))"
+        },
+        {
+          "conname": "ck_p2f_identity",
+          "contype": "c",
+          "definition": "CHECK ((((format = '9:16'::text) AND (delivery_operation_id = operation_id)) OR ((format = '1:1'::text) AND (delivery_operation_id <> operation_id))))"
+        },
+        {
+          "conname": "ck_p2f_role",
+          "contype": "c",
+          "definition": "CHECK ((artifact_role = ANY (ARRAY['square_original'::text, 'vertical'::text])))"
+        },
+        {
+          "conname": "fk_p2f_control_operation",
+          "contype": "f",
+          "definition": "FOREIGN KEY (campaign_id, operation_id) REFERENCES product_9_16_two_stage_operations(campaign_id, operation_id) ON DELETE RESTRICT"
+        },
+        {
+          "conname": "fk_p2f_credit_operation",
+          "contype": "f",
+          "definition": "FOREIGN KEY (campaign_id, delivery_operation_id) REFERENCES product_1_1_campaign_credit_operations(campaign_id, operation_id) ON DELETE RESTRICT"
+        },
+        {
+          "conname": "product_two_format_deliveries_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "conname": "uq_p2f_campaign_operation_format",
+          "contype": "u",
+          "definition": "UNIQUE (campaign_id, operation_id, format)"
+        },
+        {
+          "conname": "uq_p2f_delivery_operation",
+          "contype": "u",
+          "definition": "UNIQUE (delivery_operation_id)"
+        }
+      ],
+      "indexes": [
+        {
+          "indexname": "idx_p2f_campaign_id",
+          "indexdef": "CREATE INDEX idx_p2f_campaign_id ON public.product_two_format_deliveries USING btree (campaign_id)"
+        },
+        {
+          "indexname": "product_two_format_deliveries_pkey",
+          "indexdef": "CREATE UNIQUE INDEX product_two_format_deliveries_pkey ON public.product_two_format_deliveries USING btree (id)"
+        },
+        {
+          "indexname": "uq_p2f_campaign_operation_format",
+          "indexdef": "CREATE UNIQUE INDEX uq_p2f_campaign_operation_format ON public.product_two_format_deliveries USING btree (campaign_id, operation_id, format)"
+        },
+        {
+          "indexname": "uq_p2f_delivery_operation",
+          "indexdef": "CREATE UNIQUE INDEX uq_p2f_delivery_operation ON public.product_two_format_deliveries USING btree (delivery_operation_id)"
+        }
+      ],
+      "policies": [
+        {
+          "policyname": "Service role reads two format deliveries",
+          "roles": "{service_role}",
+          "cmd": "SELECT",
+          "qual": "true",
+          "with_check": null
+        }
+      ],
+      "grants": [
+        {
+          "grantee": "postgres",
+          "privilege_type": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege_type": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "privilege_type": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "privilege_type": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "privilege_type": "TRIGGER"
+        },
+        {
+          "grantee": "postgres",
+          "privilege_type": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege_type": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "privilege_type": "SELECT"
+        }
+      ],
+      "acl": {
+        "relrowsecurity": true,
+        "acl": "{postgres=arwdDxtm/postgres,service_role=r/postgres}"
+      }
+    },
+    "functions": [
+      {
+        "proname": "product_two_format_deliver_format",
+        "args": "p_store_id uuid, p_campaign_id uuid, p_operation_id uuid, p_format text, p_publication_token uuid",
+        "prosecdef": true,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "acl": "{postgres=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "proname": "product_two_format_open_delivery",
+        "args": "p_store_id uuid, p_campaign_id uuid, p_operation_id uuid, p_square_delivery_id uuid, p_expansion_model text, p_expansion_quality text, p_expansion_config_version_id uuid",
+        "prosecdef": true,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "acl": "{postgres=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "proname": "product_two_format_project_campaign",
+        "args": "p_campaign_id uuid",
+        "prosecdef": true,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "acl": "{postgres=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "proname": "product_two_format_refund_format",
+        "args": "p_store_id uuid, p_campaign_id uuid, p_operation_id uuid, p_format text, p_art_kind text, p_observed_epoch integer, p_reason text",
+        "prosecdef": true,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "acl": "{postgres=X/postgres,service_role=X/postgres}"
+      }
+    ],
+    "functionPrivileges": [
+      {
+        "proname": "product_two_format_deliver_format",
+        "anon_exec": false,
+        "authenticated_exec": false,
+        "service_role_exec": true
+      },
+      {
+        "proname": "product_two_format_open_delivery",
+        "anon_exec": false,
+        "authenticated_exec": false,
+        "service_role_exec": true
+      },
+      {
+        "proname": "product_two_format_project_campaign",
+        "anon_exec": false,
+        "authenticated_exec": false,
+        "service_role_exec": true
+      },
+      {
+        "proname": "product_two_format_refund_format",
+        "anon_exec": false,
+        "authenticated_exec": false,
+        "service_role_exec": true
+      }
+    ],
+    "immutabilityTriggers": [
+      {
+        "table_name": "campaign_composition_artifacts",
+        "tgname": "trg_campaign_composition_artifacts_immutable",
+        "definition": "CREATE TRIGGER trg_campaign_composition_artifacts_immutable BEFORE DELETE OR UPDATE ON public.campaign_composition_artifacts FOR EACH ROW EXECUTE FUNCTION trg_campaign_composition_artifacts_immutable_fn()"
+      },
+      {
+        "table_name": "credit_transactions",
+        "tgname": "trg_credit_transactions_immutable",
+        "definition": "CREATE TRIGGER trg_credit_transactions_immutable BEFORE DELETE OR UPDATE ON public.credit_transactions FOR EACH ROW EXECUTE FUNCTION trg_credit_transactions_immutable_fn()"
+      },
+      {
+        "table_name": "product_1_1_generation_outcomes",
+        "tgname": "trg_p1_1_generation_outcome_immutable",
+        "definition": "CREATE TRIGGER trg_p1_1_generation_outcome_immutable BEFORE DELETE OR UPDATE ON public.product_1_1_generation_outcomes FOR EACH ROW EXECUTE FUNCTION trg_p1_1_generation_outcome_immutable_fn()"
+      },
+      {
+        "table_name": "product_9_16_two_stage_outcomes",
+        "tgname": "trg_p916_outcome_immutable",
+        "definition": "CREATE TRIGGER trg_p916_outcome_immutable BEFORE DELETE OR UPDATE ON public.product_9_16_two_stage_outcomes FOR EACH ROW EXECUTE FUNCTION trg_p916_outcome_immutable_fn()"
+      }
+    ],
+    "adminAuditCheck": {
+      "definition": "CHECK ((action = ANY (ARRAY['credit_grant'::text, 'credit_adjustment'::text, 'store_create_invite'::text, 'manual_refund'::text, 'approve_verification'::text, 'reject_verification'::text, 'create_test_store'::text, 'admin_exception'::text, 'reveal_cnpj'::text, 'access_request_approve'::text, 'access_request_reject'::text, 'feature_flag_update'::text, 'ai_model_selection_update'::text, 'ai_model_selection_reset'::text, 'support_credit_request_update'::text, 'data_subject_request_received'::text, 'data_subject_request_in_progress'::text, 'data_subject_request_completed'::text, 'data_subject_request_cancelled'::text, 'data_subject_request_cancel_rejected'::text, 'image_model_pair_config_update'::text, 'product_1_1_pending_resolution'::text, 'access_request_invite'::text, 'visual_signature_model_config_update'::text, 'visual_signature_model_config_reset'::text, 'visual_signature_model_config_publish'::text, 'visual_signature_model_config_activation'::text, 'nine_sixteen_expansion_model_config_update'::text])))"
+    },
+    "ledger": {
+      "total": 157,
+      "f607": 1,
+      "legal": 0,
+      "f607_name": "f60_7_two_format_foundation"
+    },
+    "pendingMigrations": [
+      {
+        "version": "20261030185658",
+        "file": "20261030185658_f50_legal_publication.sql"
+      }
+    ],
+    "migration": {
+      "file": "supabase/migrations/20261118002139_f60_7_two_format_foundation.sql",
+      "localSha256": "6342EA442A5B9F23197902B316809A59563F8604CEAEE9121019EAC0836F8C78",
+      "containerSha256BeforeApply": "6342EA442A5B9F23197902B316809A59563F8604CEAEE9121019EAC0836F8C78",
+      "hashMatches": true,
+      "lines": 949
+    },
+    "backup": {
+      "path": "G:/Vendeo-Homolog/recovery/pre-f60.7-20261119T152106Z.dump",
+      "bytes": 1747704,
+      "sha256": "2ED7D51B15BC7FD14FEDEAAB9A5C27E87F11C571161A89105F0AFC5BB21F164E",
+      "sha256Matches": true,
+      "restoreListExitCode": 0,
+      "restoreListFile": "G:/Vendeo-Homolog/recovery/pre-f60.7-20261119T152106Z.dump.restore-list.txt"
+    }
+  }
+}
