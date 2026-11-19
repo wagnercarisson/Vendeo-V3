@@ -515,7 +515,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
         const { loadC4HttpInjection } = await import(
           "@/lib/product-two-format/testing/c4-http-injection-loader"
         );
-        const injection = await loadC4HttpInjection(supabaseAdmin);
+        const injection = await loadC4HttpInjection(supabaseAdmin, {
+          campaignId: newFlow.campaignId,
+          operationId: newFlow.operationId,
+          route: "generate-image",
+        });
         return handleJointGenerateRequest(
           {
             newFlow,

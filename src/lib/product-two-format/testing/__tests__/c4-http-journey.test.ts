@@ -9,6 +9,7 @@ import { deliverTwoFormatVertical } from "@/lib/product-two-format/orchestration
 import { openJointOperation } from "@/lib/product-two-format/orchestration/joint-operation-service";
 import { preflightJointSelection } from "@/lib/product-two-format/orchestration/preflight";
 import { runJointBase } from "@/lib/product-two-format/orchestration/joint-base";
+import { runExpansionStep } from "@/lib/product-9-16-two-stage/orchestration/expansion-step";
 import {
   createJointOfflineWorld,
   createJointWorldDeps,
@@ -23,9 +24,11 @@ describe("F60.7 C4-I — jornada offline com injeção determinística", () => {
   it("base, copy e expansão usam os invokers determinísticos, sem provider padrão", async () => {
     const world = createJointOfflineWorld();
     world.seedScenario();
-    const injection = createC4HttpInjection({ client: world.client });
-    const worldDeps = await createJointWorldDeps(world, {
-      providerSeams: injection.seams,
+    const worldDeps = await createJointWorldDeps(world);
+    const injection = createC4HttpInjection({
+      client: world.client,
+      baseSeams: worldDeps.baseSeams,
+      expandSeams: worldDeps.expandSeams,
     });
 
     const preflight = await preflightJointSelection(worldDeps.joint.preflight);
@@ -40,7 +43,10 @@ describe("F60.7 C4-I — jornada offline com injeção determinística", () => {
     );
     expect(opened.kind).toBe("opened");
 
-    const base = await runJointBase(jointBaseInput(), worldDeps.baseDeps);
+    const base = await runJointBase(jointBaseInput(), {
+      ...worldDeps.baseDeps,
+      base: injection.base,
+    });
     expect(base).toEqual({ kind: "completed" });
 
     const square = await deliverJointSquare(
@@ -49,9 +55,21 @@ describe("F60.7 C4-I — jornada offline com injeção determinística", () => {
     );
     expect(square.kind).toBe("delivered");
 
+    const verticalDeps = {
+      ...worldDeps.verticalDeps,
+      expand: (input: Parameters<typeof runExpansionStep>[0]) =>
+        runExpansionStep(input, {
+          control: worldDeps.joint.control,
+          expand: injection.expand,
+          preflightFrozenExpansion:
+            worldDeps.nine.deps.preflightFrozenExpansion,
+          clock: worldDeps.joint.clock,
+          client: world.client,
+        }),
+    };
     const vertical = await deliverTwoFormatVertical(
       jointVerticalInput(),
-      worldDeps.verticalDeps,
+      verticalDeps,
     );
     expect(vertical.kind).toBe("delivered");
 

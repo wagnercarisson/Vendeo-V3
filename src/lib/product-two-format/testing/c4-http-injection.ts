@@ -7,6 +7,8 @@ import type { AiInvoker } from "@/lib/ai/gateway";
 import type { SquareBaseImageGateway } from "@/lib/campaign/square-base/transport";
 import { runSquareBase } from "@/lib/campaign/square-base/run-square-base";
 import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
+import type { ExpandVerticalDeps } from "@/lib/campaign/vertical-expansion/expand";
+import type { SquareBaseDeps } from "@/lib/campaign/square-base/run-square-base";
 import { createNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestration/delivery-deps";
 import type { RunNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestration/types";
 
@@ -27,6 +29,30 @@ export interface C4ActivationEvent {
   readonly step: C4ActivationStep;
   readonly source: "deterministic";
   readonly model: typeof DETERMINISTIC_MODEL;
+}
+
+export interface C4ActivationContext {
+  readonly campaignId: string;
+  readonly operationId: string;
+  readonly route: "generate-image" | "continue";
+}
+
+/** Log estruturado TEST-ONLY; sem conteúdo, segredos, usage ou custo. */
+export function emitC4Activation(
+  event: C4ActivationEvent,
+  context: C4ActivationContext,
+): void {
+  console.info(
+    `[f60.7-c4-i-activation] ${JSON.stringify({
+      type: "f60.7.c4_i.activation",
+      campaignId: context.campaignId,
+      operationId: context.operationId,
+      route: context.route,
+      step: event.step,
+      source: event.source,
+      model: event.model,
+    })}`,
+  );
 }
 
 export interface C4HttpInjection extends RunNineSixteenDeps {
@@ -140,10 +166,16 @@ export function c4DeterministicImageBase64(
 
 export function createC4HttpInjection(input: {
   readonly client: SupabaseClient;
+  /** Seams DB/Storage de teste (nunca em produção). */
+  readonly baseSeams?: Partial<SquareBaseDeps>;
+  readonly expandSeams?: Partial<ExpandVerticalDeps>;
+  readonly onActivation?: (event: C4ActivationEvent) => void;
 }): C4HttpInjection {
   const activation: C4ActivationEvent[] = [];
   const record = (step: C4ActivationStep) => {
-    activation.push(activationEvent(step));
+    const event = activationEvent(step);
+    activation.push(event);
+    input.onActivation?.(event);
   };
   const copyInvoker = createDeterministicCopyInvoker(record);
   const imageGateway = createDeterministicImageGateway(record);
@@ -156,6 +188,7 @@ export function createC4HttpInjection(input: {
     ...baseDeps,
     base: (baseInput, deps) =>
       runSquareBase(baseInput, {
+        ...(input.baseSeams ?? {}),
         ...(deps ?? {}),
         client: input.client,
         imageGateway,
@@ -163,6 +196,7 @@ export function createC4HttpInjection(input: {
       }),
     expand: (expandInput, deps) =>
       expandVerticalToNineSixteen(expandInput, {
+        ...(input.expandSeams ?? {}),
         ...deps,
         client: input.client,
         invoker: expansionInvoker,

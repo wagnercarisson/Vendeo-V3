@@ -105,7 +105,11 @@ export const POST = apiHandler(
           { status: 409 },
         );
       }
-      const injection = await loadC4HttpInjection(supabaseAdmin);
+      const injection = await loadC4HttpInjection(supabaseAdmin, {
+        campaignId: id,
+        operationId: body.operationId,
+        route: "continue",
+      });
       const deps = createTwoFormatRunDeps({
         client: supabaseAdmin,
         ...(injection === undefined ? {} : { nineDeps: injection }),
