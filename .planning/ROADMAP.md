@@ -971,7 +971,7 @@ Plans:
 - [x] C1 — Pós-entrega e status do conjunto. **ACEITO LOCALMENTE/OFFLINE em `eec074fe` (`60.7-C1-VERIFICATION.md`).**
 - [x] C2 — Formulário, review e continuação conjunta. **ACEITO LOCALMENTE/OFFLINE em `08556c5d` (`60.7-C2-VERIFICATION.md`).**
 - [x] C3 — Lista/dashboard/detalhe/tabs/preview/download/miniaturas/polling. **ACEITO LOCALMENTE/OFFLINE em `c064a7fa` (`60.7-C3-VERIFICATION.md`).**
-- [ ] C4 — Wiring administrativo + arte íntegra na jornada conectada. **C4-O IMPLEMENTADO LOCALMENTE/OFFLINE (`60.7-C4-SUMMARY.md`), AGUARDANDO REVISÃO; C4-I NÃO EXECUTADO.** C5a e autorizações de ambiente/artefato/escrita continuam pendentes.
+- [ ] C4 — Wiring administrativo + arte íntegra na jornada conectada. **C4-O IMPLEMENTADO LOCALMENTE/OFFLINE em `72a95e7f` (`60.7-C4-SUMMARY.md`), AGUARDANDO REVISÃO; C4-I NÃO EXECUTADO.** C5a e autorizações de ambiente/artefato/escrita continuam pendentes.
 - [ ] Gate de banco — **ACEITO COM LIMITAÇÕES em 2026-11-19; 17 cenários de banco PASS + complemento base 10/10; S13/S14 apenas regressão legada; S17 offline.** Pendências obrigatórias transferidas para C: arte íntegra pela jornada conectada (C4) e preservação de conteúdo (C5). Evidência em `60.7-GATE-B-DB-APPLY.md` / `60.7-GATE-B-DB-COMPLEMENT-APPLY.md`; plano em `60.7-C-PLAN.md`.
 
 **Directory:** .planning/phases/60.7-entrega-conjunta-formatos-1-1-9-16/ (a criar no planejamento).
