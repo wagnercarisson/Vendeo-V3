@@ -73,7 +73,7 @@
 
 ## 6. Subfatia C — Jornada e apresentação
 
-> Somente após o Gate C a opção conjunta fica disponível ao lojista. Plano detalhado em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop); C **não iniciada**.
+> Somente após o Gate C a opção conjunta fica disponível ao lojista. Plano macro em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop); **C1 executável em `60.7-C1-PLAN.md`**. C **não iniciada**.
 
 - [ ] 6.1 Implementar o dispatch dedicado no `generate-image` para o formato conjunto, com validação da flag vertical aplicável, fingerprint congelado, `inputFiles`/`resumeContext` e ausência de efeitos antes da validação.
 - [ ] 6.2 Implementar a rota/continuação da operação conjunta, reutilizando o schema e os limites existentes, sem aceitar conteúdo novo do navegador.
@@ -103,7 +103,7 @@
 - [ ] 7.2 Revisar a jornada completa e confirmar que a opção conjunta só fica disponível após o aceite desta subfatia.
 - [ ] 7.3 Registrar aceite ou correções; nenhuma ativação de produção, deploy, flag ou pricing é executada neste gate.
 - [ ] 7.4 **Pendência obrigatória do Gate de banco — arte íntegra pela jornada conectada:** validar a entrega 1:1/9:16 com artefato canônico integral (bytes + evidência) pela rota/jornada efetivamente conectada, incluindo a entrega administrativa quando o wiring estiver disponível; nenhum fake de DB/RPC/Storage; arte de lojista real nunca. Critérios C4-A1..A6 em `60.7-C-PLAN.md`.
-- [ ] 7.5 **Pendência obrigatória do Gate de banco — preservação de conteúdo:** capturar baseline no início de C e comparar fingerprints de conteúdo das linhas não sintéticas no fechamento; qualquer diferença inexplicada bloqueia C. A janela C é verificável; o passado permanece não comprovado e restore exige autorização separada. Critérios C5-A1..A5 em `60.7-C-PLAN.md`.
+- [ ] 7.5 **Pendência obrigatória do Gate de banco — preservação de conteúdo:** **C5a** deve capturar a baseline **antes da primeira escrita de C no homolog**, com autorização específica, e **C5b** comparar fingerprints de conteúdo das linhas não sintéticas no fechamento; qualquer diferença inexplicada bloqueia C. A janela C é verificável; o passado permanece não comprovado e restore exige autorização separada. Critérios C5-A1..A5 em `60.7-C-PLAN.md`.
 
 ## 8. Gates finais e limites
 
