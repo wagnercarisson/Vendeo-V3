@@ -360,6 +360,7 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
       },
     );
     expect(missing.error?.message).toBe("shared_operation_not_final");
+    expect(noFinality.world.creditRowFor(SQUARE_DELIVERY_ID)?.status).toBe("reserved");
 
     const present = await setup({
       state: { sharedOutcome: "failed" },
@@ -381,6 +382,7 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
       success: false,
       reason: "artifact_present",
     });
+    expect(present.world.creditRowFor(SQUARE_DELIVERY_ID)?.status).toBe("reserved");
 
     const publishing = await setup({
       state: { sharedOutcome: "failed" },
@@ -401,6 +403,7 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
       },
     );
     expect(publication.error?.message).toBe("publication_in_progress");
+    expect(publishing.world.creditRowFor(SQUARE_DELIVERY_ID)?.status).toBe("reserved");
 
     const replay = createJointOfflineWorld();
     replay.seedScenario();
@@ -481,11 +484,22 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
       artifact_role: "square_original",
       created_at: "2026-11-19T00:00:00.000Z",
     });
+    const duplicateCampaign = duplicate.rows.find(
+      (row) => row.__table === "campaigns" && row.id === CAMPAIGN_ID,
+    );
+    const duplicateBefore = {
+      status: duplicateCampaign?.status,
+      storage_path: duplicateCampaign?.storage_path,
+    };
     const duplicated = await duplicate.client.rpc(
       "product_two_format_project_campaign",
       { p_campaign_id: CAMPAIGN_ID },
     );
     expect(duplicated.error?.message).toBe("delivery_links_inconsistent");
+    expect({
+      status: duplicateCampaign?.status,
+      storage_path: duplicateCampaign?.storage_path,
+    }).toEqual(duplicateBefore);
 
     const mixed = createJointOfflineWorld();
     mixed.seedScenario();
