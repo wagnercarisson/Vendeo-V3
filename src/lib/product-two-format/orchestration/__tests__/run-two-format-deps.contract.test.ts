@@ -4,9 +4,11 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import { createTwoFormatRunDeps } from "../run-two-format-deps";
+import { runTwoFormatGeneration } from "../run-two-format";
 import {
   CAMPAIGN_ID,
   OPERATION_ID,
+  SQUARE_DELIVERY_ID,
   STORE_ID,
   createJointOfflineWorld,
 } from "./support/joint-offline-world";
@@ -152,6 +154,165 @@ describe("F60.7 C1 — status conjunto derivado do planejamento conjunto", () =>
     const on = await status(true);
     expect(on.nextStep).toBe("expansion");
     expect(on.canContinue).toBe(true);
+  });
+
+  it("expansão concluída + vertical reservado anuncia entrega gratuita", async () => {
+    const base = step("base");
+    const expansion = step("expansion");
+    if (!base || !expansion) throw new Error("missing steps");
+    base.status = "done";
+    expansion.status = "done";
+    await world.seedJointArtifact({
+      role: "square_original",
+      operationId: OPERATION_ID,
+    });
+    world.seedJointState({
+      squareStatus: "delivered",
+      verticalStatus: "reserved",
+    });
+
+    const off = await status(false);
+    expect(off.nextStep).toBe("delivery");
+    expect(off.canContinue).toBe(true);
+    expect(off.operationTerminal).toBe(false);
+
+    const on = await status(true);
+    expect(on.nextStep).toBe("delivery");
+    expect(on.canContinue).toBe(true);
+  });
+
+  it("expansão pendente continua paga e bloqueada com flag OFF", async () => {
+    const base = step("base");
+    if (!base) throw new Error("missing base step");
+    base.status = "done";
+    await world.seedJointArtifact({
+      role: "square_original",
+      operationId: OPERATION_ID,
+    });
+    world.seedJointState({
+      squareStatus: "delivered",
+      verticalStatus: "reserved",
+    });
+
+    const off = await status(false);
+    expect(off.nextStep).toBe("expansion");
+    expect(off.canContinue).toBe(false);
+
+    const on = await status(true);
+    expect(on.nextStep).toBe("expansion");
+    expect(on.canContinue).toBe(true);
+  });
+
+  it("continuação com expansão concluída entrega sem provider nem nova reserva", async () => {
+    const base = step("base");
+    const expansion = step("expansion");
+    if (!base || !expansion) throw new Error("missing steps");
+    base.status = "done";
+    expansion.status = "done";
+
+    const squarePath = `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/square_original.jpg`;
+    const verticalPath = `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/vertical.jpg`;
+    world.base.putObject(squarePath, Buffer.from("square-artifact"));
+    world.base.putObject(verticalPath, Buffer.from("vertical-artifact"));
+    world.base.seedArtifactRow({
+      id: "6a7b8c9d-6a7b-4c8d-9e0f-6a7b8c9d0e1f",
+      store_id: STORE_ID,
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      role: "square_original",
+      format: "1:1",
+      origin: "provider_generation",
+      derived_from_artifact_id: null,
+      source_campaign_id: null,
+      storage_bucket: "campaign-composition-artifacts",
+      storage_path: squarePath,
+      width: 1024,
+      height: 1024,
+      mime_type: "image/jpeg",
+      byte_size: 1,
+      checksum_sha256: "fixture",
+      provenance: {},
+      created_at: "2026-11-18T00:00:00.000Z",
+    });
+    world.base.seedArtifactRow({
+      id: "7b8c9d0e-7b8c-4d0e-9f1a-7b8c9d0e1f2a",
+      store_id: STORE_ID,
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      role: "vertical",
+      format: "9:16",
+      origin: "ai_expansion",
+      derived_from_artifact_id: null,
+      source_campaign_id: null,
+      storage_bucket: "campaign-composition-artifacts",
+      storage_path: verticalPath,
+      width: 1080,
+      height: 1920,
+      mime_type: "image/jpeg",
+      byte_size: 1,
+      checksum_sha256: "fixture",
+      provenance: {},
+      created_at: "2026-11-18T00:00:00.000Z",
+    });
+    world.seedJointState({
+      squareStatus: "delivered",
+      verticalStatus: "reserved",
+    });
+
+    const beforeCredits = world.rows.filter(
+      (row) => row.__table === "product_1_1_campaign_credit_operations",
+    );
+    const deps = createTwoFormatRunDeps({
+      client: world.client,
+      clock: world.clock,
+      probeVertical: async () => ({
+        kind: "integral",
+        format: "9:16",
+        width: 1080,
+        height: 1920,
+        mimeType: "image/jpeg",
+        storagePath: verticalPath,
+        evidenceRef: "7b8c9d0e-7b8c-4d0e-9f1a-7b8c9d0e1f2a",
+      }),
+    });
+
+    const response = await runTwoFormatGeneration(
+      {
+        mode: "continue",
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        authorization: { kind: "system" },
+        allowNewPaidStep: false,
+        requestStartedAtMs: world.clock(),
+        deadlineAtMs: world.clock() + 120_000,
+        inputSnapshot: {},
+        squareDeliveryId: SQUARE_DELIVERY_ID,
+        requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      deps,
+    );
+    const events = (await response.text())
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(events.at(-1)).toMatchObject({
+      type: "result",
+      operationTerminal: true,
+      formats: {
+        "1:1": { state: "delivered" },
+        "9:16": { state: "delivered" },
+      },
+    });
+    expect(world.creditRowFor(OPERATION_ID)?.status).toBe("delivered");
+    expect(world.creditRowFor(SQUARE_DELIVERY_ID)?.status).toBe("delivered");
+    expect(
+      world.rows.filter(
+        (row) => row.__table === "product_1_1_campaign_credit_operations",
+      ),
+    ).toHaveLength(beforeCredits.length);
+    expect(world.rpcOrder).toContain("product_two_format_deliver_format:9:16");
+    expect(world.rpcOrder).not.toContain("product_9_16_acquire_step:expansion");
   });
 
   it("ambos estornados tornam a operação terminal e sem continuação", async () => {

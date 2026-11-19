@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { AttemptTarget } from "@/lib/product-9-16-two-stage/types";
+import type { VerticalArtifactProbeResult } from "@/lib/product-9-16-two-stage/two-stage-financial-service";
 import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 import {
   reconstructFirstExecution,
@@ -86,8 +87,16 @@ function jointProgress(input: {
       canContinue = input.allowNewPaidStep && !busy;
       break;
     case "run_vertical_only":
-      nextStep = "expansion";
-      canContinue = input.allowNewPaidStep && !busy;
+      // Expansão já concluída ⇒ falta apenas CONFIRMAR A ENTREGA do vertical:
+      // ação gratuita, permitida com flag OFF. Expansão pendente/em curso/retry
+      // continua sendo etapa paga.
+      if (input.expansionStatus === "done") {
+        nextStep = "delivery";
+        canContinue = true;
+      } else {
+        nextStep = "expansion";
+        canContinue = input.allowNewPaidStep && !busy;
+      }
       break;
     case "settle_square":
       nextStep = "square_delivery";
@@ -134,6 +143,15 @@ export interface TwoFormatRunDepsOptions {
    * composição real injetam apenas os seams de provider/DB/Storage.
    */
   readonly nineDeps?: RunNineSixteenDeps;
+  /**
+   * Sonda de Storage do vertical. Em produção é a composição real; testes de
+   * composição podem fixar o artefato sem banco/objeto real.
+   */
+  readonly probeVertical?: (input: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+  }) => Promise<VerticalArtifactProbeResult>;
 }
 
 /**
@@ -153,6 +171,10 @@ export function createTwoFormatRunDeps(
   const credit = new ProductOneToOneCreditOperationClient(client);
   const attempt = new ProductOneToOneAttemptStartClient(client);
   const jointClient = new TwoFormatJointFinancialClient(client);
+  const probeVertical =
+    options.probeVertical ??
+    ((probe: { storeId: string; campaignId: string; operationId: string }) =>
+      joint.probeVertical.probeVerticalArtifact(probe));
 
   const readOperationView: TwoFormatRunDeps["readOperationView"] = (input) =>
     control.getOperationView(input);
@@ -313,7 +335,7 @@ export function createTwoFormatRunDeps(
             clock,
             client,
           }),
-        probeVertical: (probe) => joint.probeVertical.probeVerticalArtifact(probe),
+        probeVertical: (probe) => probeVertical(probe),
         beginPublication: (campaignId, operationId) =>
           credit.beginPublication(campaignId, operationId),
         abortPublication: (campaignId, operationId, token, phase) =>
@@ -362,8 +384,7 @@ export function createTwoFormatRunDeps(
           });
         },
         probeSquare: (probe) => joint.probeSquare.probeSquareOriginal(probe),
-        probeVertical: (probe) =>
-          joint.probeVertical.probeVerticalArtifact(probe),
+        probeVertical: (probe) => probeVertical(probe),
         getPublicationEpoch: (campaignId, operationId) =>
           credit.getPublicationEpoch(campaignId, operationId),
         refundFormat: (refund) => jointClient.refundFormat(refund),
