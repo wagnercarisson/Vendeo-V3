@@ -291,6 +291,28 @@ describe("F60.7 C1 — runtime conjunto", () => {
     });
   });
 
+  it("replay com outcome desconhecido retorna unknown, não processing", async () => {
+    const d = deps({
+      readOperationView: vi.fn(async () => foundView()),
+      readStatus: vi.fn(async () =>
+        snapshot({
+          square: "unknown",
+          vertical: "unknown",
+          next: null,
+          canContinue: false,
+        }),
+      ),
+    });
+    const response = await runTwoFormatGeneration(input(), d);
+    const result = await events(response);
+    expect(d.resumeJointOperation).not.toHaveBeenCalled();
+    expect(d.openJointOperation).not.toHaveBeenCalled();
+    expect(result.at(-1)).toMatchObject({
+      type: "unknown",
+      operationTerminal: false,
+    });
+  });
+
   it("ambos estornados NÃO viram resultado de sucesso", () => {
     const event = terminalForStatus(
       input(),

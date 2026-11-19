@@ -31,6 +31,12 @@ import { repairJointProjection } from "./repair-joint-projection";
 import { runJointBase } from "./joint-base";
 import { resumeJointOperation } from "./resume-joint-operation";
 import { finalizeJointFailure } from "./finalize-joint-failure";
+import {
+  classifyJointFormat,
+  planJointResume,
+  type JointArtifactObservation,
+} from "./classify-joint-resume";
+import type { TwoFormatFormatView } from "../read-model";
 import type { TwoFormatRunDeps } from "./run-two-format";
 import type {
   TwoFormatFormatStatus,
@@ -39,37 +45,84 @@ import type {
 } from "./two-format-events";
 import type { TwoFormatFormat } from "../types";
 
-function nextStepFor(
-  action: string,
-  formats: Readonly<Record<TwoFormatFormat, TwoFormatFormatStatus>>,
-): TwoFormatNextStep {
-  switch (action) {
-    case "acquire_base":
-    case "retry_base":
-      return "base";
-    case "acquire_expansion":
-    case "retry_expansion":
-      return "expansion";
-    case "deliver":
-      if (
-        formats["1:1"].state === "processing" &&
-        formats["9:16"].state === "delivered"
-      ) {
-        return "square_delivery";
-      }
-      return "delivery";
-    default:
-      return null;
-  }
-}
-
 function terminalFormatState(state: TwoFormatFormatStatus["state"]): boolean {
   return state === "delivered" || state === "absent";
 }
 
-/** Etapas GRATUITAS (entrega/reparo) podem continuar mesmo com a flag OFF. */
-function isFreeStep(step: TwoFormatNextStep): boolean {
-  return step === "delivery" || step === "square_delivery";
+/**
+ * Próxima ação CONJUNTA derivada dos dois formatos e da autoridade durável.
+ * Nunca usa `view.nextAction`/`view.canContinue` do 9:16 como se fosse a
+ * decisão conjunta: entrega/liquidação/finalização gratuitas continuam
+ * anunciáveis mesmo com a flag OFF ou com o crédito vertical terminal.
+ */
+function jointProgress(input: {
+  readonly square: TwoFormatFormatView;
+  readonly vertical: TwoFormatFormatView;
+  readonly baseStatus: string;
+  readonly expansionStatus: string;
+  readonly nextAction: string;
+  readonly allowNewPaidStep: boolean;
+  readonly failedOutcome: boolean;
+  readonly operationTerminal: boolean;
+}): { readonly nextStep: TwoFormatNextStep; readonly canContinue: boolean } {
+  const square = classifyJointFormat(input.square);
+  const vertical = classifyJointFormat(input.vertical);
+  // Base concluída ⇒ a arte do quadrado foi persistida (o step só conclui após
+  // a persistência). Isso permite planejar a liquidação GRATUITA do quadrado
+  // mesmo antes de a expansão ser aberta.
+  const squareArtifact: JointArtifactObservation =
+    square === "reserved" && input.baseStatus === "done" ? "integral" : "absent";
+  const plan = planJointResume({ square, vertical, squareArtifact });
+  const busy =
+    input.baseStatus === "in_progress" ||
+    input.expansionStatus === "in_progress" ||
+    input.nextAction === "wait";
+
+  let nextStep: TwoFormatNextStep;
+  let canContinue: boolean;
+  switch (plan.action) {
+    case "run_base":
+      nextStep = "base";
+      canContinue = input.allowNewPaidStep && !busy;
+      break;
+    case "run_vertical_only":
+      nextStep = "expansion";
+      canContinue = input.allowNewPaidStep && !busy;
+      break;
+    case "settle_square":
+      nextStep = "square_delivery";
+      canContinue = true;
+      break;
+    case "pending_finalization":
+      nextStep = "delivery";
+      canContinue = true;
+      break;
+    case "repair_only":
+      nextStep = "delivery";
+      canContinue = true;
+      break;
+    case "partial_terminal":
+    case "terminal_error":
+    case "blocked_unknown":
+    case "blocked_partial_read":
+    case "fail_closed":
+      nextStep = null;
+      canContinue = false;
+      break;
+  }
+
+  // Outcome durável `failed` ainda pendente de estorno/entrega: anuncia a
+  // finalização gratuita, sem liberar nova etapa paga. Indeterminação de leitura
+  // nunca vira promessa de ação.
+  const indeterminate =
+    square === "unknown" ||
+    square === "unavailable" ||
+    vertical === "unknown" ||
+    vertical === "unavailable";
+  if (input.failedOutcome && !input.operationTerminal && !indeterminate) {
+    return { nextStep: "delivery", canContinue: true };
+  }
+  return { nextStep, canContinue };
 }
 
 export interface TwoFormatRunDepsOptions {
@@ -132,14 +185,26 @@ export function createTwoFormatRunDeps(
       throw new Error(`joint_operation_${operation.kind}`);
     }
     const view = delivery.view;
+    // Outcome durável `unknown`: o crédito pode continuar `reserved`, mas o
+    // estado do formato NÃO pode voltar a `processing` no replay/status.
+    const durableUnknown = operation.view.unknown;
+    const squareView: TwoFormatFormatView =
+      durableUnknown && view.square.state === "processing"
+        ? { ...view.square, state: "unknown" }
+        : view.square;
+    const verticalView: TwoFormatFormatView =
+      durableUnknown && view.vertical.state === "processing"
+        ? { ...view.vertical, state: "unknown" }
+        : view.vertical;
+
     const formats: Record<TwoFormatFormat, TwoFormatFormatStatus> = {
       "1:1": {
-        state: view.square.state,
-        deliveryOperationId: view.square.deliveryOperationId,
+        state: squareView.state,
+        deliveryOperationId: squareView.deliveryOperationId,
       },
       "9:16": {
-        state: view.vertical.state,
-        deliveryOperationId: view.vertical.deliveryOperationId,
+        state: verticalView.state,
+        deliveryOperationId: verticalView.deliveryOperationId,
       },
     };
     const preferredFormat =
@@ -148,25 +213,28 @@ export function createTwoFormatRunDeps(
         : formats["9:16"].state === "delivered"
           ? ("9:16" as const)
           : null;
-    const nextStep = nextStepFor(operation.view.nextAction, formats);
     // Terminal dos DOIS formatos. Cada estado terminal do read model só existe
     // com crédito terminal (entregue ou estornado). Um único formato NÃO declara
     // a operação terminal.
     const operationTerminal =
       terminalFormatState(formats["1:1"].state) &&
       terminalFormatState(formats["9:16"].state);
-    const canContinue =
-      !operationTerminal &&
-      operation.view.canContinue &&
-      (input.allowNewPaidStep ||
-        !(nextStep === "base" || nextStep === "expansion") ||
-        isFreeStep(nextStep));
+    const progress = jointProgress({
+      square: squareView,
+      vertical: verticalView,
+      baseStatus: operation.view.base.status,
+      expansionStatus: operation.view.expansion.status,
+      nextAction: operation.view.nextAction,
+      allowNewPaidStep: input.allowNewPaidStep,
+      failedOutcome: operation.view.failedOutcome,
+      operationTerminal,
+    });
     return {
       campaignStatus: String(campaign.data?.status ?? "generating"),
       formats,
       preferredFormat,
-      nextStep,
-      canContinue,
+      nextStep: progress.nextStep,
+      canContinue: progress.canContinue,
       operationTerminal,
     } satisfies TwoFormatStatusSnapshot;
   };

@@ -201,7 +201,7 @@ describe("F60.7 C1 — helper → composition root → componentes reais", () =>
 
     expect(result.at(-1)).toMatchObject({
       type: "processing",
-      nextStep: "expansion",
+      nextStep: "square_delivery",
       operationTerminal: false,
     });
     expect(joint.counters.baseProviderCalls).toBe(1);
