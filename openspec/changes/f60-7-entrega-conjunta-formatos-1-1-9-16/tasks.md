@@ -63,17 +63,17 @@
 
 > Gate separado e explicitamente autorizado. Sem geração paga, provider, novo ambiente ou produção. Testes estáticos/offline não substituem esta etapa.
 
-- [ ] 5.1 Obter autorização explícita para aplicar a migration no homolog existente e registrar backup/identidade do alvo antes da aplicação.
-- [ ] 5.2 Aplicar somente a migration conjunta no homolog autorizado e verificar schema, RLS, grants, RPCs, CHECKs e ausência de alteração em dados existentes.
-- [ ] 5.3 Validar no PostgreSQL: abertura atômica das duas reservas, saldo insuficiente sem estado parcial, idempotência, conflito de seleção, concorrência, entrega/estorno por formato, projeção e resposta tardia.
-- [ ] 5.4 Validar que as RPCs/consultas dos fluxos 1:1/9:16 individuais e históricos permanecem intactas.
-- [ ] 5.5 Registrar evidência e limitações; se a autorização não existir, bloquear a liberação da Subfatia C e não declarar a migration validada.
+- [x] 5.1 Obter autorização explícita para aplicar a migration no homolog existente e registrar backup/identidade do alvo antes da aplicação.
+- [x] 5.2 Aplicar somente a migration conjunta no homolog autorizado e verificar schema, RLS, grants, RPCs, CHECKs e ausência de alteração em dados existentes.
+- [x] 5.3 Validar no PostgreSQL: abertura atômica das duas reservas, saldo insuficiente sem estado parcial, idempotência, conflito de seleção, concorrência, entrega/estorno por formato, projeção e resposta tardia.
+- [x] 5.4 Validar que as RPCs/consultas dos fluxos 1:1/9:16 individuais e históricos permanecem intactas.
+- [x] 5.5 Registrar evidência e limitações; se a autorização não existir, bloquear a liberação da Subfatia C e não declarar a migration validada.
 
-> **Execução do Gate de banco (2026-11-19):** `5.1–5.5` **executados parcialmente**. Primeiro: backup, aplicação transacional, ledger 156→157 e **17 cenários de banco PASS**; S13/S14 apenas regressão legada e S17 offline. Depois: **complemento base 10/10 PASS** com `resolveJointPending` real (J2 comprova o handoff do outcome próprio do quadrado) e PostgREST real, **sem Storage de arte**. **J3/Storage sintético e preservação de conteúdo não foram executados**; conteúdo segue não comprovado. Evidências em `60.7-GATE-B-DB-APPLY.md` e `60.7-GATE-B-DB-COMPLEMENT-APPLY.md`. **Os checkboxes permanecem abertos** — a execução não aprova o gate nem libera a Subfatia C.
+> **Execução do Gate de banco (2026-11-19):** `5.1–5.5` executados e **aceitos com limitações**. Primeiro: backup, aplicação transacional, ledger 156→157 e **17 cenários de banco PASS**; S13/S14 apenas regressão legada e S17 offline. Depois: **complemento base 10/10 PASS** com `resolveJointPending` real (J2 comprova o handoff do outcome próprio do quadrado) e PostgREST real, **sem Storage de arte**. **Pendências obrigatórias transferidas para C:** arte íntegra pela jornada conectada e preservação de conteúdo (janela C; histórico não comprovado). Ver `60.7-C-PLAN.md`. A Subfatia C **não foi iniciada**.
 
 ## 6. Subfatia C — Jornada e apresentação
 
-> Somente após o Gate C a opção conjunta fica disponível ao lojista.
+> Somente após o Gate C a opção conjunta fica disponível ao lojista. Plano detalhado em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop); C **não iniciada**.
 
 - [ ] 6.1 Implementar o dispatch dedicado no `generate-image` para o formato conjunto, com validação da flag vertical aplicável, fingerprint congelado, `inputFiles`/`resumeContext` e ausência de efeitos antes da validação.
 - [ ] 6.2 Implementar a rota/continuação da operação conjunta, reutilizando o schema e os limites existentes, sem aceitar conteúdo novo do navegador.
@@ -102,6 +102,8 @@
 - [ ] 7.1 Executar typecheck/lint/build/diff e as suítes focadas da Subfatia C; validar OpenSpec strict.
 - [ ] 7.2 Revisar a jornada completa e confirmar que a opção conjunta só fica disponível após o aceite desta subfatia.
 - [ ] 7.3 Registrar aceite ou correções; nenhuma ativação de produção, deploy, flag ou pricing é executada neste gate.
+- [ ] 7.4 **Pendência obrigatória do Gate de banco — arte íntegra pela jornada conectada:** validar a entrega 1:1/9:16 com artefato canônico integral (bytes + evidência) pela rota/jornada efetivamente conectada, incluindo a entrega administrativa quando o wiring estiver disponível; nenhum fake de DB/RPC/Storage; arte de lojista real nunca. Critérios C4-A1..A6 em `60.7-C-PLAN.md`.
+- [ ] 7.5 **Pendência obrigatória do Gate de banco — preservação de conteúdo:** capturar baseline no início de C e comparar fingerprints de conteúdo das linhas não sintéticas no fechamento; qualquer diferença inexplicada bloqueia C. A janela C é verificável; o passado permanece não comprovado e restore exige autorização separada. Critérios C5-A1..A5 em `60.7-C-PLAN.md`.
 
 ## 8. Gates finais e limites
 
