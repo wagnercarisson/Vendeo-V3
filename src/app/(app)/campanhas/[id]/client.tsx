@@ -155,7 +155,7 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
         (recovery.waitRemainingMs > 0 || drivesAutomaticRecovery)));
 
   useEffect(() => {
-    if (props.joint) return;
+    if (props.joint || props.jointFlow) return;
     if (
       !isLegacyGenerating &&
       !isNewFlowRunning &&
@@ -172,6 +172,7 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
     isLegacyGenerating,
     isNewFlowRunning,
     props.joint,
+    props.jointFlow,
     recoveryNeedsAccompaniment,
     router,
   ]);
@@ -205,6 +206,9 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
             supportEmail={props.newFlow.supportEmail}
             campaignId={props.campaignId}
             operationId={props.newFlow.operationId ?? null}
+            imageRecoveryAvailable={
+              props.joint === undefined && props.jointFlow !== true
+            }
           />
         )}
       </div>

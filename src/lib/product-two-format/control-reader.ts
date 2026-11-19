@@ -166,11 +166,21 @@ export function applyTwoFormatDurableOutcomes(
   const controlUnknown =
     input.controlOperationId !== undefined &&
     input.unknownOperationIds.has(input.controlOperationId);
+  // Precedência aceita: crédito COMPARTILHADO terminal (`delivered`/`absent`)
+  // torna o outcome histórico do controle INERTE. Ele só bloqueia o irmão
+  // enquanto a operação compartilhada não é terminal.
+  const controlTerminal =
+    view.vertical.state === "delivered" || view.vertical.state === "absent";
+  const controlUnknownActive =
+    !controlTerminal &&
+    (controlUnknown ||
+      view.vertical.state === "unknown" ||
+      view.vertical.state === "unavailable");
   const apply = (formatView: TwoFormatFormatView): TwoFormatFormatView => {
     if (formatView.state !== "processing") return formatView;
     const unknown =
       input.outcomesReadFailed ||
-      controlUnknown ||
+      controlUnknownActive ||
       (formatView.deliveryOperationId !== null &&
         input.unknownOperationIds.has(formatView.deliveryOperationId));
     if (!unknown) return formatView;

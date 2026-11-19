@@ -193,6 +193,7 @@ describe("F60.7 C3 — detalhe conjunto", () => {
     expect(h.attemptStartCalls).toBe(0);
     expect(props).toMatchObject({
       campaignId: h.campaign.id,
+      jointFlow: true,
       newFlowFormat: "9:16",
       downloadDisabled: false,
       imageUrl:
@@ -275,6 +276,31 @@ describe("F60.7 C3 — detalhe conjunto", () => {
     });
   });
 
+  it("controle entregue torna o unknown histórico inerte e preserva o quadrado pendente", async () => {
+    h.view = setState(VIEW(), "square", "processing");
+    h.outcomesResult = {
+      kind: "found",
+      unknownOperationIds: new Set([
+        "33333333-3333-4333-8333-333333333333",
+      ]),
+      controlSupportReference: null,
+    };
+
+    const props = await renderPage();
+
+    expect(props).toMatchObject({
+      imageUrl:
+        `https://signed/${h.campaign.store_id}/${h.campaign.id}/33333333-3333-4333-8333-333333333333/vertical.jpg`,
+      newFlowFormat: "9:16",
+      joint: {
+        formats: { "1:1": "processing", "9:16": "delivered" },
+        preferredFormat: "9:16",
+        state: "partial_processing",
+      },
+      newFlow: expect.objectContaining({ state: "delivered" }),
+    });
+  });
+
   it("formato inválido/vazio/duplicado não cai no preferido", async () => {
     for (const format of ["bogus", "", ["1:1", "9:16"]]) {
       const props = await renderPage(format);
@@ -298,6 +324,7 @@ describe("F60.7 C3 — detalhe conjunto", () => {
 
     expect(h.attemptStartCalls).toBe(0);
     expect(props).toMatchObject({
+      jointFlow: true,
       newFlow: expect.objectContaining({ state: "unknown", operationId: null }),
     });
   });

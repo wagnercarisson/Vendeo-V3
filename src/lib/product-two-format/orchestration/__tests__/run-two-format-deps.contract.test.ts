@@ -352,6 +352,100 @@ describe("F60.7 C1 — status conjunto derivado do planejamento conjunto", () =>
     expect(replay.operationTerminal).toBe(false);
   });
 
+  it("vertical entregue + unknown histórico do controle: quadrado pendente NÃO é bloqueado", async () => {
+    const base = step("base");
+    if (!base) throw new Error("missing base step");
+    base.status = "done";
+    world.base.seedArtifactRow({
+      id: "7b8c9d0e-7b8c-4d0e-9f1a-7b8c9d0e1f2b",
+      store_id: STORE_ID,
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      role: "vertical",
+      format: "9:16",
+      origin: "ai_expansion",
+      derived_from_artifact_id: null,
+      source_campaign_id: null,
+      storage_bucket: "campaign-composition-artifacts",
+      storage_path: `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/vertical.jpg`,
+      width: 1080,
+      height: 1920,
+      mime_type: "image/jpeg",
+      byte_size: 1,
+      checksum_sha256: "fixture",
+      provenance: {},
+      created_at: "2026-11-18T00:00:00.000Z",
+    });
+    world.seedJointState({
+      squareStatus: "reserved",
+      verticalStatus: "delivered",
+      sharedOutcome: "unknown",
+    });
+
+    const result = await status(false);
+    expect(result.formats["9:16"].state).toBe("delivered");
+    expect(result.formats["1:1"].state).toBe("processing");
+    expect(result.nextStep).toBe("square_delivery");
+    expect(result.canContinue).toBe(true);
+    expect(result.operationTerminal).toBe(false);
+  });
+
+  it("vertical estornado + unknown histórico do controle: finalização continua recuperável", async () => {
+    const base = step("base");
+    if (!base) throw new Error("missing base step");
+    base.status = "done";
+    world.seedJointState({
+      squareStatus: "reserved",
+      verticalStatus: "refunded",
+      sharedOutcome: "unknown",
+    });
+
+    const result = await status(false);
+    expect(result.formats["9:16"].state).toBe("absent");
+    expect(result.formats["1:1"].state).toBe("processing");
+    expect(result.nextStep).toBe("delivery");
+    expect(result.canContinue).toBe(true);
+    expect(result.operationTerminal).toBe(false);
+  });
+
+  it("unknown PRÓPRIO do quadrado continua bloqueando mesmo com controle entregue", async () => {
+    const base = step("base");
+    if (!base) throw new Error("missing base step");
+    base.status = "done";
+    world.base.seedArtifactRow({
+      id: "7b8c9d0e-7b8c-4d0e-9f1a-7b8c9d0e1f2c",
+      store_id: STORE_ID,
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      role: "vertical",
+      format: "9:16",
+      origin: "ai_expansion",
+      derived_from_artifact_id: null,
+      source_campaign_id: null,
+      storage_bucket: "campaign-composition-artifacts",
+      storage_path: `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/vertical.jpg`,
+      width: 1080,
+      height: 1920,
+      mime_type: "image/jpeg",
+      byte_size: 1,
+      checksum_sha256: "fixture",
+      provenance: {},
+      created_at: "2026-11-18T00:00:00.000Z",
+    });
+    world.seedJointState({
+      squareStatus: "reserved",
+      squareOutcome: "unknown",
+      verticalStatus: "delivered",
+      sharedOutcome: "unknown",
+    });
+
+    const result = await status(false);
+    expect(result.formats["9:16"].state).toBe("delivered");
+    expect(result.formats["1:1"].state).toBe("unknown");
+    expect(result.nextStep).toBeNull();
+    expect(result.canContinue).toBe(false);
+  });
+
   it("requestId da tentativa anterior é query_only; nova tentativa exige novo ID", async () => {
     const base = step("base");
     const expansion = step("expansion");

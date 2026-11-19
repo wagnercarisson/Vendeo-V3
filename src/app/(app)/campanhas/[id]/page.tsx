@@ -110,7 +110,8 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
   const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
   const jointClassification = classifyTwoFormatCampaign(campaign.input_snapshot);
 
-  const renderUnknownJoint = (operationId: string | null) => {
+  const renderUnknownJoint = (operationId: string | null, isJoint = false) => {
+    props.jointFlow = isJoint;
     props.newFlow = {
       state: "unknown",
       supportReference: null,
@@ -123,10 +124,13 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
   };
 
   if (flowClassification === "indeterminate") {
-    return renderUnknownJoint(null);
+    return renderUnknownJoint(
+      null,
+      jointClassification.kind !== "not_two_format",
+    );
   }
   if (jointClassification.kind === "inconsistent") {
-    return renderUnknownJoint(null);
+    return renderUnknownJoint(null, true);
   }
 
   if (jointClassification.kind === "two_format") {
@@ -135,7 +139,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       storeId: campaign.store_id,
     });
     if (control.kind !== "found") {
-      return renderUnknownJoint(null);
+      return renderUnknownJoint(null, true);
     }
 
     const jointRead = await readTwoFormatDelivery(
@@ -147,7 +151,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       { client: supabaseAdmin },
     );
     if (jointRead.kind !== "found") {
-      return renderUnknownJoint(control.operationId);
+      return renderUnknownJoint(control.operationId, true);
     }
 
     // Outcome durável por identidade (controle + quadrado). Crédito reservado
@@ -235,6 +239,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       previewUrl,
       state: jointState,
     };
+    props.jointFlow = true;
 
     let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
     try {

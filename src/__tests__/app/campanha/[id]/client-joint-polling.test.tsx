@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const routerRefresh = vi.hoisted(() => vi.fn());
@@ -189,5 +189,71 @@ describe("F60.7 C3 — cliente conjunto montado", () => {
         name: ptBRCampaignDetailMessages.downloadOriginal,
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("fallback conjunto unknown não oferece recuperação de imagem individual", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request) =>
+      response({
+        "1:1": { state: "unknown" },
+        "9:16": { state: "unknown" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <CampaignPageClient
+        {...baseProps}
+        imageUrl={null}
+        jointFlow
+        newFlow={{
+          state: "unknown",
+          operationId: "op-1",
+          supportEmail: "suporte@example.com",
+        }}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Recuperar imagem salva" }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Verificar novamente" }),
+      );
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/campaign/generation-status");
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes("image-recovery"),
+      ),
+    ).toBe(false);
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        /generate|continue/.test(String(url)),
+      ),
+    ).toBe(false);
+  });
+
+  it("unknown individual preserva a recuperação de imagem", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    render(
+      <CampaignPageClient
+        {...baseProps}
+        imageUrl={null}
+        newFlow={{
+          state: "unknown",
+          operationId: "op-1",
+          supportEmail: "suporte@example.com",
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Recuperar imagem salva" }),
+    ).toBeInTheDocument();
   });
 });

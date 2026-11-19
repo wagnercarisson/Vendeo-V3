@@ -128,4 +128,101 @@ describe("F60.7 C3 — autoridade conjunta", () => {
     expect(applied.square.state).toBe("delivered");
     expect(applied.vertical.state).toBe("unknown");
   });
+
+  it("crédito compartilhado terminal torna o unknown histórico do controle inerte", () => {
+    const base = {
+      origin: "two_format_two_stage" as const,
+      campaignId: CAMPAIGN,
+      operationId: CONTROL,
+      square: {
+        format: "1:1" as const,
+        state: "processing" as const,
+        creditRefunded: false,
+        deliveryOperationId: SQUARE,
+        artifactRole: null,
+        artifactPath: null,
+        supportReference: null,
+      },
+      vertical: {
+        format: "9:16" as const,
+        state: "delivered" as const,
+        creditRefunded: false,
+        deliveryOperationId: CONTROL,
+        artifactRole: "vertical" as const,
+        artifactPath: `${STORE}/${CAMPAIGN}/${CONTROL}/vertical.jpg`,
+        supportReference: null,
+      },
+      preferredThumbnail: null,
+    };
+
+    const delivered = applyTwoFormatDurableOutcomes(base, {
+      unknownOperationIds: new Set([CONTROL]),
+      outcomesReadFailed: false,
+      controlOperationId: CONTROL,
+    });
+    expect(delivered.square.state).toBe("processing");
+    expect(delivered.vertical.state).toBe("delivered");
+
+    const refunded = applyTwoFormatDurableOutcomes(
+      {
+        ...base,
+        vertical: {
+          ...base.vertical,
+          state: "absent",
+          creditRefunded: true,
+          artifactRole: null,
+          artifactPath: null,
+        },
+      },
+      {
+        unknownOperationIds: new Set([CONTROL]),
+        outcomesReadFailed: false,
+        controlOperationId: CONTROL,
+      },
+    );
+    expect(refunded.square.state).toBe("processing");
+    expect(refunded.vertical.state).toBe("absent");
+  });
+
+  it("unknown PRÓPRIO do quadrado continua bloqueando e falha de leitura é fail-closed", () => {
+    const base = {
+      origin: "two_format_two_stage" as const,
+      campaignId: CAMPAIGN,
+      operationId: CONTROL,
+      square: {
+        format: "1:1" as const,
+        state: "processing" as const,
+        creditRefunded: false,
+        deliveryOperationId: SQUARE,
+        artifactRole: null,
+        artifactPath: null,
+        supportReference: null,
+      },
+      vertical: {
+        format: "9:16" as const,
+        state: "delivered" as const,
+        creditRefunded: false,
+        deliveryOperationId: CONTROL,
+        artifactRole: "vertical" as const,
+        artifactPath: `${STORE}/${CAMPAIGN}/${CONTROL}/vertical.jpg`,
+        supportReference: null,
+      },
+      preferredThumbnail: null,
+    };
+
+    const ownUnknown = applyTwoFormatDurableOutcomes(base, {
+      unknownOperationIds: new Set([SQUARE]),
+      outcomesReadFailed: false,
+      controlOperationId: CONTROL,
+    });
+    expect(ownUnknown.square.state).toBe("unknown");
+    expect(ownUnknown.vertical.state).toBe("delivered");
+
+    const failedRead = applyTwoFormatDurableOutcomes(base, {
+      unknownOperationIds: new Set(),
+      outcomesReadFailed: true,
+      controlOperationId: CONTROL,
+    });
+    expect(failedRead.square.state).toBe("unknown");
+  });
 });

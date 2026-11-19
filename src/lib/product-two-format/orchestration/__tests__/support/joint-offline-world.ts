@@ -210,6 +210,22 @@ export function createJointOfflineWorld() {
   let snapshotSeq = 0;
 
   const tableRows = (table: string) => rows.filter((row) => row.__table === table);
+  // A view `product_generation_operation_outcomes_v` une os outcomes legados
+  // (quadrado) e os do controle 9:16. O fake precisa refletir essa união.
+  const rowsForTable = (table: string): Row[] =>
+    table === "product_generation_operation_outcomes_v"
+      ? [
+          ...tableRows("product_1_1_generation_outcomes").map((row) => ({
+            ...row,
+            source: "legacy",
+            stage: null,
+          })),
+          ...tableRows("product_9_16_two_stage_outcomes").map((row) => ({
+            ...row,
+            source: "9_16_two_stage",
+          })),
+        ]
+      : tableRows(table);
   const creditRowFor = (operationId: string = OPERATION_ID): CreditRow | null =>
     (tableRows("product_1_1_campaign_credit_operations").find(
       (row) => row.operation_id === operationId,
@@ -227,7 +243,7 @@ export function createJointOfflineWorld() {
   };
 
   function selectRows(table: string, filters: [string, unknown][], order?: [string, boolean]) {
-    let matched = tableRows(table).filter((row) =>
+    let matched = rowsForTable(table).filter((row) =>
       filters.every(([column, value]) =>
         value === null || value === undefined
           ? row[column] === null || row[column] === undefined
@@ -256,7 +272,7 @@ export function createJointOfflineWorld() {
         filters.push([column, "__in__"]);
         // Representa `in` removendo o filtro especial logo abaixo.
         filters.pop();
-        const existing = tableRows(table).filter((row) =>
+        const existing = rowsForTable(table).filter((row) =>
           filters.every(([candidate, expected]) => row[candidate] === expected),
         );
         const selected = existing.filter((row) => accepted.has(row[column]));

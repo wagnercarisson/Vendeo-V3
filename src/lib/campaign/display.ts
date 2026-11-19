@@ -83,9 +83,10 @@ export interface CampaignPageProps {
    * em legado/formato indisponível ⇒ tratamento 1:1 atual.
    */
   newFlowFormat?: "1:1" | "9:16" | "1:1+9:16";
+  /** F60.7 C3 — identifica o fluxo conjunto mesmo sem view válida (fallback). */
+  jointFlow?: boolean;
   /** F60.7 C3 — apresentação conjunta (uma linha, dois formatos). */
-  joint?: {
-    readonly formats: Readonly<Record<TwoFormatFormat, TwoFormatDeliveryState>>;
+  joint?: {    readonly formats: Readonly<Record<TwoFormatFormat, TwoFormatDeliveryState>>;
     readonly preferredFormat: TwoFormatFormat | null;
     readonly requestedFormat: TwoFormatFormat | null;
     /** `true` quando `?format=` veio vazio/inválido/duplicado (nunca fallback). */
