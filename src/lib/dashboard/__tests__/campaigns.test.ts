@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockCreateServerClient = vi.fn();
+const mockAdmin = {};
 const mockGenerateBatchThumbnailUrls = vi.fn();
 const mockGenerateBatchPreferredThumbnailUrls = vi.fn(async () => ({}));
 const mockReadTwoFormatListSummaries = vi.fn(async () => new Map());
@@ -11,7 +12,7 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: mockCreateServerClient,
-  supabaseAdmin: {},
+  supabaseAdmin: mockAdmin,
 }));
 
 vi.mock("@/lib/campaign/list", () => ({
@@ -260,6 +261,13 @@ describe("queryEligibleCampaigns", () => {
       thumbnailUrl: "https://signed/joint-thumb",
     });
     expect(result[1].joint).toBeUndefined();
+    expect(mockReadTwoFormatListSummaries).toHaveBeenCalledWith(
+      expect.objectContaining({ client: mockAdmin, storeId: "store-1" }),
+    );
+    // Conjunto não entra na assinatura legada; o individual continua.
+    expect(mockGenerateBatchThumbnailUrls).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "campaign-2" }),
+    ]);
   });
 });
 

@@ -2,24 +2,38 @@
 
 import { useEffect } from "react";
 
+import {
+  areBothTwoFormatStatesSettled,
+  twoFormatStatesSignature,
+} from "@/lib/product-two-format/format-signature";
+
 const INITIAL_INTERVAL_MS = 5_000;
 const MAX_BACKOFF_MS = 30_000;
 
+type StatusFormats = Partial<
+  Record<"1:1" | "9:16", { readonly state?: string } | string>
+>;
+
 /**
- * F60.7 C3 — polling read-only do status conjunto.
+ * F60.7 C3 — polling READ-ONLY do status conjunto.
  *
- * - uma requisição por vez (sem sobreposição);
+ * - uma requisição por vez (`inFlight`/`AbortController`);
+ * - comparação por assinatura CANÔNICA de estados (nunca objetos completos);
  * - backoff 5/10/20/30 s em falhas;
- * - cancelamento no unmount;
- * - para em terminal; quando um formato passa a delivered, chama `onDelivered`
- *   (o status não contém URL; o chamador renova props/URLs no servidor).
+ * - cancelamento no unmount/troca;
+ * - em QUALQUER mudança relevante de estados (delivered, refunded/absent,
+ *   unknown) chama `onTransition` uma vez e CONTINUA o ciclo; o chamador faz
+ *   `router.refresh()` para o servidor recomputar URLs assinadas;
+ * - para quando os dois formatos estão estáveis.
+ *
+ * Nunca chama geração/continuação, nunca projeta campanha e nunca assina URL.
  */
 export function useTwoFormatPolling(input: {
   readonly campaignId: string;
   readonly operationId: string | null;
   readonly enabled: boolean;
   readonly formatsSignature: string;
-  readonly onDelivered: () => void;
+  readonly onTransition: () => void;
   /** Injetável em testes. */
   readonly fetchFn?: typeof fetch;
   readonly intervalMs?: number;
@@ -29,23 +43,28 @@ export function useTwoFormatPolling(input: {
     operationId,
     enabled,
     formatsSignature,
-    onDelivered,
+    onTransition,
     fetchFn,
     intervalMs = INITIAL_INTERVAL_MS,
   } = input;
 
   useEffect(() => {
     if (!enabled || !operationId) return;
+
     let cancelled = false;
     let inFlight = false;
     let failures = 0;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let controller: AbortController | null = null;
+    let lastSignature = formatsSignature;
 
     const schedule = (ms: number) => {
       if (cancelled) return;
       timer = setTimeout(() => void tick(), ms);
     };
+
+    const retryDelay = () =>
+      Math.min(MAX_BACKOFF_MS, intervalMs * 2 ** Math.max(0, failures - 1));
 
     const tick = async () => {
       if (cancelled || inFlight) return;
@@ -64,42 +83,37 @@ export function useTwoFormatPolling(input: {
         if (cancelled) return;
         if (!response.ok) {
           failures += 1;
-          schedule(
-            Math.min(
-              MAX_BACKOFF_MS,
-              intervalMs * 2 ** (failures - 1),
-            ),
-          );
+          schedule(retryDelay());
           return;
         }
+
         const data = (await response.json()) as {
-          operation?: {
-            formats?: Record<"1:1" | "9:16", { state?: string }>;
-          };
+          operation?: { formats?: StatusFormats };
         };
         if (cancelled) return;
         const formats = data.operation?.formats;
+
         if (formats) {
-          const signature = JSON.stringify(formats);
-          const anyDelivered =
-            formats["1:1"]?.state === "delivered" ||
-            formats["9:16"]?.state === "delivered";
-          if (signature !== formatsSignature && anyDelivered) {
-            onDelivered();
+          const signature = twoFormatStatesSignature(formats);
+          const changed = signature !== lastSignature;
+          if (changed) {
+            lastSignature = signature;
+            onTransition();
+          }
+          failures = 0;
+          if (areBothTwoFormatStatesSettled(formats)) {
             return;
           }
+          schedule(intervalMs);
+          return;
         }
+
         failures = 0;
         schedule(intervalMs);
       } catch {
         if (!cancelled) {
           failures += 1;
-          schedule(
-            Math.min(
-              MAX_BACKOFF_MS,
-              intervalMs * 2 ** (failures - 1),
-            ),
-          );
+          schedule(retryDelay());
         }
       } finally {
         inFlight = false;
@@ -118,7 +132,7 @@ export function useTwoFormatPolling(input: {
     fetchFn,
     formatsSignature,
     intervalMs,
-    onDelivered,
+    onTransition,
     operationId,
   ]);
 }

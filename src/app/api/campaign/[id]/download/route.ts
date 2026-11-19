@@ -18,6 +18,7 @@ import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import { readTwoFormatDelivery } from "@/lib/product-two-format/delivery-reader";
+import { resolveTwoFormatControlOperation } from "@/lib/product-two-format/control-reader";
 import { resolveTwoFormatAccess } from "@/lib/product-two-format/access";
 import { COMPOSITION_ARTIFACT_BUCKET } from "@/lib/campaign/composition-artifacts/artifact-path";
 
@@ -45,27 +46,46 @@ export const GET = apiHandler(async (
   // F60.7 C3 — ramo conjunto ANTES dos gates individuais. A autoridade é
   // `readTwoFormatDelivery` → `resolveTwoFormatAccess`; sem fallback de formato.
   if (classifyTwoFormatCampaign(campaign.input_snapshot).kind === "two_format") {
-    const operationRow = await supabaseAdmin
-      .from("product_9_16_two_stage_operations")
-      .select("operation_id")
-      .eq("campaign_id", id)
-      .eq("store_id", campaign.store_id)
-      .maybeSingle<{ operation_id: string }>();
-    if (operationRow.error) {
+    // `getAll` distingue ausência de valor inválido/vazio/duplicado. Só a
+    // ausência escolhe o preferido; os demais são recusados ANTES de qualquer
+    // leitura de vínculo/artefato ou assinatura.
+    const formatValues = new URL(_request.url).searchParams.getAll("format");
+    if (formatValues.length > 1) {
+      return NextResponse.json(
+        { error: { code: "unsupported_format", message: "Formato inválido." } },
+        { status: 400 },
+      );
+    }
+    const requestedFormat = formatValues.length === 1 ? formatValues[0] : undefined;
+    if (
+      requestedFormat !== undefined &&
+      requestedFormat !== "1:1" &&
+      requestedFormat !== "9:16"
+    ) {
+      return NextResponse.json(
+        { error: { code: "unsupported_format", message: "Formato inválido." } },
+        { status: 400 },
+      );
+    }
+
+    const control = await resolveTwoFormatControlOperation({
+      campaignId: id,
+      storeId: campaign.store_id,
+    });
+    if (control.kind === "read_failed") {
       return NextResponse.json(
         { error: { code: "operation_unavailable", message: "Operação indisponível." } },
         { status: 503 },
       );
     }
-    const operationId = operationRow.data?.operation_id;
-    if (!operationId) {
+    if (control.kind !== "found") {
       return NextResponse.json(
         { error: { code: "operation_not_found", message: "Operação não encontrada." } },
         { status: 404 },
       );
     }
     const read = await readTwoFormatDelivery(
-      { campaignId: id, operationId, storeId: campaign.store_id },
+      { campaignId: id, operationId: control.operationId, storeId: campaign.store_id },
       { client: supabaseAdmin },
     );
     if (read.kind !== "found") {
@@ -79,17 +99,15 @@ export const GET = apiHandler(async (
         { status: read.kind === "read_failed" ? 503 : 403 },
       );
     }
-    const requested = new URL(_request.url).searchParams.get("format");
+    // `requestedFormat` já foi validado antes de qualquer leitura.
+    const requested = requestedFormat;
     const preferred =
       read.view.square.state === "delivered"
         ? "1:1"
         : read.view.vertical.state === "delivered"
           ? "9:16"
           : null;
-    const target =
-      requested === "1:1" || requested === "9:16"
-        ? requested
-        : preferred;
+    const target = requested === undefined ? preferred : requested;
     if (!target) {
       return NextResponse.json(
         { error: { code: "not_delivered", message: "Formato não entregue." } },

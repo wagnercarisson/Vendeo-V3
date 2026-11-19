@@ -141,7 +141,10 @@ export async function listCampaigns(
   const rows = data ?? [];
   const items = rows.map(mapToListItem);
   const summaries = await readTwoFormatListSummaries({
-    client: supabase,
+    // RLS: `product_two_format_deliveries` concede SELECT somente a
+    // `service_role`. A leitura privilegiada ocorre AQUI, após a autorização da
+    // página, e é escopada por loja/campanhas pelo próprio helper.
+    client: supabaseAdmin,
     storeId,
     campaigns: rows.map((row) => ({
       id: row.id,
@@ -154,7 +157,11 @@ export async function listCampaigns(
       preferredThumbnailPath: summary.preferredThumbnailPath,
     })),
   );
-  const thumbnails = await generateBatchThumbnailUrls(items);
+  // Conjuntos NÃO passam pela assinatura legada: a miniatura do preferido já
+  // foi resolvida pela autoridade conjunta acima.
+  const legacyThumbnails = await generateBatchThumbnailUrls(
+    items.filter((item) => !summaries.has(item.id)),
+  );
   const itemsWithThumbnails = items.map((item) => {
     const summary = summaries.get(item.id);
     if (summary) {
@@ -166,7 +173,7 @@ export async function listCampaigns(
         thumbnailUrl: preferredThumbnails[item.id] ?? null,
       };
     }
-    return { ...item, thumbnailUrl: thumbnails[item.id] ?? null };
+    return { ...item, thumbnailUrl: legacyThumbnails[item.id] ?? null };
   });
 
   const total = count ?? itemsWithThumbnails.length;
@@ -269,24 +276,28 @@ export async function generateBatchPreferredThumbnailUrls(
   items: readonly { id: string; preferredThumbnailPath: string | null }[],
 ): Promise<Record<string, string | null>> {
   const thumbnails: Record<string, string | null> = {};
-  const signable: Array<{ id: string; thumbnailPath: string }> = [];
+  const idsByPath = new Map<string, string[]>();
   for (const item of items) {
     thumbnails[item.id] = null;
-    if (item.preferredThumbnailPath) {
-      signable.push({ id: item.id, thumbnailPath: item.preferredThumbnailPath });
-    }
+    if (!item.preferredThumbnailPath) continue;
+    const ids = idsByPath.get(item.preferredThumbnailPath) ?? [];
+    ids.push(item.id);
+    idsByPath.set(item.preferredThumbnailPath, ids);
   }
-  const results = await Promise.allSettled(
-    signable.map((item) =>
-      supabaseAdmin.storage
-        .from(THUMBNAIL_BUCKET)
-        .createSignedUrl(item.thumbnailPath, 3600)
-        .then((res) => ({ id: item.id, url: res.data?.signedUrl ?? null })),
-    ),
-  );
-  for (const result of results) {
-    if (result.status === "fulfilled" && result.value.url) {
-      thumbnails[result.value.id] = result.value.url;
+
+  const paths = [...idsByPath.keys()];
+  if (paths.length === 0) return thumbnails;
+
+  // Assinatura REALMENTE em lote: uma única chamada para todos os caminhos.
+  const { data, error } = await supabaseAdmin.storage
+    .from(THUMBNAIL_BUCKET)
+    .createSignedUrls(paths, 3600);
+  if (error || !data) return thumbnails;
+
+  for (const entry of data) {
+    if (!entry.signedUrl || typeof entry.path !== "string") continue;
+    for (const id of idsByPath.get(entry.path) ?? []) {
+      thumbnails[id] = entry.signedUrl;
     }
   }
   return thumbnails;

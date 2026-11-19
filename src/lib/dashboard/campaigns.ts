@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
 import { generateBatchThumbnailUrls, generateBatchPreferredThumbnailUrls } from "@/lib/campaign/list";
 import { readTwoFormatListSummaries } from "@/lib/product-two-format/list-summary";
 import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
@@ -65,7 +65,10 @@ export async function queryEligibleCampaigns(
   const rows = (data ?? []) as EligibleCampaignRow[];
 
   const summaries = await readTwoFormatListSummaries({
-    client: supabase,
+    // RLS: vínculos conjuntos são legíveis apenas por `service_role`. Leitura
+    // privilegiada server-side, após a autorização do dashboard, com escopo de
+    // loja/campanhas no helper.
+    client: supabaseAdmin,
     storeId,
     campaigns: rows.map((row) => ({
       id: row.id,
@@ -79,11 +82,13 @@ export async function queryEligibleCampaigns(
     })),
   );
   const thumbnails = await generateBatchThumbnailUrls(
-    rows.map((row) => ({
-      id: row.id,
-      status: "ready" as const,
-      storagePath: row.storage_path,
-    })),
+    rows
+      .filter((row) => !summaries.has(row.id))
+      .map((row) => ({
+        id: row.id,
+        status: "ready" as const,
+        storagePath: row.storage_path,
+      })),
   );
 
   return rows.map((row) => {

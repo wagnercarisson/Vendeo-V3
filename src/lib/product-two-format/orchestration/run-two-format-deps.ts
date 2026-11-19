@@ -22,6 +22,10 @@ import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestrati
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { readTwoFormatDelivery } from "../delivery-reader";
+import {
+  applyTwoFormatDurableOutcomes,
+  readTwoFormatDurableOutcomes,
+} from "../control-reader";
 import { TwoFormatJointFinancialClient } from "../joint-financial-client";
 import { createJointDeps } from "./joint-deps";
 import { openJointOperation } from "./joint-operation-service";
@@ -207,17 +211,31 @@ export function createTwoFormatRunDeps(
       throw new Error(`joint_operation_${operation.kind}`);
     }
     const view = delivery.view;
-    // Outcome durável `unknown`: o crédito pode continuar `reserved`, mas o
-    // estado do formato NÃO pode voltar a `processing` no replay/status.
-    const durableUnknown = operation.view.unknown;
-    const squareView: TwoFormatFormatView =
-      durableUnknown && view.square.state === "processing"
-        ? { ...view.square, state: "unknown" }
-        : view.square;
-    const verticalView: TwoFormatFormatView =
-      durableUnknown && view.vertical.state === "processing"
-        ? { ...view.vertical, state: "unknown" }
-        : view.vertical;
+    // Outcome durável POR IDENTIDADE (controle + quadrado). A leitura usa a
+    // view canônica; falha ⇒ fail-closed para formatos ainda `processing`.
+    // Crédito terminal (`delivered`/`absent`) nunca é rebaixado.
+    const durable = await readTwoFormatDurableOutcomes({
+      campaignId: input.campaignId,
+      controlOperationId: input.operationId,
+      operations: [view.square.deliveryOperationId],
+      client,
+    });
+    const unknownOperationIds =
+      durable.kind === "found"
+        ? new Set(durable.unknownOperationIds)
+        : new Set<string>();
+    // `operation.view.unknown` é a leitura da autoridade 9:16; mantém a
+    // precedência já existente para o controle.
+    if (operation.view.unknown) {
+      unknownOperationIds.add(input.operationId);
+    }
+    const durableView = applyTwoFormatDurableOutcomes(view, {
+      unknownOperationIds,
+      outcomesReadFailed: durable.kind !== "found",
+      controlOperationId: input.operationId,
+    });
+    const squareView = durableView.square;
+    const verticalView = durableView.vertical;
 
     const formats: Record<TwoFormatFormat, TwoFormatFormatStatus> = {
       "1:1": {

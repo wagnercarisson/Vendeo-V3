@@ -53,6 +53,16 @@ export type ApprovalDisplayState =
   | { status: "approved"; approvedAt: string }
   | { status: "regenerating" }; // derivado de correction_in_progress (decisão 5) — inalcançável na 37.1
 
+export type JointTwoFormatState =
+  | "delivered"
+  | "partial_terminal"
+  | "partial_indeterminate"
+  | "partial_processing"
+  | "finalization_pending"
+  | "refunded"
+  | "unknown"
+  | "processing";
+
 export interface CampaignPageProps {
   imageUrl: string | null;
   caption: string;
@@ -64,6 +74,8 @@ export interface CampaignPageProps {
   createdAt: string;
   updatedAt: string;
   downloadUrl: string;
+  /** F60.7 C3 — quando não há formato acessível para download. */
+  downloadDisabled?: boolean;
   campaignId: string;
   isPublicationCopyEdited: boolean;
   /**
@@ -76,16 +88,11 @@ export interface CampaignPageProps {
     readonly formats: Readonly<Record<TwoFormatFormat, TwoFormatDeliveryState>>;
     readonly preferredFormat: TwoFormatFormat | null;
     readonly requestedFormat: TwoFormatFormat | null;
+    /** `true` quando `?format=` veio vazio/inválido/duplicado (nunca fallback). */
+    readonly requestedFormatInvalid?: boolean;
     readonly previewFormat: TwoFormatFormat | null;
     readonly previewUrl: string | null;
-    readonly state:
-      | "delivered"
-      | "partial_terminal"
-      | "partial_indeterminate"
-      | "finalization_pending"
-      | "refunded"
-      | "unknown"
-      | "processing";
+    readonly state: JointTwoFormatState;
   };
   /**
    * F56.2b1b (B1B-D7 / REQ-56.2.2-09): estado do NOVO fluxo Product 1:1, derivado

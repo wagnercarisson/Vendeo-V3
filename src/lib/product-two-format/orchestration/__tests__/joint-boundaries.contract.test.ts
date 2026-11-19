@@ -185,6 +185,7 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     }
     expect(serverImports.sort()).toEqual(
       [
+        "src/lib/product-two-format/control-reader.ts",
         "src/lib/product-two-format/delivery-reader.ts",
         "src/lib/product-two-format/joint-financial-client.ts",
         "src/lib/product-two-format/orchestration/handle-joint-generate.ts",

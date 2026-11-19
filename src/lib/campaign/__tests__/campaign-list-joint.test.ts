@@ -1,32 +1,24 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const h = vi.hoisted(() => ({
+  readSummariesInput: null as unknown,
+  admin: {} as {
+    storage?: {
+      from: () => {
+        createSignedUrl: ReturnType<typeof vi.fn>;
+        createSignedUrls: ReturnType<typeof vi.fn>;
+      };
+    };
+  },
+  createSignedUrl: vi.fn(),
+  createSignedUrls: vi.fn(),
+  readSummaries: vi.fn(),
+}));
+
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/campaign/list", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/campaign/list")>();
-  return {
-    ...actual,
-    generateBatchThumbnailUrls: vi.fn(async () => ({})),
-    generateBatchPreferredThumbnailUrls: vi.fn(async () => ({
-      "campaign-1": "https://signed/joint",
-    })),
-  };
-});
 vi.mock("@/lib/product-two-format/list-summary", () => ({
-  readTwoFormatListSummaries: vi.fn(async () => new Map([
-    [
-      "campaign-1",
-      {
-        campaignId: "campaign-1",
-        operationId: "operation-1",
-        formats: { "1:1": "delivered", "9:16": "delivered" },
-        preferredFormat: "1:1",
-        preferredThumbnailPath:
-          "store-1/campaign-1/operation-1/square_original.thumb-v1.webp",
-        view: null,
-      },
-    ],
-  ])),
+  readTwoFormatListSummaries: h.readSummaries,
 }));
 
 const rows = [
@@ -57,20 +49,48 @@ vi.mock("@/lib/supabase/server", () => ({
       Promise.resolve({ data: rows, count: rows.length, error: null }).then(resolve);
     return { from: () => query };
   },
-  supabaseAdmin: {
-    storage: {
-      from: () => ({
-        createSignedUrl: async (path: string) => ({
-          data: { signedUrl: `https://signed/${path}` },
-          error: null,
-        }),
-      }),
-    },
-  },
+  supabaseAdmin: h.admin,
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.createSignedUrl.mockResolvedValue({
+    data: { signedUrl: "https://signed/legacy" },
+    error: null,
+  });
+  h.createSignedUrls.mockResolvedValue({
+    data: [
+      {
+        path: "store-1/campaign-1/operation-1/square_original.thumb-v1.webp",
+        signedUrl: "https://signed/joint",
+        error: null,
+      },
+    ],
+    error: null,
+  });
+  h.admin.storage = {
+    from: () => ({
+      createSignedUrl: h.createSignedUrl,
+      createSignedUrls: h.createSignedUrls,
+    }),
+  };
+  h.readSummaries.mockImplementation(async (input: unknown) => {
+    h.readSummariesInput = input;
+    return new Map([
+      [
+        "campaign-1",
+        {
+          campaignId: "campaign-1",
+          operationId: "operation-1",
+          formats: { "1:1": "delivered", "9:16": "delivered" },
+          preferredFormat: "1:1",
+          preferredThumbnailPath:
+            "store-1/campaign-1/operation-1/square_original.thumb-v1.webp",
+          view: null,
+        },
+      ],
+    ]);
+  });
 });
 
 describe("F60.7 C3 — listagem real", () => {
@@ -83,8 +103,20 @@ describe("F60.7 C3 — listagem real", () => {
       joint: true,
       formats: { "1:1": "delivered", "9:16": "delivered" },
       preferredFormat: "1:1",
-      thumbnailUrl:
-        "https://signed/store-1/campaign-1/operation-1/square_original.thumb-v1.webp",
+      thumbnailUrl: "https://signed/joint",
     });
+  });
+
+  it("usa o cliente privilegiado e não passa conjuntos pela assinatura legada", async () => {
+    const { listCampaigns } = await import("@/lib/campaign/list");
+    await listCampaigns("store-1");
+
+    expect(h.readSummariesInput).toMatchObject({
+      client: h.admin,
+      storeId: "store-1",
+    });
+    expect(h.createSignedUrls).toHaveBeenCalledTimes(1);
+    // A assinatura legada (singular) não processa o conjunto.
+    expect(h.createSignedUrl).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { twoFormatStatesSignature } from "@/lib/product-two-format/format-signature";
 import { useTwoFormatPolling } from "../use-two-format-polling";
 
 function json(body: unknown, status = 200): Response {
@@ -11,16 +12,20 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function input(fetchFn: typeof fetch, onDelivered = vi.fn()) {
+function input(
+  fetchFn: typeof fetch,
+  onTransition = vi.fn(),
+  formatsSignature = twoFormatStatesSignature({
+    "1:1": "processing",
+    "9:16": "processing",
+  }),
+) {
   return {
     campaignId: "campaign-1",
     operationId: "operation-1",
     enabled: true,
-    formatsSignature: JSON.stringify({
-      "1:1": { state: "processing" },
-      "9:16": { state: "processing" },
-    }),
-    onDelivered,
+    formatsSignature,
+    onTransition,
     fetchFn,
   };
 }
@@ -50,13 +55,23 @@ describe("F60.7 C3 — polling conjunto com relógio controlado", () => {
       await vi.advanceTimersByTimeAsync(5_000);
     });
     expect(fetchFn).toHaveBeenCalledTimes(1);
+
     await act(async () => {
-      resolve(json({ operation: { formats: {} } }));
+      resolve(
+        json({
+          operation: {
+            formats: {
+              "1:1": { state: "processing" },
+              "9:16": { state: "processing" },
+            },
+          },
+        }),
+      );
       await Promise.resolve();
     });
   });
 
-  it("aplica backoff 5/10/20/30 em falhas", async () => {
+  it("aplica backoff 5/10/20 em falhas", async () => {
     const fetchFn = vi.fn(async () =>
       json({ error: { code: "status_unavailable" } }, 503),
     );
@@ -76,10 +91,52 @@ describe("F60.7 C3 — polling conjunto com relógio controlado", () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });
     expect(fetchFn).toHaveBeenCalledTimes(3);
+    // Terceiro retry após 20 s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(fetchFn).toHaveBeenCalledTimes(4);
   });
 
-  it("dispara onDelivered quando um formato passa a delivered e para", async () => {
-    const onDelivered = vi.fn();
+  it("compara estados canônicos e não reage a formato de objeto diferente", async () => {
+    const onTransition = vi.fn();
+    const fetchFn = vi.fn(async () =>
+      json({
+        operation: {
+          formats: {
+            "1:1": { state: "delivered", deliveryOperationId: "op-1" },
+            "9:16": { state: "delivered", deliveryOperationId: "op-2" },
+          },
+        },
+      }),
+    );
+    renderHook(() =>
+      useTwoFormatPolling(
+        input(
+          fetchFn as typeof fetch,
+          onTransition,
+          twoFormatStatesSignature({
+            "1:1": "delivered",
+            "9:16": "delivered",
+          }),
+        ),
+      ),
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(onTransition).not.toHaveBeenCalled();
+    // Ambos estáveis ⇒ para.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("dispara uma transição e CONTINUA acompanhando o formato pendente", async () => {
+    const onTransition = vi.fn();
     const fetchFn = vi.fn(async () =>
       json({
         operation: {
@@ -91,13 +148,41 @@ describe("F60.7 C3 — polling conjunto com relógio controlado", () => {
       }),
     );
     renderHook(() =>
-      useTwoFormatPolling(input(fetchFn as typeof fetch, onDelivered)),
+      useTwoFormatPolling(input(fetchFn as typeof fetch, onTransition)),
     );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5_000);
     });
-    expect(onDelivered).toHaveBeenCalledTimes(1);
+    expect(onTransition).toHaveBeenCalledTimes(1);
+    // Continua: nova consulta após 5 s, sem repetir a transição.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(onTransition).toHaveBeenCalledTimes(1);
+  });
+
+  it("aplica estorno/unknown sem nova entrega e para quando ambos estabilizam", async () => {
+    const onTransition = vi.fn();
+    const fetchFn = vi.fn(async () =>
+      json({
+        operation: {
+          formats: {
+            "1:1": { state: "absent" },
+            "9:16": { state: "unknown" },
+          },
+        },
+      }),
+    );
+    renderHook(() =>
+      useTwoFormatPolling(input(fetchFn as typeof fetch, onTransition)),
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(onTransition).toHaveBeenCalledTimes(1);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
@@ -105,7 +190,16 @@ describe("F60.7 C3 — polling conjunto com relógio controlado", () => {
   });
 
   it("cancela timers no unmount", async () => {
-    const fetchFn = vi.fn(async () => json({ operation: { formats: {} } }));
+    const fetchFn = vi.fn(async () =>
+      json({
+        operation: {
+          formats: {
+            "1:1": { state: "processing" },
+            "9:16": { state: "processing" },
+          },
+        },
+      }),
+    );
     const { unmount } = renderHook(() =>
       useTwoFormatPolling(input(fetchFn as typeof fetch)),
     );

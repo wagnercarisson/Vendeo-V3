@@ -29,6 +29,7 @@ import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { CopyRecoveryPanel } from "@/components/flow/copy-recovery-panel";
 import { isDrivingCopyRecovery } from "@/lib/campaign/copy-recovery-driving";
 import { useTwoFormatPolling } from "@/components/flow/use-two-format-polling";
+import { twoFormatStatesSignature } from "@/lib/product-two-format/format-signature";
 
 interface CampaignPageClientProps extends CampaignPageProps {
   messages: CampaignDetailMessages;
@@ -91,22 +92,26 @@ function newRequestToken(): string | null {
 export default function CampaignPageClient(props: CampaignPageClientProps) {
   const router = useRouter();
 
-  // F60.7 C3 — polling read-only do conjunto. Status não contém URL: quando um
-  // formato passa a delivered, um único router.refresh renova props/URLs.
-  const handleJointDelivered = useCallback(() => {
+  // F60.7 C3 — polling read-only do conjunto. Status não contém URL: em
+  // QUALQUER transição relevante (entregue, estornado/ausente, unknown) um único
+  // router.refresh renova props/URLs. O mecanismo legado abaixo NÃO roda para
+  // campanhas conjuntas.
+  const handleJointTransition = useCallback(() => {
     router.refresh();
   }, [router]);
+  const jointPollingEnabled =
+    props.joint !== undefined &&
+    (props.joint.state === "processing" ||
+      props.joint.state === "partial_processing" ||
+      props.joint.state === "finalization_pending");
   useTwoFormatPolling({
     campaignId: props.campaignId,
     operationId: props.newFlow?.operationId ?? null,
-    enabled:
-      props.joint !== undefined &&
-      props.joint.state !== "delivered" &&
-      props.joint.state !== "refunded" &&
-      props.joint.state !== "unknown" &&
-      props.joint.state !== "partial_terminal",
-    formatsSignature: props.joint ? JSON.stringify(props.joint.formats) : "",
-    onDelivered: handleJointDelivered,
+    enabled: jointPollingEnabled,
+    formatsSignature: props.joint
+      ? twoFormatStatesSignature(props.joint.formats)
+      : "",
+    onTransition: handleJointTransition,
   });
 
 
@@ -128,7 +133,8 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
     { label: displayTitle, lang: contentTitleLang },
   ];
 
-  const isNewFlowRunning = props.newFlow?.state === "running";
+  const isNewFlowRunning =
+    props.joint === undefined && props.newFlow?.state === "running";
   const isLegacyGenerating = !props.newFlow && props.displayStatus === "generating";
   const recovery = props.newFlow?.recovery;
   const drivesAutomaticRecovery =
@@ -149,6 +155,7 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
         (recovery.waitRemainingMs > 0 || drivesAutomaticRecovery)));
 
   useEffect(() => {
+    if (props.joint) return;
     if (
       !isLegacyGenerating &&
       !isNewFlowRunning &&
@@ -161,7 +168,13 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isLegacyGenerating, isNewFlowRunning, recoveryNeedsAccompaniment, router]);
+  }, [
+    isLegacyGenerating,
+    isNewFlowRunning,
+    props.joint,
+    recoveryNeedsAccompaniment,
+    router,
+  ]);
 
   // F56.2b1b (Plano 06, B1B-D7 / REQ-56.2.2-09): campanha do NOVO fluxo — o
   // estado exibido deriva da OPERAÇÃO PERSISTIDA (props.newFlow) e NUNCA cai nas
@@ -392,19 +405,27 @@ function ReadyView(props: CampaignPageClientProps) {
                 {format}
               </a>
             ))}
-          {props.joint.state !== "delivered" && (
+          {props.joint.requestedFormatInvalid && (
             <span className="text-xs text-text-muted font-body">
-              {props.joint.state === "partial_terminal"
-                ? "Entrega parcial: um formato foi estornado."
-                : props.joint.state === "partial_indeterminate"
-                  ? "Entrega parcial: o outro formato ainda não foi confirmado."
-                  : props.joint.state === "finalization_pending"
-                    ? "Finalização pendente: um formato foi estornado e o outro ainda está em processamento."
-                    : props.joint.state === "refunded"
-                      ? "Operação estornada."
-                      : "Processando formatos..."}
+              Formato solicitado inválido. Escolha um dos formatos entregues.
             </span>
           )}
+          {!props.joint.requestedFormatInvalid &&
+            props.joint.state !== "delivered" && (
+              <span className="text-xs text-text-muted font-body">
+                {props.joint.state === "partial_terminal"
+                  ? "Entrega parcial: um formato foi estornado."
+                  : props.joint.state === "partial_indeterminate"
+                    ? "Entrega parcial: o outro formato ainda não foi confirmado."
+                    : props.joint.state === "partial_processing"
+                      ? "Entrega parcial: o outro formato está em processamento."
+                      : props.joint.state === "finalization_pending"
+                        ? "Finalização pendente: um formato foi estornado e o outro ainda está em processamento."
+                        : props.joint.state === "refunded"
+                          ? "Operação estornada."
+                          : "Processando formatos..."}
+              </span>
+            )}
         </div>
       )}
       {props.imageUrl &&
@@ -594,14 +615,16 @@ function ReadyView(props: CampaignPageClientProps) {
         </div>
       </Card>
 
-      <Button
-        variant="primary"
-        size="md"
-        onClick={() => { window.location.href = props.downloadUrl; }}
-      >
-        <Download className="h-4 w-4" />
-        {props.messages.downloadOriginal}
-      </Button>
+      {!props.downloadDisabled && (
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => { window.location.href = props.downloadUrl; }}
+        >
+          <Download className="h-4 w-4" />
+          {props.messages.downloadOriginal}
+        </Button>
+      )}
       <p className="text-xs text-text-muted">
         {props.messages.disclaimer}
       </p>
@@ -785,19 +808,27 @@ function NewFlowDeliveredView(props: CampaignPageClientProps) {
                 {format}
               </a>
             ))}
-          {props.joint.state !== "delivered" && (
+          {props.joint.requestedFormatInvalid && (
             <span className="text-xs text-text-muted font-body">
-              {props.joint.state === "partial_terminal"
-                ? "Entrega parcial: um formato foi estornado."
-                : props.joint.state === "partial_indeterminate"
-                  ? "Entrega parcial: o outro formato ainda não foi confirmado."
-                  : props.joint.state === "finalization_pending"
-                    ? "Finalização pendente: um formato foi estornado e o outro ainda está em processamento."
-                    : props.joint.state === "refunded"
-                      ? "Operação estornada."
-                      : "Processando formatos..."}
+              Formato solicitado inválido. Escolha um dos formatos entregues.
             </span>
           )}
+          {!props.joint.requestedFormatInvalid &&
+            props.joint.state !== "delivered" && (
+              <span className="text-xs text-text-muted font-body">
+                {props.joint.state === "partial_terminal"
+                  ? "Entrega parcial: um formato foi estornado."
+                  : props.joint.state === "partial_indeterminate"
+                    ? "Entrega parcial: o outro formato ainda não foi confirmado."
+                    : props.joint.state === "partial_processing"
+                      ? "Entrega parcial: o outro formato está em processamento."
+                      : props.joint.state === "finalization_pending"
+                        ? "Finalização pendente: um formato foi estornado e o outro ainda está em processamento."
+                        : props.joint.state === "refunded"
+                          ? "Operação estornada."
+                          : "Processando formatos..."}
+              </span>
+            )}
         </div>
       )}
       {props.imageUrl &&
@@ -855,16 +886,18 @@ function NewFlowDeliveredView(props: CampaignPageClientProps) {
         />
       )}
 
-      <Button
-        variant="primary"
-        size="md"
-        onClick={() => {
-          window.location.href = props.downloadUrl;
-        }}
-      >
-        <Download className="h-4 w-4" />
-        {props.messages.downloadOriginal}
-      </Button>
+      {!props.downloadDisabled && (
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => {
+            window.location.href = props.downloadUrl;
+          }}
+        >
+          <Download className="h-4 w-4" />
+          {props.messages.downloadOriginal}
+        </Button>
+      )}
       <p className="text-xs text-text-muted">
         {props.messages.disclaimer}
       </p>

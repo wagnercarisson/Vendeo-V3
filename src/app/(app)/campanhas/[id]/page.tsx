@@ -23,11 +23,18 @@ import {
 } from "@/lib/campaign/display";
 import type {
   CampaignFormRestore,
+  JointTwoFormatState,
   NewFlowCopyRecoveryRecord,
   NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
+import {
+  applyTwoFormatDurableOutcomes,
+  readTwoFormatDurableOutcomes,
+  resolveTwoFormatControlOperation,
+} from "@/lib/product-two-format/control-reader";
+import type { TwoFormatFormat } from "@/lib/product-two-format/types";
 import { normalizeTwoFormatOutcome } from "@/lib/campaign/two-format-outcome";
 import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
 import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
@@ -52,6 +59,25 @@ interface PageProps {
 // F37.2 (R7): teto de staleness do consumo = timeout global de geração + 30s.
 const CORRECTION_GENERATION_STALE_AFTER_MS = IMAGE_GENERATION_GLOBAL_TIMEOUT_MS + 30_000;
 
+type JointFormatRequest =
+  | { readonly kind: "absent" }
+  | { readonly kind: "invalid" }
+  | { readonly kind: "valid"; readonly format: TwoFormatFormat };
+
+/**
+ * Distingue `?format=` AUSENTE de valor inválido/vazio/duplicado. Só a ausência
+ * autoriza o fallback para o formato preferido; os demais falham fechado.
+ */
+function parseJointFormatRequest(
+  raw: string | string[] | undefined,
+): JointFormatRequest {
+  if (raw === undefined) return { kind: "absent" };
+  if (raw === "1:1" || raw === "9:16") {
+    return { kind: "valid", format: raw };
+  }
+  return { kind: "invalid" };
+}
+
 export default async function CampaignDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
 
@@ -75,13 +101,174 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
 
   let props = mapCampaignToProps(campaign, id);
 
-  // F56.2b1b (Plano 06, B1B-D7 / C1 / I2 / E1) — campanha do NOVO fluxo: o
-  // estado exibido deriva da OPERAÇÃO PERSISTIDA (`getCampaignOperation`), NUNCA
-  // de `campaign.status`. A leitura só REFLETE o estado persistido — não retoma
-  // nem controla processamento. `delivered`/`refunded` (terminal) PREVALECEM
-  // sobre o marcador histórico `unknown`; `unknown` só governa operação não
-  // terminal. Campanhas legadas (operação `null`) seguem no caminho atual
-  // byte-compatível (aprovação F37 + `computeDisplayStatus`).
+  // F60.7 C3 — classificação CONJUNTA antes de qualquer identidade financeira
+  // individual. `getCampaignOperation` escolhe a reserva mais recente por
+  // `created_at DESC`; numa campanha conjunta existem DUAS reservas, então ela
+  // não é autoridade para a operação de controle. O ramo conjunto resolve a
+  // identidade pela autoridade conjunta (vínculos de entrega) e nunca chama a
+  // RPC financeira individual.
+  const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
+  const jointClassification = classifyTwoFormatCampaign(campaign.input_snapshot);
+
+  const renderUnknownJoint = (operationId: string | null) => {
+    props.newFlow = {
+      state: "unknown",
+      supportReference: null,
+      operationId,
+      supportEmail: process.env.SUPPORT_EMAIL,
+    };
+    return (
+      <CampaignPageClient {...props} messages={messages} locale={locale} />
+    );
+  };
+
+  if (flowClassification === "indeterminate") {
+    return renderUnknownJoint(null);
+  }
+  if (jointClassification.kind === "inconsistent") {
+    return renderUnknownJoint(null);
+  }
+
+  if (jointClassification.kind === "two_format") {
+    const control = await resolveTwoFormatControlOperation({
+      campaignId: id,
+      storeId: campaign.store_id,
+    });
+    if (control.kind !== "found") {
+      return renderUnknownJoint(null);
+    }
+
+    const jointRead = await readTwoFormatDelivery(
+      {
+        campaignId: id,
+        operationId: control.operationId,
+        storeId: campaign.store_id,
+      },
+      { client: supabaseAdmin },
+    );
+    if (jointRead.kind !== "found") {
+      return renderUnknownJoint(control.operationId);
+    }
+
+    // Outcome durável por identidade (controle + quadrado). Crédito reservado
+    // NUNCA rebaixa um outcome `unknown` para simples processamento.
+    const durable = await readTwoFormatDurableOutcomes({
+      campaignId: id,
+      controlOperationId: control.operationId,
+      operations: [jointRead.view.square.deliveryOperationId],
+    });
+    const view = applyTwoFormatDurableOutcomes(jointRead.view, {
+      unknownOperationIds:
+        durable.kind === "found" ? durable.unknownOperationIds : new Set(),
+      outcomesReadFailed: durable.kind !== "found",
+      controlOperationId: control.operationId,
+    });
+
+    const resolvedSearchParams = searchParams ? await searchParams : undefined;
+    const formatRequest = parseJointFormatRequest(
+      resolvedSearchParams?.format,
+    );
+    const requestedFormat =
+      formatRequest.kind === "valid" ? formatRequest.format : null;
+    const preferredFormat =
+      view.square.state === "delivered"
+        ? "1:1"
+        : view.vertical.state === "delivered"
+          ? "9:16"
+          : null;
+    // Só a AUSÊNCIA do parâmetro permite escolher o preferido. Valor inválido,
+    // vazio ou duplicado nunca cai silenciosamente no outro formato.
+    const targetFormat =
+      formatRequest.kind === "absent" ? preferredFormat : requestedFormat;
+    const access =
+      targetFormat === null
+        ? null
+        : resolveTwoFormatAccess({ view, format: targetFormat });
+    let previewUrl: string | null = null;
+    if (access?.allowed === true) {
+      const signed = await supabaseAdmin.storage
+        .from(COMPOSITION_ARTIFACT_BUCKET)
+        .createSignedUrl(access.artifactPath, 300);
+      previewUrl = signed.data?.signedUrl ?? null;
+    }
+
+    const square = view.square.state;
+    const vertical = view.vertical.state;
+    // Reutiliza o normalizador ÚNICO do C2 para não divergir do formulário.
+    const jointOutcome = normalizeTwoFormatOutcome({
+      formats: {
+        "1:1": { state: square },
+        "9:16": { state: vertical },
+      },
+    });
+    let jointState: JointTwoFormatState =
+      jointOutcome.kind === "complete"
+        ? "delivered"
+        : jointOutcome.kind === "error"
+          ? "unknown"
+          : jointOutcome.kind;
+    // Entregue + o outro ainda processando NÃO é "running" puro: a arte
+    // entregue permanece visível e o pendente é acompanhado em separado.
+    if (
+      jointState === "processing" &&
+      (square === "delivered" || vertical === "delivered")
+    ) {
+      jointState = "partial_processing";
+    }
+
+    props.imageUrl = previewUrl;
+    props.newFlowFormat = targetFormat ?? undefined;
+    props.downloadUrl =
+      targetFormat !== null
+        ? `/api/campaign/${id}/download?format=${targetFormat}`
+        : `/api/campaign/${id}/download`;
+    props.downloadDisabled = access?.allowed !== true;
+    props.joint = {
+      formats: {
+        "1:1": square,
+        "9:16": vertical,
+      },
+      preferredFormat,
+      requestedFormat,
+      requestedFormatInvalid: formatRequest.kind === "invalid",
+      previewFormat: access?.allowed === true ? targetFormat : null,
+      previewUrl,
+      state: jointState,
+    };
+
+    let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
+    try {
+      newFlowCopy = mapNewFlowCopy(
+        await readCopyDelivery(supabaseAdmin, {
+          campaignId: id,
+          operationId: control.operationId,
+        }),
+        false,
+      );
+    } catch {
+      newFlowCopy = null;
+    }
+    props.newFlow = {
+      state:
+        jointState === "refunded"
+          ? "refunded"
+          : jointState === "unknown"
+            ? "unknown"
+            : jointState === "processing" ||
+                jointState === "finalization_pending"
+              ? "running"
+              : "delivered",
+      supportReference:
+        durable.kind === "found" ? durable.controlSupportReference : null,
+      operationId: control.operationId,
+      supportEmail: process.env.SUPPORT_EMAIL,
+      copy: newFlowCopy,
+    };
+    return (
+      <CampaignPageClient {...props} messages={messages} locale={locale} />
+    );
+  }
+
   const loadNewFlowOperation = async () => {
     try {
       return await new ProductOneToOneAttemptStartClient().getCampaignOperation(id);
@@ -94,142 +281,11 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
   const newFlowOperation = await loadNewFlowOperation();
   const newFlowState = mapNewFlowDisplayState(newFlowOperation);
 
-  // F56.2b1b (Plano 06 — correção) — CLASSIFICAÇÃO PERSISTIDA. O fluxo da campanha
-  // é decidido pela informação PERSISTIDA (`campaigns.input_snapshot.
-  // frozenContentReferences`), NUNCA pelo resultado da leitura da operação. Marcador
-  // PRESENTE ⇒ campanha do NOVO fluxo: se a operação não puder ser lida (RPC
-  // ausente/erro), FALHA FECHADA — superfície segura de resultado DESCONHECIDO —
-  // NUNCA as telas legadas (`StaleView`/`ErrorView`) de regeneração nem o gate F37.
-  // Marcador AUSENTE ⇒ LEGADO PROVADO (caminho abaixo preservado). INDETERMINADA ⇒
-  // fail-closed.
-  const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
-  if (
-    flowClassification === "indeterminate" ||
-    (flowClassification === "new_flow" && !newFlowState)
-  ) {
-    props.newFlow = {
-      state: "unknown",
-      supportReference: null,
-      operationId: null,
-      supportEmail: process.env.SUPPORT_EMAIL,
-    };
-    return (
-      <CampaignPageClient {...props} messages={messages} locale={locale} />
-    );
+  if (flowClassification === "new_flow" && !newFlowState) {
+    return renderUnknownJoint(null);
   }
 
   if (newFlowState && newFlowOperation) {
-    // F60.7 C3 — campanha conjunta: uma única superfície, dois formatos.
-    if (classifyTwoFormatCampaign(campaign.input_snapshot).kind === "two_format") {
-      const jointRead = await readTwoFormatDelivery(
-        {
-          campaignId: id,
-          operationId: newFlowOperation.operationId,
-          storeId: campaign.store_id,
-        },
-        { client: supabaseAdmin },
-      );
-      if (jointRead.kind !== "found") {
-        props.newFlow = {
-          state: "unknown",
-          supportReference: null,
-          operationId: newFlowOperation.operationId,
-          supportEmail: process.env.SUPPORT_EMAIL,
-        };
-        return (
-          <CampaignPageClient {...props} messages={messages} locale={locale} />
-        );
-      }
-      const view = jointRead.view;
-      const resolvedSearchParams = searchParams ? await searchParams : undefined;
-      const rawFormat = resolvedSearchParams?.format;
-      const requestedFormat =
-        rawFormat === "1:1" || rawFormat === "9:16" ? rawFormat : null;
-      const preferredFormat =
-        view.square.state === "delivered"
-          ? "1:1"
-          : view.vertical.state === "delivered"
-            ? "9:16"
-            : null;
-      const targetFormat = requestedFormat ?? preferredFormat;
-      const access =
-        targetFormat === null
-          ? null
-          : resolveTwoFormatAccess({ view, format: targetFormat });
-      let previewUrl: string | null = null;
-      if (access?.allowed === true) {
-        const signed = await supabaseAdmin.storage
-          .from(COMPOSITION_ARTIFACT_BUCKET)
-          .createSignedUrl(access.artifactPath, 300);
-        previewUrl = signed.data?.signedUrl ?? null;
-      }
-
-      const square = view.square.state;
-      const vertical = view.vertical.state;
-      // Reutiliza o normalizador ÚNICO do C2 para não divergir do formulário.
-      const jointOutcome = normalizeTwoFormatOutcome({
-        formats: {
-          "1:1": { state: square },
-          "9:16": { state: vertical },
-        },
-      });
-      const jointState =
-        jointOutcome.kind === "complete"
-          ? "delivered"
-          : jointOutcome.kind === "error"
-            ? "unknown"
-            : jointOutcome.kind;
-
-      props.imageUrl = previewUrl;
-      props.newFlowFormat = targetFormat ?? undefined;
-      props.downloadUrl =
-        targetFormat !== null
-          ? `/api/campaign/${id}/download?format=${targetFormat}`
-          : `/api/campaign/${id}/download`;
-      props.joint = {
-        formats: {
-          "1:1": square,
-          "9:16": vertical,
-        },
-        preferredFormat,
-        requestedFormat,
-        previewFormat: access?.allowed === true ? targetFormat : null,
-        previewUrl,
-        state: jointState,
-      };
-
-      let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
-      try {
-        newFlowCopy = mapNewFlowCopy(
-          await readCopyDelivery(supabaseAdmin, {
-            campaignId: id,
-            operationId: newFlowOperation.operationId,
-          }),
-          false,
-        );
-      } catch {
-        newFlowCopy = null;
-      }
-      props.newFlow = {
-        state:
-          jointState === "refunded"
-            ? "refunded"
-            : jointState === "unknown"
-              ? "unknown"
-              : jointState === "processing" ||
-                  jointState === "finalization_pending"
-                ? "running"
-                : "delivered",
-        supportReference: newFlowOperation.supportReference ?? null,
-        operationId: newFlowOperation.operationId,
-        supportEmail: process.env.SUPPORT_EMAIL,
-        copy: newFlowCopy,
-      };
-      return (
-        <CampaignPageClient {...props} messages={messages} locale={locale} />
-      );
-    }
-
     // F59/D-12 — formato PERSISTIDO, resolvido server-side. Indisponível ⇒ sem
     // frame vertical e sem URL assinada (fail-closed).
     const formatResolution = resolveCampaignFormat(campaign.input_snapshot);

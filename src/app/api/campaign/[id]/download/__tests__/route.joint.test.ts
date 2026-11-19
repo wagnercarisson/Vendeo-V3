@@ -16,6 +16,11 @@ const h = vi.hoisted(() => ({
     },
   },
   read: null as unknown,
+  controlResult: {
+    kind: "found",
+    operationId: "33333333-3333-4333-8333-333333333333",
+  } as unknown,
+  readCalls: 0,
   download: vi.fn(async (path: string) => ({
     data: new Blob([`bytes:${path}`]),
     error: null,
@@ -54,7 +59,13 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 vi.mock("@/lib/product-two-format/delivery-reader", () => ({
-  readTwoFormatDelivery: vi.fn(async () => h.read),
+  readTwoFormatDelivery: vi.fn(async () => {
+    h.readCalls += 1;
+    return h.read;
+  }),
+}));
+vi.mock("@/lib/product-two-format/control-reader", () => ({
+  resolveTwoFormatControlOperation: vi.fn(async () => h.controlResult),
 }));
 
 const STORE = h.campaign.store_id;
@@ -96,11 +107,20 @@ function view(square: "delivered" | "absent", vertical: "delivered" | "absent") 
 
 function request(format?: string) {
   const url = new URL(`http://localhost/api/campaign/${CAMPAIGN}/download`);
-  if (format) url.searchParams.set("format", format);
+  if (format !== undefined) url.searchParams.set("format", format);
+  return new NextRequest(url);
+}
+
+function requestDuplicate() {
+  const url = new URL(`http://localhost/api/campaign/${CAMPAIGN}/download`);
+  url.searchParams.append("format", "1:1");
+  url.searchParams.append("format", "9:16");
   return new NextRequest(url);
 }
 
 beforeEach(() => {
+  h.readCalls = 0;
+  h.controlResult = { kind: "found", operationId: OPERATION };
   h.download.mockClear();
 });
 
@@ -139,6 +159,20 @@ describe("F60.7 C3 — download conjunto", () => {
       params: Promise.resolve({ id: CAMPAIGN }),
     });
     expect(response.status).toBe(403);
+    expect(h.download).not.toHaveBeenCalled();
+  });
+
+  it("formato inválido, vazio ou duplicado é recusado sem leitura/download", async () => {
+    h.read = { kind: "found", view: view("delivered", "delivered") };
+    const { GET } = await import("../route");
+
+    for (const req of [request("bogus"), request(""), requestDuplicate()]) {
+      const response = await GET(req, {
+        params: Promise.resolve({ id: CAMPAIGN }),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(h.readCalls).toBe(0);
     expect(h.download).not.toHaveBeenCalled();
   });
 });
