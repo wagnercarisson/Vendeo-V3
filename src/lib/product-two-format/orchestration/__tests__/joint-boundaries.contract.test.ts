@@ -40,6 +40,7 @@ const C2_PRODUCTION_CONSUMERS = new Set([
   "src/components/flow/campaign-format-selector.tsx",
   "src/components/flow/campaign-input-form.tsx",
   "src/components/flow/generation-progress.tsx",
+  "src/components/flow/unknown-result-panel.tsx",
   "src/components/flow/use-campaign-form.ts",
 ]);
 

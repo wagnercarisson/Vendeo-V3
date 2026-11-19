@@ -5,6 +5,7 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import { createTwoFormatRunDeps } from "../run-two-format-deps";
 import { runTwoFormatGeneration } from "../run-two-format";
+import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 import {
   CAMPAIGN_ID,
   OPERATION_ID,
@@ -349,5 +350,53 @@ describe("F60.7 C1 — status conjunto derivado do planejamento conjunto", () =>
     expect(replay.nextStep).toBeNull();
     expect(replay.canContinue).toBe(false);
     expect(replay.operationTerminal).toBe(false);
+  });
+
+  it("requestId da tentativa anterior é query_only; nova tentativa exige novo ID", async () => {
+    const base = step("base");
+    const expansion = step("expansion");
+    if (!base || !expansion) throw new Error("missing steps");
+    base.status = "done";
+    expansion.status = "failed";
+    expansion.failure_class = "transient";
+    expansion.attempts_used = 1;
+    world.rows.push({
+      __table: "product_9_16_two_stage_attempt_claims",
+      id: "claim-old",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      stage: "expansion",
+      attempt_number: 1,
+      target: "initial",
+      request_id: "11111111-1111-4111-8111-111111111111",
+      status: "failed",
+      failure_class: "transient",
+      attempt_token: "old-token",
+    });
+
+    const control = new ProductTwoStageOperationClient(world.client);
+    const reused = await control.acquire({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      stage: "expansion",
+      requestId: "11111111-1111-4111-8111-111111111111",
+      target: "retry",
+    });
+    expect(reused).toMatchObject({
+      acquired: false,
+      authorization: "query_only",
+    });
+
+    const fresh = await control.acquire({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      stage: "expansion",
+      requestId: "22222222-2222-4222-8222-222222222222",
+      target: "retry",
+    });
+    expect(fresh).toMatchObject({
+      acquired: true,
+      authorization: "execute",
+    });
   });
 });

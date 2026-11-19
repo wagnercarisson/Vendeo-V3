@@ -510,7 +510,7 @@ describe("F60.7 C2 — reload e autoridade de origin", () => {
     expect(bodies[0].requestId).not.toBe(bodies[1].requestId);
   });
 
-  it("retry ambíguo da mesma continuação reutiliza o requestId", async () => {
+  it("resposta perdida + status autorizando retry usa NOVO requestId", async () => {
     sessionStorage.setItem(
       "campaign_active_operation:store-7",
       JSON.stringify({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }),
@@ -524,7 +524,7 @@ describe("F60.7 C2 — reload e autoridade de origin", () => {
             formats: formats("processing", "processing"),
             canContinue: true,
             operationTerminal: false,
-            nextStep: "square_delivery",
+            nextStep: "expansion",
           },
         });
       }
@@ -556,6 +556,8 @@ describe("F60.7 C2 — reload e autoridade de origin", () => {
       await result.current.continueGeneration();
     });
     await waitFor(() => expect(continueCalls).toBe(1));
+    // A consulta de status autorizou nova tentativa; a superfície volta
+    // consultável com canContinue=true.
     await waitFor(() => expect(result.current.processingResult).not.toBeNull());
 
     await act(async () => {
@@ -566,7 +568,7 @@ describe("F60.7 C2 — reload e autoridade de origin", () => {
       .filter(([url]) => String(url).endsWith("/continue"))
       .map(([, init]) => JSON.parse((init as RequestInit).body as string));
     expect(bodies).toHaveLength(2);
-    expect(bodies[0].requestId).toBe(bodies[1].requestId);
+    expect(bodies[0].requestId).not.toBe(bodies[1].requestId);
   });
 
   it("status conjunto ambos estornados encaminha estorno, nunca sucesso", async () => {
@@ -598,6 +600,82 @@ describe("F60.7 C2 — reload e autoridade de origin", () => {
     expect(result.current.unknownResult).toBeNull();
   });
 
+  it("fechamento anormal do stream inicial joint consulta status e preserva a operação", async () => {
+    const { result } = renderHook(() =>
+      useCampaignForm("store-1", { eligible: true }),
+    );
+    await fillJointForm(result);
+    await act(async () => {
+      await result.current.enterReview();
+    });
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/campaign/generate-image") {
+        return ndjson([
+          { type: "phase", phase: "square_base", status: "running" },
+        ]);
+      }
+      if (url === "/api/campaign/generation-status") {
+        return jsonResponse({
+          operation: {
+            origin: "two_format_two_stage",
+            formats: formats("processing", "processing"),
+            canContinue: true,
+            operationTerminal: false,
+            nextStep: "square_delivery",
+          },
+        });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await act(async () => {
+      await result.current.confirmReview();
+    });
+    await waitFor(() =>
+      expect(result.current.processingResult?.operationId).toBeTruthy(),
+    );
+    expect(result.current.unknownResult).toBeNull();
+    expect(result.current.processingResult?.canContinue).toBe(true);
+  });
+
+  it("draft joint restaurado só do cliente pausa com flag OFF e bloqueia review", async () => {
+    mockRestoreFormState.mockReturnValue({
+      productName: "Produto local",
+      description: "",
+      originalPriceCents: 1000,
+      discountedPriceCents: undefined,
+      badge: "",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [],
+      mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
+      backgroundDirection: "studio",
+      campaignFormat: "1:1+9:16",
+    });
+    const { result } = renderHook(() =>
+      useCampaignForm("store-local", {
+        eligible: true,
+        verticalEnabled: false,
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.fields.campaignFormat).toBe("1:1+9:16"),
+    );
+    expect(result.current.formatPaused).toBe(true);
+    let entered = true;
+    await act(async () => {
+      entered = await result.current.enterReview();
+    });
+    expect(entered).toBe(false);
+    expect(result.current.reviewMode).toBe(false);
+  });
+
   it("status indisponível no reload não monta continuação nem adivinha fluxo", async () => {
     sessionStorage.setItem(
       "campaign_active_operation:store-3",
@@ -612,7 +690,13 @@ describe("F60.7 C2 — reload e autoridade de origin", () => {
       useCampaignForm("store-3", { eligible: true }),
     );
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(result.current.processingResult).toBeNull();
+    // Falha de leitura preserva a operação consultável, com continuação bloqueada.
+    await waitFor(() =>
+      expect(result.current.processingResult).toMatchObject({
+        canContinue: false,
+        partial: "unavailable",
+      }),
+    );
     await act(async () => {
       await result.current.continueGeneration();
     });

@@ -102,6 +102,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     unknownResult,
     processingResult,
     flowKind,
+    formatPaused,
     continueGeneration,
     retryProcessingStatus,
     resetUnknownResult,
@@ -109,7 +110,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     restorationNotice,
     backgroundDirectionNotice,
     backgroundDirectionRequired,
-  } = useCampaignForm(storeId, { eligible, restoredForm, campaignFormatPaused });
+  } = useCampaignForm(storeId, { eligible, restoredForm, campaignFormatPaused, verticalEnabled });
+  const isFormatPaused = formatPaused ?? campaignFormatPaused;
 
   // Recorte 2 (Plano 09): o resultado TERMINAL `refunded` é apresentado pelo
   // DETALHE (reutiliza o `RefundedPanel`) — NÃO há mais superfície paralela aqui.
@@ -148,7 +150,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
       </div>
       {showFormatSelector && (
         <div className={`${styles.column} space-y-3`}>
-          {campaignFormatPaused && (
+          {isFormatPaused && (
             <div
               role="alert"
               className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
@@ -172,9 +174,9 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
           <CampaignFormatSelector
             value={fields.campaignFormat ?? "1:1"}
             onChange={(format) => setField("campaignFormat", format)}
-            disabled={isSubmitting || campaignFormatPaused}
-            verticalEnabled={verticalEnabled && !campaignFormatPaused}
-            jointEnabled={verticalEnabled && !campaignFormatPaused}
+            disabled={isSubmitting || isFormatPaused}
+            verticalEnabled={verticalEnabled && !isFormatPaused}
+            jointEnabled={verticalEnabled && !isFormatPaused}
           />
         </div>
       )}
@@ -206,6 +208,15 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
           >
             A entrega de um formato já foi encerrada; a finalização do outro está
             pendente. Você pode verificar novamente ou retomar quando autorizado.
+          </div>
+        )}
+        {processingResult.partial === "unavailable" && (
+          <div
+            role="alert"
+            className="mx-auto mb-4 max-w-md rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
+          >
+            Não foi possível confirmar o status agora. A operação foi preservada;
+            use “Verificar novamente”.
           </div>
         )}
         <div className="flex flex-wrap gap-2 justify-center pb-8">
@@ -442,7 +453,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         supportEmail={supportEmail}
         eligible={eligible}
         backgroundDirectionRequired={backgroundDirectionRequired}
-        campaignFormatPaused={campaignFormatPaused}
+        campaignFormatPaused={isFormatPaused}
       />
       </div>
     </div>

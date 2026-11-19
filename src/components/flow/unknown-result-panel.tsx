@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  eventFormats,
+  normalizeTwoFormatOutcome,
+} from "@/lib/campaign/two-format-outcome";
 
 /**
  * F56.2b1b (UI-SPEC §Surface 3 / §Copywriting, B1B-D5/D7 / REQ-56.2.2-06/-07) —
@@ -88,6 +92,41 @@ export function UnknownResultPanel({
       const data = await res.json().catch(() => null);
       // Consome o estado PERSISTIDO devolvido pela consulta. Nunca inicia
       // tentativa/geração/cobrança.
+      const operation = data?.operation as Record<string, unknown> | undefined;
+      if (
+        operation?.origin === "two_format_two_stage" ||
+        operation?.formats !== undefined
+      ) {
+        const formats = eventFormats(operation);
+        if (formats) {
+          const normalized = normalizeTwoFormatOutcome({
+            formats,
+            operationTerminal: operation.operationTerminal === true,
+            canContinue: operation.canContinue === true,
+            nextStep:
+              typeof operation.nextStep === "string"
+                ? operation.nextStep
+                : null,
+          });
+          if (
+            normalized.kind === "complete" ||
+            normalized.kind === "partial_terminal"
+          ) {
+            onResolved?.("delivered");
+            router.push(`/campanhas/${campaignId}`);
+            return;
+          }
+          if (normalized.kind === "refunded") {
+            onResolved?.("refunded");
+            router.push(`/campanhas/${campaignId}`);
+            return;
+          }
+          // processing/finalization/partial indeterminate/unknown: mantém a
+          // superfície e reconsulta; nunca inventa terminal.
+          router.refresh();
+          return;
+        }
+      }
       const state = data?.operation?.state;
       if (state === "delivered") {
         onResolved?.("delivered");

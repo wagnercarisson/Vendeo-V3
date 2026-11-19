@@ -17,6 +17,20 @@ import {
 } from "@/lib/product-1-1/selection-validation";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 import { registerCopyRecoveryDrivingHandle } from "@/lib/campaign/copy-recovery-driving";
+import {
+  eventFormats,
+  normalizeTwoFormatOutcome,
+  type NormalizedTwoFormatOutcome,
+  type TwoFormatClientFormatState,
+  type TwoFormatClientFormats,
+} from "@/lib/campaign/two-format-outcome";
+
+export { normalizeTwoFormatOutcome };
+export type {
+  NormalizedTwoFormatOutcome,
+  TwoFormatClientFormatState,
+  TwoFormatClientFormats,
+};
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -108,142 +122,6 @@ const MAX_CONTINUATIONS = 3;
 /** F60.7 C2 — conveniência do fluxo conjunto (base + quadrado + expansão + vertical). */
 const MAX_CONTINUATIONS_JOINT = 4;
 
-export type CampaignFormatValue = "1:1" | "9:16" | "1:1+9:16";
-export type CampaignFlowKind =
-  | "one_to_one"
-  | "two_stage_9_16"
-  | "two_format_two_stage";
-
-type ProcessingState = {
-  campaignId: string | null;
-  operationId: string | null;
-  canContinue: boolean;
-  stepInProgress: boolean;
-  continuationsExhausted?: boolean;
-  /** C2 — resultado parcial preservado sem apagar a operação ativa. */
-  partial?: "indeterminate" | "finalization_pending" | null;
-  nextStep?: string | null;
-};
-
-type StatusOutcome =
-  | "delivered"
-  | "partial_terminal"
-  | "partial_indeterminate"
-  | "refunded"
-  | "unknown"
-  | "processing"
-  | "unavailable"
-  | "error";
-
-export type TwoFormatClientFormatState =
-  | "delivered"
-  | "processing"
-  | "absent"
-  | "unknown"
-  | "unavailable";
-
-export type TwoFormatClientFormats = Record<
-  "1:1" | "9:16",
-  { readonly state: TwoFormatClientFormatState }
->;
-
-export type NormalizedTwoFormatOutcome =
-  | { readonly kind: "complete"; readonly formats: TwoFormatClientFormats }
-  | { readonly kind: "partial_terminal"; readonly formats: TwoFormatClientFormats }
-  | {
-      readonly kind: "partial_indeterminate";
-      readonly formats: TwoFormatClientFormats;
-    }
-  | {
-      readonly kind: "finalization_pending";
-      readonly formats: TwoFormatClientFormats;
-      readonly canContinue: boolean;
-      readonly nextStep: string | null;
-    }
-  | { readonly kind: "refunded"; readonly formats: TwoFormatClientFormats }
-  | { readonly kind: "unknown"; readonly formats: TwoFormatClientFormats }
-  | {
-      readonly kind: "processing";
-      readonly formats: TwoFormatClientFormats;
-      readonly canContinue: boolean;
-      readonly nextStep: string | null;
-    }
-  | { readonly kind: "error"; readonly formats: TwoFormatClientFormats };
-
-/**
- * F60.7 C2 — normaliza o terminal conjunto (NDJSON inicial, continuação e
- * status) em UMA decisão. `result` nunca é sucesso por si só: o estado dos dois
- * formatos e `operationTerminal` é que decidem.
- */
-export function normalizeTwoFormatOutcome(input: {
-  readonly formats: TwoFormatClientFormats;
-  readonly operationTerminal?: boolean;
-  readonly canContinue?: boolean;
-  readonly nextStep?: string | null;
-  readonly event?: "result" | "processing" | "unknown" | "error";
-  readonly refunded?: boolean;
-}): NormalizedTwoFormatOutcome {
-  const { formats } = input;
-  const square = formats["1:1"].state;
-  const vertical = formats["9:16"].state;
-  const delivered =
-    (square === "delivered" ? 1 : 0) + (vertical === "delivered" ? 1 : 0);
-
-  if (input.event === "unknown") return { kind: "unknown", formats };
-  if (input.event === "error") {
-    return input.refunded === true
-      ? { kind: "refunded", formats }
-      : { kind: "error", formats };
-  }
-
-  if (delivered === 2) return { kind: "complete", formats };
-
-  if (delivered === 1) {
-    const other = square === "delivered" ? vertical : square;
-    if (other === "absent") return { kind: "partial_terminal", formats };
-    if (other === "processing") {
-      return {
-        kind: "processing",
-        formats,
-        canContinue: input.canContinue === true,
-        nextStep: input.nextStep ?? null,
-      };
-    }
-    // unknown/unavailable: parcial não terminal, identidade preservada.
-    return { kind: "partial_indeterminate", formats };
-  }
-
-  if (square === "absent" && vertical === "absent") {
-    return { kind: "refunded", formats };
-  }
-
-  const anyUnknown =
-    square === "unknown" ||
-    vertical === "unknown" ||
-    square === "unavailable" ||
-    vertical === "unavailable";
-  if (anyUnknown) return { kind: "unknown", formats };
-
-  const finalizationPending =
-    (square === "absent" && vertical === "processing") ||
-    (vertical === "absent" && square === "processing");
-  if (finalizationPending) {
-    return {
-      kind: "finalization_pending",
-      formats,
-      canContinue: input.canContinue === true,
-      nextStep: input.nextStep ?? null,
-    };
-  }
-
-  return {
-    kind: "processing",
-    formats,
-    canContinue: input.canContinue === true,
-    nextStep: input.nextStep ?? null,
-  };
-}
-
 function maxContinuationsFor(flowKind: CampaignFlowKind): number {
   return flowKind === "two_format_two_stage"
     ? MAX_CONTINUATIONS_JOINT
@@ -268,32 +146,32 @@ function parseFlowKind(value: unknown): CampaignFlowKind | undefined {
     : undefined;
 }
 
-function eventFormats(event: Record<string, unknown>): TwoFormatClientFormats | null {
-  const raw = event.formats as
-    | Record<string, { state?: unknown }>
-    | undefined;
-  const square = raw?.["1:1"]?.state;
-  const vertical = raw?.["9:16"]?.state;
-  const valid = new Set<TwoFormatClientFormatState>([
-    "delivered",
-    "processing",
-    "absent",
-    "unknown",
-    "unavailable",
-  ]);
-  if (
-    typeof square !== "string" ||
-    typeof vertical !== "string" ||
-    !valid.has(square as TwoFormatClientFormatState) ||
-    !valid.has(vertical as TwoFormatClientFormatState)
-  ) {
-    return null;
-  }
-  return {
-    "1:1": { state: square as TwoFormatClientFormatState },
-    "9:16": { state: vertical as TwoFormatClientFormatState },
-  };
-}
+export type CampaignFormatValue = "1:1" | "9:16" | "1:1+9:16";
+export type CampaignFlowKind =
+  | "one_to_one"
+  | "two_stage_9_16"
+  | "two_format_two_stage";
+
+type ProcessingState = {
+  campaignId: string | null;
+  operationId: string | null;
+  canContinue: boolean;
+  stepInProgress: boolean;
+  continuationsExhausted?: boolean;
+  /** C2 — resultado parcial preservado sem apagar a operação ativa. */
+  partial?: "indeterminate" | "finalization_pending" | "unavailable" | null;
+  nextStep?: string | null;
+};
+
+type StatusOutcome =
+  | "delivered"
+  | "partial_terminal"
+  | "partial_indeterminate"
+  | "refunded"
+  | "unknown"
+  | "processing"
+  | "unavailable"
+  | "error";
 
 /** Chave escopada da identidade da operacao (reidratacao no reload). */
 function scopedIdentityDraftKey(campaignId: string): string {
@@ -479,11 +357,13 @@ export interface UseCampaignFormReturn {
     canContinue: boolean;
     stepInProgress: boolean;
     continuationsExhausted?: boolean;
-    partial?: "indeterminate" | "finalization_pending" | null;
+    partial?: "indeterminate" | "finalization_pending" | "unavailable" | null;
     nextStep?: string | null;
   } | null;
   /** F60.5/F60.7 — fluxo efetivo da submissao/restauracao (decide UI e status). */
   flowKind: CampaignFlowKind;
+  /** Pausa efetiva (servidor OU draft local joint/vertical com flag OFF). */
+  formatPaused: boolean;
   continueGeneration: () => Promise<void>;
   retryProcessingStatus: () => Promise<void>;
   /** Recorte 2 (Plano 09): invalida a identidade terminal (não reenvia os IDs estornados). */
@@ -1028,10 +908,12 @@ export function useCampaignForm(
     restoredForm?: CampaignFormRestore | null;
     /** F59/D-03 — rascunho vertical pausado: bloqueia retry/reenvio. */
     campaignFormatPaused?: boolean;
+    /** C2 — flag vertical; pausa também draft LOCAL joint/vertical com OFF. */
+    verticalEnabled?: boolean;
   },
 ): UseCampaignFormReturn {
   const eligible = options?.eligible === true;
-  const campaignFormatPaused = options?.campaignFormatPaused === true;
+  const serverCampaignFormatPaused = options?.campaignFormatPaused === true;
   // F56.2b2b (C4 / B2B-D9): snapshot server-side + escopo do rascunho pela
   // campanha-ORIGEM. `restoredForm` NUNCA carrega a operação estornada (sem
   // `operationId`): a nova submissão gera NOVOS ids.
@@ -1041,6 +923,13 @@ export function useCampaignForm(
   // `studio` silencioso).
   const backgroundDirectionUnresolved = restoredForm?.backgroundDirectionUnresolved === true;
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
+  // C2 — draft restaurado SOMENTE do sessionStorage não passa pelo servidor:
+  // deriva a pausa do formato efetivamente hidratado + flag vertical.
+  const campaignFormatPaused =
+    serverCampaignFormatPaused ||
+    (options?.verticalEnabled === false &&
+      (fields.campaignFormat === "9:16" ||
+        fields.campaignFormat === "1:1+9:16"));
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<keyof CampaignFormFields, boolean>>({
     productName: false,
@@ -1945,7 +1834,8 @@ export function useCampaignForm(
         lastOperationId ??
         (typeof body.operationId === "string" ? body.operationId : null);
       if (
-        flowKindRef.current === "two_stage_9_16" &&
+        (flowKindRef.current === "two_stage_9_16" ||
+          flowKindRef.current === "two_format_two_stage") &&
         observedCampaignId &&
         observedOperationId
       ) {
@@ -1955,7 +1845,10 @@ export function useCampaignForm(
           canContinue: false,
           stepInProgress: false,
         });
-        if (outcome !== "unavailable") {
+        if (
+          outcome !== "unavailable" ||
+          flowKindRef.current === "two_format_two_stage"
+        ) {
           setIsSubmitting(false);
           return;
         }
@@ -1971,6 +1864,26 @@ export function useCampaignForm(
       });
       setIsSubmitting(false);
     } catch (err) {
+      // C2 — interrupção de leitura no fluxo conjunto: UMA consulta read-only
+      // antes de decidir; falha de status preserva a superfície consultável.
+      if (flowKindRef.current === "two_format_two_stage") {
+        const campaignId =
+          lastCampaignId ??
+          (typeof body.campaignId === "string" ? body.campaignId : null);
+        const operationId =
+          lastOperationId ??
+          (typeof body.operationId === "string" ? body.operationId : null);
+        if (campaignId && operationId) {
+          await refreshStatus({
+            campaignId,
+            operationId,
+            canContinue: false,
+            stepInProgress: false,
+          });
+        }
+        setIsSubmitting(false);
+        return;
+      }
       // F56.2b1b (Plano 06 — correção) — Submissão do NOVO fluxo JÁ ENVIADA: uma
       // interrupção da LEITURA (`reader.read()` rejeitado / `AbortError`) é tratada
       // como RESULTADO DESCONHECIDO (Superfície 3), SEM afirmar cancelamento e SEM
@@ -2001,6 +1914,12 @@ export function useCampaignForm(
   }
 
   const handleSubmit = useCallback(async () => {
+    if (campaignFormatPaused) {
+      setSubmitError(
+        "Este rascunho usa um formato temporariamente indisponível. Sua escolha foi preservada; aguarde a liberação ou volte para editar.",
+      );
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     setFieldErrors({});
@@ -2143,7 +2062,7 @@ export function useCampaignForm(
       setSubmitError(message);
       setIsSubmitting(false);
     }
-  }, [fields, imagePreviewUrl, restoredImageDataUrl, storeId, router, onPhaseChange, eligible]);
+  }, [fields, imagePreviewUrl, restoredImageDataUrl, storeId, router, onPhaseChange, eligible, campaignFormatPaused]);
 
   const resetSubmit = useCallback(() => {
     setSubmitError(null);
@@ -2264,6 +2183,15 @@ export function useCampaignForm(
   // F43 (D2/D3): entra em revisão somente com form válido; roda a preparação das
   // imagens (compressão + normalização) com estado curto "Preparando imagens...".
   const enterReview = useCallback(async (): Promise<boolean> => {
+    if (campaignFormatPaused) {
+      setReviewError(
+        "Este rascunho usa um formato temporariamente indisponível. Sua escolha foi preservada; o envio está pausado.",
+      );
+      setSubmitError(
+        "Este rascunho usa um formato temporariamente indisponível. Sua escolha foi preservada; o envio está pausado.",
+      );
+      return false;
+    }
     if (!isValid) {
       const errors: FieldErrors = {};
       const allFields: (keyof CampaignFormFields)[] = [
@@ -2391,7 +2319,7 @@ export function useCampaignForm(
       setPreparing(false);
       return false;
     }
-  }, [isValid, fields, storeId, restoredImageDataUrl, hasUsableImage, backgroundDirectionRequired]);
+  }, [isValid, fields, storeId, restoredImageDataUrl, hasUsableImage, backgroundDirectionRequired, campaignFormatPaused]);
 
   // F43 (D2): "Voltar e editar" — preserva fields/touched/fieldErrors (nada perdido).
   const exitReview = useCallback(() => {
@@ -2486,6 +2414,19 @@ export function useCampaignForm(
   const refreshStatus = useCallback(
     async (target: ProcessingState | null): Promise<StatusOutcome> => {
       if (!target?.campaignId || !target.operationId) return "unavailable";
+      const markUnavailable = () => {
+        // Falha de leitura NÃO remove a recuperação: preserva uma superfície
+        // consultável com continuação bloqueada (exceto o 9:16 legado, que
+        // mantém o fallback de unknown já existente).
+        if (flowKindRef.current === "two_stage_9_16") return;
+        setProcessingResult({
+          ...target,
+          canContinue: false,
+          stepInProgress: false,
+          partial: "unavailable",
+          nextStep: null,
+        });
+      };
       try {
         const response = await fetch("/api/campaign/generation-status", {
           method: "POST",
@@ -2498,6 +2439,7 @@ export function useCampaignForm(
         if (!response.ok) {
           // 503 `status_unavailable`/404: mantem o processamento com retry
           // manual — nunca vira sucesso, unknown ou nova geracao.
+          markUnavailable();
           return "unavailable";
         }
         const data = (await response.json()) as {
@@ -2523,7 +2465,10 @@ export function useCampaignForm(
           flowKindResolvedRef.current = true;
           const square = operation.formats?.["1:1"]?.state;
           const vertical = operation.formats?.["9:16"]?.state;
-          if (!square || !vertical) return "unavailable";
+          if (!square || !vertical) {
+            markUnavailable();
+            return "unavailable";
+          }
           const normalized = normalizeTwoFormatOutcome({
             formats: {
               "1:1": { state: square },
@@ -2533,6 +2478,17 @@ export function useCampaignForm(
             canContinue: operation.canContinue === true,
             nextStep: operation.nextStep ?? null,
           });
+          // Reconciliação da tentativa perdida: se o status AUTORIZA uma nova
+          // continuação, o requestId em voo pertence à tentativa anterior e
+          // NÃO pode ser reutilizado (a RPC responderia query_only/identity
+          // conflict). Retransmissão só é possível com canContinue=false.
+          if (
+            (normalized.kind === "processing" ||
+              normalized.kind === "finalization_pending") &&
+            normalized.canContinue
+          ) {
+            jointRequestIdRef.current = null;
+          }
           return applyJointOutcome(normalized, target);
         }
         if (operation?.origin === "9_16_two_stage") {
@@ -2582,6 +2538,7 @@ export function useCampaignForm(
         });
         return "processing";
       } catch {
+        markUnavailable();
         return "unavailable";
       }
     },
@@ -3008,6 +2965,7 @@ export function useCampaignForm(
           : eligible && fields.campaignFormat === "9:16"
             ? "two_stage_9_16"
             : "one_to_one",
+    formatPaused: campaignFormatPaused,
     continueGeneration,
     retryProcessingStatus,
     restorationNotice,
