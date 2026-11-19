@@ -1,0 +1,71 @@
+[
+  {
+    "step": 0,
+    "requestId": "9c223666-bb18-4d79-8e83-53a5872f1c3c",
+    "status": 200,
+    "events": [
+      {
+        "type": "phase",
+        "campaignId": "f607c400-0000-4000-8000-000000000002",
+        "operationId": "f607c400-0000-4000-8000-000000000003",
+        "phase": "square_delivery",
+        "status": "complete"
+      },
+      {
+        "type": "processing",
+        "campaignId": "f607c400-0000-4000-8000-000000000002",
+        "operationId": "f607c400-0000-4000-8000-000000000003",
+        "responseTerminal": true,
+        "operationTerminal": false,
+        "state": "next:expansion",
+        "nextStep": "expansion",
+        "canContinue": true,
+        "formats": {
+          "1:1": {
+            "state": "delivered",
+            "deliveryOperationId": "21555380-0e20-42c7-bb58-3f3c930a6ed8"
+          },
+          "9:16": {
+            "state": "processing",
+            "deliveryOperationId": "f607c400-0000-4000-8000-000000000003"
+          }
+        },
+        "preferredFormat": "1:1"
+      }
+    ]
+  },
+  {
+    "step": 1,
+    "requestId": "f7a7e604-b350-4fa1-b598-655d65e1b1ac",
+    "status": 200,
+    "events": [
+      {
+        "type": "phase",
+        "campaignId": "f607c400-0000-4000-8000-000000000002",
+        "operationId": "f607c400-0000-4000-8000-000000000003",
+        "phase": "vertical_delivery",
+        "status": "complete"
+      },
+      {
+        "type": "result",
+        "campaignId": "f607c400-0000-4000-8000-000000000002",
+        "operationId": "f607c400-0000-4000-8000-000000000003",
+        "responseTerminal": true,
+        "operationTerminal": true,
+        "campaignUrl": "/campanhas/f607c400-0000-4000-8000-000000000002",
+        "formats": {
+          "1:1": {
+            "state": "delivered",
+            "deliveryOperationId": "21555380-0e20-42c7-bb58-3f3c930a6ed8"
+          },
+          "9:16": {
+            "state": "delivered",
+            "deliveryOperationId": "f607c400-0000-4000-8000-000000000003"
+          }
+        },
+        "preferredFormat": "1:1",
+        "partial": false
+      }
+    ]
+  }
+]

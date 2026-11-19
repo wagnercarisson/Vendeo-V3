@@ -1,0 +1,9 @@
+{
+  "status": 409,
+  "payload": {
+    "error": {
+      "code": "insufficient_evidence",
+      "message": "Resolução bloqueada."
+    }
+  }
+}

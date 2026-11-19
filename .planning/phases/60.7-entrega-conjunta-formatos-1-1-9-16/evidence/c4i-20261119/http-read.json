@@ -1,0 +1,32 @@
+{
+  "detail": {
+    "status": 200,
+    "hasSquareTab": true,
+    "hasVerticalTab": true,
+    "hasSquareArtifactPath": true
+  },
+  "list": {
+    "status": 200,
+    "hasCampaign": true
+  },
+  "downloads": {
+    "1:1": {
+      "status": 200,
+      "contentType": "image/jpeg",
+      "cacheControl": "private, no-store",
+      "bytes": 6413,
+      "sha256": "1d74e0e8f77bbfa65ecc5d64077dfaef86a3600e603d2968f1ddbc5a052f195b",
+      "width": 1024,
+      "height": 1024
+    },
+    "9:16": {
+      "status": 200,
+      "contentType": "image/jpeg",
+      "cacheControl": "private, no-store",
+      "bytes": 24569,
+      "sha256": "c3e085168da4589969668d834b8d801854194b044a9144ac436bffed3b3ed638",
+      "width": 1080,
+      "height": 1920
+    }
+  }
+}

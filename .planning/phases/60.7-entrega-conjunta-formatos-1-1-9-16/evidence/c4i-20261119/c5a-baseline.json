@@ -1,0 +1,257 @@
+﻿{
+    "generatedAtUtc":  "2026-11-19T23:47:46.8184116Z",
+    "head":  "f905441af3cd583a724b6698a2fae3792c00cc1a",
+    "target":  {
+                   "environment":  "vendeo-homolog",
+                   "container":  "supabase_db_vendeo-homolog",
+                   "postgres":  "127.0.0.1:57782/postgres",
+                   "postgrest":  "127.0.0.1:57781",
+                   "app":  "127.0.0.1:3000",
+                   "production":  false
+               },
+    "ledger":  {
+                   "count":  157,
+                   "last":  "20261118002139"
+               },
+    "tables":  [
+                   {
+                       "table":  "stores",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  38,
+                       "fingerprint":  "0391b57e4d33ab61bfdd847d43f18d74"
+                   },
+                   {
+                       "table":  "campaigns",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  132,
+                       "fingerprint":  "744450de79a48b318d200ab6a2cdc505"
+                   },
+                   {
+                       "table":  "credit_balances",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  35,
+                       "fingerprint":  "18aaa0a23de26ffbb9d046b664aa7bab"
+                   },
+                   {
+                       "table":  "credit_transactions",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  223,
+                       "fingerprint":  "29336e8bd2d9d4545da2dd2f426cd99f"
+                   },
+                   {
+                       "table":  "product_1_1_campaign_credit_operations",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  84,
+                       "fingerprint":  "4eaea98f9075e2c4be9db85aba367e01"
+                   },
+                   {
+                       "table":  "product_1_1_generation_outcomes",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  7,
+                       "fingerprint":  "01ad1a00f05c6543b778097bc81206ce"
+                   },
+                   {
+                       "table":  "product_9_16_two_stage_outcomes",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  12,
+                       "fingerprint":  "c5a7811ae2d1bb9b1b3816672614ec77"
+                   },
+                   {
+                       "table":  "campaign_composition_artifacts",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  27,
+                       "fingerprint":  "eb3a7eb7f76c0871905fa8a0c2b8edec"
+                   },
+                   {
+                       "table":  "admin_audit_log",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  107,
+                       "fingerprint":  "6abdb68f75a427556ea5fd44a3370df7"
+                   },
+                   {
+                       "table":  "storage.objects",
+                       "schema":  "storage",
+                       "exists":  true,
+                       "count":  345,
+                       "fingerprint":  "836ed10b7f0ba95781417d139b39660c"
+                   },
+                   {
+                       "table":  "feature_flags",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  10,
+                       "fingerprint":  "df7ed1ae7a976f26dc66673d6c548a76"
+                   },
+                   {
+                       "table":  "ai_model_pricing",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  26,
+                       "fingerprint":  "18f605bb5a696e99c6d6a47fa042327b"
+                   },
+                   {
+                       "table":  "ai_model_catalog",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  19,
+                       "fingerprint":  "a0d49147d8ba406478b031908bbd6b91"
+                   },
+                   {
+                       "table":  "ai_model_selection",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  3,
+                       "fingerprint":  "d2d137a1120c57b41a808793feb929ff"
+                   },
+                   {
+                       "table":  "image_generation_config_snapshots",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  34,
+                       "fingerprint":  "dff4867161fff87931bbc7d42c600177"
+                   },
+                   {
+                       "table":  "image_model_pair_config",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  1,
+                       "fingerprint":  "6ec80630142fac36e0e395ab51609769"
+                   },
+                   {
+                       "table":  "nine_sixteen_expansion_model_config",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  1,
+                       "fingerprint":  "72b6ec4bd923903e3553d20235b5a656"
+                   },
+                   {
+                       "table":  "pricing_sync_attempts",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  1,
+                       "fingerprint":  "639861f0cce5c24fb54ad5ead444813b"
+                   },
+                   {
+                       "table":  "visual_signature_model_config",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  1,
+                       "fingerprint":  "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+                   },
+                   {
+                       "table":  "visual_signature_model_config_pilot_stores",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  0,
+                       "fingerprint":  "d41d8cd98f00b204e9800998ecf8427e"
+                   },
+                   {
+                       "table":  "visual_signature_model_config_release",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  1,
+                       "fingerprint":  "a237fca8b9c22bc1db102070a3d0a0a3"
+                   },
+                   {
+                       "table":  "product_9_16_two_stage_operations",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  34,
+                       "fingerprint":  "712a55ac2d3759e68524785ca9b58e1d"
+                   },
+                   {
+                       "table":  "product_9_16_two_stage_steps",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  68,
+                       "fingerprint":  "25a6ebc5efc0c4af2095d15d0cb209ef"
+                   },
+                   {
+                       "table":  "product_9_16_two_stage_attempt_claims",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  35,
+                       "fingerprint":  "8c6a0377976be114172dab719edec876"
+                   },
+                   {
+                       "table":  "product_two_format_deliveries",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  27,
+                       "fingerprint":  "017c230b0b824e18e1f4b8ad88cf6d95"
+                   },
+                   {
+                       "table":  "product_1_1_copy_state",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  34,
+                       "fingerprint":  "e96aa140471bd372582dbdaf6a6f8ab9"
+                   },
+                   {
+                       "table":  "product_1_1_copy_cancellations",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  0,
+                       "fingerprint":  "d41d8cd98f00b204e9800998ecf8427e"
+                   },
+                   {
+                       "table":  "product_1_1_snapshot_content_binding",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  34,
+                       "fingerprint":  "0e8d93169a59121991ba831aef11cbe5"
+                   },
+                   {
+                       "table":  "product_1_1_snapshot_frozen_evidence",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  34,
+                       "fingerprint":  "82e80aeb5bdc8b6b961a2093cc0545e8"
+                   },
+                   {
+                       "table":  "generation_events",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  385,
+                       "fingerprint":  "114405c1fb0f5901eebff235241865d0"
+                   },
+                   {
+                       "table":  "campaign_art_versions",
+                       "schema":  "public",
+                       "exists":  true,
+                       "count":  0,
+                       "fingerprint":  "d41d8cd98f00b204e9800998ecf8427e"
+                   }
+               ],
+    "storageBuckets":  [
+                           {
+                               "bucket_id":  "campaign-images",
+                               "count":  210
+                           },
+                           {
+                               "bucket_id":  "campaign-internal-artifacts",
+                               "count":  22
+                           },
+                           {
+                               "bucket_id":  "lab-artifacts",
+                               "count":  55
+                           },
+                           {
+                               "bucket_id":  "store-brand-assets",
+                               "count":  42
+                           },
+                           {
+                               "bucket_id":  "visual-signatures",
+                               "count":  16
+                           }
+                       ]
+}

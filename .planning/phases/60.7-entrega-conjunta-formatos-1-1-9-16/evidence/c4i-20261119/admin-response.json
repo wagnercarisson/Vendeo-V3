@@ -1,0 +1,36 @@
+{
+  "deliver": {
+    "status": 200,
+    "payload": {
+      "resolution": {
+        "kind": "resolved",
+        "action": "deliver",
+        "format": "1:1",
+        "idempotent": false,
+        "auditRecorded": true
+      }
+    }
+  },
+  "replay": {
+    "status": 200,
+    "payload": {
+      "resolution": {
+        "kind": "resolved",
+        "action": "deliver",
+        "format": "1:1",
+        "idempotent": true,
+        "auditRecorded": true,
+        "alreadyAudited": true
+      }
+    }
+  },
+  "refund": {
+    "status": 409,
+    "payload": {
+      "error": {
+        "code": "audit_conflict",
+        "message": "Auditoria divergente para esta operação."
+      }
+    }
+  }
+}

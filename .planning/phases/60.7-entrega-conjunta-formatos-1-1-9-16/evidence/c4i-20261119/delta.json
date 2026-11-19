@@ -1,0 +1,114 @@
+﻿[
+    {
+        "table":  "stores",
+        "baselineCount":  38,
+        "currentCount":  39,
+        "delta":  1,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "campaigns",
+        "baselineCount":  132,
+        "currentCount":  135,
+        "delta":  3,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "credit_balances",
+        "baselineCount":  35,
+        "currentCount":  36,
+        "delta":  1,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "credit_transactions",
+        "baselineCount":  223,
+        "currentCount":  227,
+        "delta":  4,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_1_1_campaign_credit_operations",
+        "baselineCount":  84,
+        "currentCount":  90,
+        "delta":  6,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "campaign_composition_artifacts",
+        "baselineCount":  27,
+        "currentCount":  32,
+        "delta":  5,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "admin_audit_log",
+        "baselineCount":  107,
+        "currentCount":  108,
+        "delta":  1,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "storage.objects",
+        "baselineCount":  345,
+        "currentCount":  352,
+        "delta":  7,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "image_generation_config_snapshots",
+        "baselineCount":  34,
+        "currentCount":  36,
+        "delta":  2,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_9_16_two_stage_operations",
+        "baselineCount":  34,
+        "currentCount":  37,
+        "delta":  3,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_9_16_two_stage_steps",
+        "baselineCount":  68,
+        "currentCount":  72,
+        "delta":  4,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_9_16_two_stage_attempt_claims",
+        "baselineCount":  35,
+        "currentCount":  38,
+        "delta":  3,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_two_format_deliveries",
+        "baselineCount":  27,
+        "currentCount":  33,
+        "delta":  6,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_1_1_copy_state",
+        "baselineCount":  34,
+        "currentCount":  36,
+        "delta":  2,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_1_1_snapshot_content_binding",
+        "baselineCount":  34,
+        "currentCount":  36,
+        "delta":  2,
+        "fingerprintChanged":  true
+    },
+    {
+        "table":  "product_1_1_snapshot_frozen_evidence",
+        "baselineCount":  34,
+        "currentCount":  36,
+        "delta":  2,
+        "fingerprintChanged":  true
+    }
+]
