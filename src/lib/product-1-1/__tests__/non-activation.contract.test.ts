@@ -431,6 +431,12 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     prefixes: [],
     exact: ["@/lib/product-1-1/credit-operation/types"],
   },
+  // F60.7 C1 — composition root do runtime conjunto importa o cliente de
+  // crédito real. Par EXATO; nenhum prefixo.
+  ["src/lib/product-two-format/orchestration/run-two-format-deps.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/credit-operation/credit-operation-client"],
+  },
 });
 const SIDE_EFFECT_IMPORT_RE =
   /(?:from\s*|import\s*\(\s*)["'][^"']*(?:\/api\/campaign|\/adapters?(?:\/|$)|\/gateway(?:\/|$)|provider|\/credit(?:\/|$)|delivery|download|image-generation-operations-repository|prompt-composition)[^"']*["']/i;
@@ -1461,6 +1467,7 @@ describe("F60.7 B — pares exatos joint-deps/deliver-square ↔ product-1-1 (te
     "src/lib/product-two-format/orchestration/deliver-joint-vertical.ts",
     "src/lib/product-two-format/orchestration/finalize-joint-failure.ts",
     "src/lib/product-two-format/orchestration/resolve-joint-pending.ts",
+    "src/lib/product-two-format/orchestration/run-two-format-deps.ts",
   ] as const;
 
   it("cada importador conjunto corresponde EXATAMENTE ao conjunto real de specifiers", () => {

@@ -8,6 +8,8 @@ import { getCampaign } from "@/lib/campaign/persistence";
 import { GenerationStatusRequestSchema } from "@/lib/image-generation/schema";
 import { queryProductOneToOneOperation } from "@/lib/product-1-1/orchestration/resend-query";
 import { isProduct9_16TwoStageEnabled } from "@/lib/feature-flags/feature-flag-service";
+import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
+import { createTwoFormatRunDeps } from "@/lib/product-two-format/orchestration/run-two-format-deps";
 import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
 import { deriveTwoStageStatus } from "@/lib/product-9-16-two-stage/orchestration/status-view";
 import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
@@ -62,6 +64,50 @@ export const POST = apiHandler(async (request: NextRequest) => {
   }
 
   await requireOwnership(campaign.store_id, user.userId);
+
+  const classification = classifyTwoFormatCampaign(campaign.input_snapshot);
+  if (classification.kind === "inconsistent") {
+    return NextResponse.json(
+      {
+        error: {
+          code: "operation_identity_conflict",
+          message: "Contrato conjunto inconsistente.",
+        },
+      },
+      { status: 409 },
+    );
+  }
+
+  if (classification.kind === "two_format") {
+    let allowNewPaidStep = false;
+    try {
+      allowNewPaidStep = await isProduct9_16TwoStageEnabled();
+    } catch {
+      allowNewPaidStep = false;
+    }
+    try {
+      const deps = createTwoFormatRunDeps({ client: supabaseAdmin });
+      const status = await deps.readStatus({
+        storeId: campaign.store_id,
+        campaignId: parsed.data.campaignId,
+        operationId: parsed.data.operationId,
+        allowNewPaidStep,
+      });
+      return NextResponse.json({
+        operation: {
+          origin: "two_format_two_stage",
+          campaignId: parsed.data.campaignId,
+          operationId: parsed.data.operationId,
+          ...status,
+        },
+      });
+    } catch {
+      return NextResponse.json(
+        { error: { code: "status_unavailable", message: "Status indisponível." } },
+        { status: 503 },
+      );
+    }
+  }
 
   const origin = resolveCampaignGenerationOrigin(campaign.input_snapshot);
   if (origin.kind === "two_stage_9_16") {

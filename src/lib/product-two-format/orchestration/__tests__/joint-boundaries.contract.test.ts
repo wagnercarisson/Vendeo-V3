@@ -22,6 +22,12 @@ const FORBIDDEN_CONSUMER_DIRS = [
   "src/lib/admin",
 ];
 
+const C1_PRODUCTION_CONSUMERS = new Set([
+  "src/app/api/campaign/generate-image/route.ts",
+  "src/app/api/campaign/[id]/continue/route.ts",
+  "src/app/api/campaign/generation-status/route.ts",
+]);
+
 function walk(directory: string): string[] {
   const absolute = path.join(ROOT, directory);
   const entries = readdirSync(absolute);
@@ -64,6 +70,7 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
     const offenders: string[] = [];
     for (const directory of FORBIDDEN_CONSUMER_DIRS) {
       for (const file of walk(directory)) {
+        if (C1_PRODUCTION_CONSUMERS.has(file)) continue;
         const source = read(file);
         if (/@\/lib\/product-two-format/.test(source)) offenders.push(file);
       }
@@ -72,42 +79,62 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
   });
 
   it("Teste 2: nenhuma rota/UI nova foi criada", () => {
-    expect(gitStatus(["src/app", "src/components"])).toBe("");
+    const allowedChanged = new Set([
+      ...C1_PRODUCTION_CONSUMERS,
+      "src/app/api/campaign/[id]/continue/__tests__/route.test.ts",
+      "src/app/api/campaign/generation-status/__tests__/route.test.ts",
+    ]);
+    const changed = gitStatus(["src/app", "src/components"])
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => line.trim().replace(/^\S+\s+/, ""));
+    expect(changed.every((file) => allowedChanged.has(file))).toBe(true);
     const appFiles = walk("src/app");
     expect(appFiles.some((file) => file.endsWith(".tsx"))).toBe(true);
     expect(appFiles.some((file) => /joint|two-format/i.test(file))).toBe(false);
   });
 
-  it("Teste 3: schemas mantêm o contrato sem dispatch conjunto", () => {
+  it("Teste 3: schema aceita o par conjunto exato sem promover campos extras", () => {
     expect(Object.keys(ProductOneToOnePendingResolutionSchema.shape).sort()).toEqual(
       ["action", "campaignId", "operationId", "reason", "resolutionOperationId"],
     );
+    const base = {
+      storeId: "11111111-1111-4111-8111-111111111111",
+      campaignId: "22222222-2222-4222-8222-222222222222",
+      operationId: "33333333-3333-4333-8333-333333333333",
+      productName: "Produto",
+      backgroundDirection: "studio",
+      campaignIntent: "offer",
+      productImages: [
+        {
+          role: "primary",
+          source: "upload",
+          mimeType: "image/jpeg",
+          dataUrl: "data:image/jpeg;base64,AA==",
+        },
+      ],
+    };
     expect(
       NewFlowGenerateImageRequestSchema.safeParse({
-        storeId: "11111111-1111-4111-8111-111111111111",
-        campaignId: "22222222-2222-4222-8222-222222222222",
-        operationId: "33333333-3333-4333-8333-333333333333",
-        productName: "Produto",
-        backgroundDirection: "studio",
-        productImages: [
-          {
-            role: "primary",
-            source: "upload",
-            mimeType: "image/png",
-            dataUrl: "data:image/png;base64,AA==",
-          },
-        ],
+        ...base,
         campaignFormat: "1:1",
       }).success,
     ).toBe(true);
     expect(
       NewFlowGenerateImageRequestSchema.safeParse({
+        ...base,
         campaignFormat: "1:1+9:16",
       }).success,
+    ).toBe(true);
+    expect(
+      NewFlowGenerateImageRequestSchema.safeParse({
+        ...base,
+        campaignFormat: "1:1+9:16",
+        squareDeliveryId: "44444444-4444-4444-8444-444444444444",
+      }).success,
     ).toBe(false);
-    for (const file of ["src/lib/admin/schemas.ts", "src/lib/image-generation/schema.ts"]) {
-      expect(read(file)).not.toContain("1:1+9:16");
-    }
+    expect(read("src/lib/admin/schemas.ts")).not.toContain("1:1+9:16");
+    expect(read("src/lib/image-generation/schema.ts")).toContain("1:1+9:16");
   });
 
   it("Teste 4: exatamente uma migration F60.7, sem alteração/aplicação", () => {
@@ -127,7 +154,9 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
       [
         "src/lib/product-two-format/delivery-reader.ts",
         "src/lib/product-two-format/joint-financial-client.ts",
+        "src/lib/product-two-format/orchestration/handle-joint-generate.ts",
         "src/lib/product-two-format/orchestration/joint-deps.ts",
+        "src/lib/product-two-format/orchestration/run-two-format-deps.ts",
         "src/lib/product-two-format/orchestration/square-probe.ts",
       ].sort(),
     );
@@ -146,6 +175,7 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
         "src/lib/product-two-format/orchestration/finalize-joint-failure.ts",
         "src/lib/product-two-format/orchestration/joint-deps.ts",
         "src/lib/product-two-format/orchestration/resolve-joint-pending.ts",
+        "src/lib/product-two-format/orchestration/run-two-format-deps.ts",
       ].sort(),
     );
     expect(entries).not.toContain("@/lib/product-two-format/");

@@ -147,14 +147,14 @@ describe("parseTwoFormatDeclaration", () => {
   });
 });
 
-describe("preservação do schema de produção", () => {
-  it("o fluxo novo continua recusando o valor conjunto", () => {
+describe("C1 — schema de produção do fluxo novo", () => {
+  it("aceita o valor conjunto exato; a validação de contrato é da rota", () => {
     expect(
       NewFlowGenerateImageRequestSchema.safeParse({
         ...VALID_NEW_FLOW_BODY,
         campaignFormat: TWO_FORMAT_CAMPAIGN_FORMAT,
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("o fluxo novo continua aceitando 9:16 e 1:1 individuais", () => {

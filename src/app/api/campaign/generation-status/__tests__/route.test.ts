@@ -26,6 +26,11 @@ vi.mock("@/lib/product-1-1/orchestration/resend-query", () => ({
   queryProductOneToOneOperation: mockQueryOperation,
 }));
 
+const { mockJointStatus } = vi.hoisted(() => ({ mockJointStatus: vi.fn() }));
+vi.mock("@/lib/product-two-format/orchestration/run-two-format-deps", () => ({
+  createTwoFormatRunDeps: () => ({ readStatus: mockJointStatus }),
+}));
+
 const CAMPAIGN_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OPERATION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const STORE_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -42,6 +47,7 @@ function makeRequest(body: unknown): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockJointStatus.mockReset();
   mockGetCampaign.mockResolvedValue({ id: CAMPAIGN_ID, store_id: STORE_ID });
   mockRequireOwnership.mockResolvedValue(undefined);
   mockQueryOperation.mockResolvedValue({
@@ -147,6 +153,61 @@ describe("POST /api/campaign/generation-status — reenvio somente consulta (b1b
     const { POST } = await import("../route");
     const res = await POST(makeRequest({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }));
     expect(res.status).toBe(404);
+  });
+
+  it("origem conjunta usa status read-only, sem consulta 1:1", async () => {
+    mockGetCampaign.mockResolvedValueOnce({
+      id: CAMPAIGN_ID,
+      store_id: STORE_ID,
+      input_snapshot: {
+        campaignFormat: "1:1+9:16",
+        formatContractVersion: "f60.7-two-format-v1",
+        generationOrigin: "two_format_two_stage",
+        generationContractVersion: "f60.7-two-format-v1",
+      },
+    });
+    mockJointStatus.mockResolvedValueOnce({
+      campaignStatus: "generating",
+      formats: {
+        "1:1": { state: "delivered", deliveryOperationId: "sq" },
+        "9:16": { state: "processing", deliveryOperationId: null },
+      },
+      preferredFormat: "1:1",
+      nextStep: "expansion",
+      canContinue: true,
+      operationTerminal: false,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(
+      makeRequest({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.operation).toMatchObject({
+      origin: "two_format_two_stage",
+      preferredFormat: "1:1",
+      nextStep: "expansion",
+    });
+    expect(mockQueryOperation).not.toHaveBeenCalled();
+  });
+
+  it("snapshot conjuntos inconsistente ⇒ 409, nunca cai no 1:1", async () => {
+    mockGetCampaign.mockResolvedValueOnce({
+      id: CAMPAIGN_ID,
+      store_id: STORE_ID,
+      input_snapshot: {
+        campaignFormat: "1:1+9:16",
+        formatContractVersion: "f60.7-two-format-v1",
+        generationOrigin: "9_16_two_stage",
+      },
+    });
+    const { POST } = await import("../route");
+    const res = await POST(
+      makeRequest({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }),
+    );
+    expect(res.status).toBe(409);
+    expect(mockQueryOperation).not.toHaveBeenCalled();
   });
 
   it("asserção negativa (source): a rota NÃO contém caminho de mutação/provider", () => {

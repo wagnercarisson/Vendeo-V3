@@ -508,6 +508,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
         );
       }
       const newFlow = newFlowParsed.data;
+      if (newFlow.campaignFormat === "1:1+9:16") {
+        const { handleJointGenerateRequest } = await import(
+          "@/lib/product-two-format/orchestration/handle-joint-generate"
+        );
+        return handleJointGenerateRequest({
+          newFlow,
+          userId: guardUser.userId,
+        });
+      }
       const requestedFormat = newFlow.campaignFormat ?? "1:1";
       const newFlowBackgroundDirection: ProductOneToOneBackgroundDirection =
         newFlow.backgroundDirection;
