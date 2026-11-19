@@ -26,6 +26,51 @@ const pg = requireFromRepo("pg");
 const DATABASE_URL =
   process.env.F607_DATABASE_URL ??
   "postgres://postgres:postgres@127.0.0.1:57782/postgres";
+const AUTHORIZED_HOST = "127.0.0.1";
+const AUTHORIZED_PORT = "57782";
+const AUTHORIZED_DATABASE = "postgres";
+
+/**
+ * Trava explícita de alvo. Não basta o banco responder: a URL precisa ser
+ * exatamente o homolog local autorizado, e a execução precisa carregar a
+ * referência da autorização específica. Roda antes de qualquer conexão.
+ */
+function assertAuthorizedTarget() {
+  if (process.env.F607_HOMOLOG_AUTHORIZED !== "1") {
+    throw new Error(
+      "F607_HOMOLOG_AUTHORIZED=1 é obrigatório para qualquer execução no homolog",
+    );
+  }
+  const authorizationRef = (process.env.F607_AUTHORIZATION_REF ?? "").trim();
+  if (authorizationRef === "") {
+    throw new Error(
+      "F607_AUTHORIZATION_REF é obrigatório (referência da autorização específica)",
+    );
+  }
+  let url;
+  try {
+    url = new URL(DATABASE_URL);
+  } catch {
+    throw new Error("F607_DATABASE_URL inválida");
+  }
+  if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") {
+    throw new Error(`protocolo recusado: ${url.protocol}`);
+  }
+  const host = url.hostname;
+  const port = url.port || "5432";
+  const database = url.pathname.replace(/^\//, "");
+  if (
+    host !== AUTHORIZED_HOST ||
+    port !== AUTHORIZED_PORT ||
+    database !== AUTHORIZED_DATABASE
+  ) {
+    throw new Error(
+      `alvo recusado: ${host}:${port}/${database}; autorizado apenas ${AUTHORIZED_HOST}:${AUTHORIZED_PORT}/${AUTHORIZED_DATABASE}`,
+    );
+  }
+  return { host, port, database, authorizationRef };
+}
+
 const REPO_ROOT = process.env.F607_REPO_ROOT ?? "C:/Projetos/Vendeo V3";
 const EVIDENCE_DIR =
   process.env.F607_EVIDENCE_DIR ??
@@ -82,6 +127,7 @@ function assert(condition, message, details) {
 }
 
 function newClient() {
+  assertAuthorizedTarget();
   return new pg.Client({ connectionString: DATABASE_URL });
 }
 
@@ -1578,6 +1624,21 @@ function runOffline(scenario) {
 }
 
 async function main() {
+  const authorized = assertAuthorizedTarget();
+  if (process.argv.includes("--check-target")) {
+    console.log(
+      JSON.stringify({
+        target: {
+          host: authorized.host,
+          port: authorized.port,
+          database: authorized.database,
+        },
+        authorizationRef: authorized.authorizationRef,
+        connectionAttempted: false,
+      }),
+    );
+    return;
+  }
   const health = newClient();
   await health.connect();
   const identity = await one(
@@ -1689,6 +1750,7 @@ async function main() {
       version: identity.version,
       connection: DATABASE_URL.replace(/:\/\/[^@]+@/, "://<redacted>@"),
       container: "supabase_db_vendeo-homolog",
+      authorizationRef: authorized.authorizationRef,
       ledger: identity.ledger,
       f607Ledger: identity.f607_ledger,
       legalLedger: identity.legal_ledger,

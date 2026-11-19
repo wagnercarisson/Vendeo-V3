@@ -1,0 +1,34 @@
+{
+  "kind": "f60.7-gate-b-target-lock",
+  "tested_at": "2026-11-19T16:19:44.906Z",
+  "connection_attempted": false,
+  "tested_by": "node --check-target (sem abrir conexão)",
+  "cases": [
+    {
+      "name": "authorized",
+      "exit": 0,
+      "result": "target accepted (127.0.0.1:57782/postgres); connectionAttempted=false"
+    },
+    {
+      "name": "wrong_host",
+      "exit": 1,
+      "result": "rejected before connection: localhost:57782/postgres"
+    },
+    {
+      "name": "wrong_port",
+      "exit": 1,
+      "result": "rejected before connection: 127.0.0.1:5432/postgres"
+    },
+    {
+      "name": "missing_authorization_flag",
+      "exit": 1,
+      "result": "rejected before connection: F607_HOMOLOG_AUTHORIZED!=1"
+    },
+    {
+      "name": "missing_authorization_ref",
+      "exit": 1,
+      "result": "rejected before connection: empty F607_AUTHORIZATION_REF"
+    }
+  ],
+  "note": "Local harness test only; no database connection was opened and no SQL was executed."
+}

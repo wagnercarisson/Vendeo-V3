@@ -1,0 +1,34 @@
+{
+  "kind": "f60.7-gate-b-classification-overlay",
+  "supersedes": "gate-b-evidence.json scenario status only; raw evidence is preserved unchanged",
+  "corrected_at": "2026-11-19",
+  "db_pass": 17,
+  "db_pass_ids": ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10","S11","S12","S15","S16","S18","S19","S20"],
+  "not_joint_admin_proof": {
+    "ids": ["S13","S14"],
+    "reason": "Harness chamou admin_resolve_product_1_1_pending (RPC legada) sobre a identidade quadrada; a evidência retorna flow:\"legacy\". NÃO exercita resolveJointPending nem a auditoria flow:\"two_format\".",
+    "classification": "PASS apenas como regressão legada"
+  },
+  "offline_only": {
+    "ids": ["S17"],
+    "reason": "Reexecução da suíte offline do cliente (15/15); a borda HTTP/PostgREST real não foi exercitada.",
+    "classification": "OFFLINE; fora da contagem de banco"
+  },
+  "content_preservation": {
+    "proven": "coerência quantitativa: contagens finais = baseline + inventário; contagens fora do inventário = baseline",
+    "not_proven": "ausência de UPDATE em linhas existentes; não há fingerprint de conteúdo pré/pós",
+    "complement": "60.7-GATE-B-DB-COMPLEMENT.md §3"
+  },
+  "target_lock": {
+    "original_harness": "aceitava qualquer F607_DATABASE_URL",
+    "corrected_local": "exige F607_HOMOLOG_AUTHORIZED=1, F607_AUTHORIZATION_REF e host/porta/banco exatos; testado sem conexão em gate-b-target-lock.json",
+    "retroactive": false
+  },
+  "retakes_authorization": {
+    "new_specific_authorization": false,
+    "ids": ["S12","S13","S19"],
+    "note": "Retomadas/reexecução ocorreram sob a autorização original, após diagnóstico de defeitos do harness; desvio de protocolo registrado para decisão do revisor."
+  },
+  "gate_status": "NOT_APPROVED",
+  "f60_7_status": "INCOMPLETE"
+}
