@@ -21,6 +21,7 @@ interface Fixture {
   outcomes?: Array<Record<string, unknown>>;
   claims?: Array<Record<string, unknown>>;
   errorTable?: string;
+  responses?: Partial<Record<string, { data: unknown; error: unknown }>>;
 }
 
 function client(fixture: Fixture) {
@@ -28,6 +29,8 @@ function client(fixture: Fixture) {
     from(table: string) {
       const query: Record<string, unknown> = {};
       const result = () => {
+        const overridden = fixture.responses?.[table];
+        if (overridden) return overridden;
         if (fixture.errorTable === table) {
           return { data: null, error: { message: `${table}_failed` } };
         }
@@ -84,8 +87,8 @@ function baseFixture(): Fixture {
       },
     ],
     credits: [
-      { operation_id: CONTROL, status: "delivered" },
-      { operation_id: SQUARE, status: "reserved" },
+      { operation_id: CONTROL, store_id: STORE, status: "delivered" },
+      { operation_id: SQUARE, store_id: STORE, status: "reserved" },
     ],
     outcomes: [
       { operation_id: CONTROL, outcome: "failed" },
@@ -122,8 +125,8 @@ describe("F60.7 C4 — leitor de resolução conjunta", () => {
 
     const terminal = baseFixture();
     terminal.credits = [
-      { operation_id: CONTROL, status: "refunded" },
-      { operation_id: SQUARE, status: "refunded" },
+      { operation_id: CONTROL, store_id: STORE, status: "refunded" },
+      { operation_id: SQUARE, store_id: STORE, status: "refunded" },
     ];
     const refunded = await readJointResolutionState(
       client(terminal) as never,
@@ -189,6 +192,97 @@ describe("F60.7 C4 — leitor de resolução conjunta", () => {
     await expect(
       readJointResolutionState(client(fixture) as never, input),
     ).resolves.toMatchObject({ kind: "read_failed" });
+  });
+
+  it("resposta malformada nunca vira ausência nem autoriza", async () => {
+    const cases: Array<[string, unknown, string]> = [
+      ["product_generation_operation_outcomes_v", null, "outcomes_malformed"],
+      ["product_generation_active_claims_v", {}, "claims_malformed"],
+      ["product_two_format_deliveries", null, "links_malformed"],
+    ];
+    for (const [table, data, reason] of cases) {
+      const fixture = baseFixture();
+      fixture.responses = { [table]: { data, error: null } };
+      await expect(
+        readJointResolutionState(client(fixture) as never, input),
+      ).resolves.toEqual({ kind: "read_failed", reason });
+    }
+  });
+
+  it("cardinalidade/duplicidade de outcomes e vínculos bloqueiam", async () => {
+    const outcomes = baseFixture();
+    outcomes.outcomes = [
+      { operation_id: CONTROL, outcome: "failed" },
+      { operation_id: CONTROL, outcome: "unknown" },
+      { operation_id: SQUARE, outcome: "failed" },
+    ];
+    await expect(
+      readJointResolutionState(client(outcomes) as never, input),
+    ).resolves.toEqual({ kind: "read_failed", reason: "outcomes_duplicate" });
+
+    const links = baseFixture();
+    links.links = [
+      ...(links.links ?? []),
+      {
+        campaign_id: CAMPAIGN,
+        operation_id: CONTROL,
+        store_id: STORE,
+        format: "1:1",
+        delivery_operation_id: SQUARE,
+        artifact_role: "square_original",
+      },
+    ];
+    await expect(
+      readJointResolutionState(client(links) as never, input),
+    ).resolves.toEqual({ kind: "read_failed", reason: "links_cardinality" });
+  });
+
+  it("identidade dos créditos (loja, ausência, duplicidade) é validada", async () => {
+    const missingStore = baseFixture();
+    missingStore.credits = [
+      { operation_id: CONTROL, status: "delivered" },
+      { operation_id: SQUARE, status: "reserved" },
+    ];
+    await expect(
+      readJointResolutionState(client(missingStore) as never, input),
+    ).resolves.toEqual({ kind: "read_failed", reason: "credits_malformed" });
+
+    const wrongStore = baseFixture();
+    wrongStore.credits = [
+      { operation_id: CONTROL, store_id: "other", status: "delivered" },
+      { operation_id: SQUARE, store_id: STORE, status: "reserved" },
+    ];
+    await expect(
+      readJointResolutionState(client(wrongStore) as never, input),
+    ).resolves.toEqual({ kind: "read_failed", reason: "credits_identity" });
+
+    const duplicate = baseFixture();
+    duplicate.credits = [
+      ...(duplicate.credits ?? []),
+      { operation_id: SQUARE, store_id: STORE, status: "delivered" },
+    ];
+    await expect(
+      readJointResolutionState(client(duplicate) as never, input),
+    ).resolves.toEqual({ kind: "read_failed", reason: "credits_duplicate" });
+
+    const missingSibling = baseFixture();
+    missingSibling.credits = [
+      { operation_id: SQUARE, store_id: STORE, status: "reserved" },
+    ];
+    await expect(
+      readJointResolutionState(client(missingSibling) as never, input),
+    ).resolves.toEqual({ kind: "read_failed", reason: "credit_operation_missing" });
+
+    const missingSquareForVertical = baseFixture();
+    missingSquareForVertical.credits = [
+      { operation_id: CONTROL, store_id: STORE, status: "delivered" },
+    ];
+    await expect(
+      readJointResolutionState(client(missingSquareForVertical) as never, {
+        ...input,
+        deliveryOperationId: CONTROL,
+      }),
+    ).resolves.toEqual({ kind: "read_failed", reason: "credit_operation_missing" });
   });
 
   it("composição expõe todas as portas de resolveJointPending", () => {

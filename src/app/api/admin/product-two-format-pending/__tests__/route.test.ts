@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   outcome: null as unknown,
   throwOnResolve: false,
+  denyAdmin: false,
+  denyCsrf: false,
   resolveCalls: [] as unknown[],
   deps: { marker: "joint-admin-deps" },
   campaign: {
@@ -23,14 +25,14 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/auth/api-handler", () => ({
-  apiHandler: (handler: unknown) => handler,
-}));
 vi.mock("@/lib/admin/require-admin", () => ({
-  requireAdmin: vi.fn(async () => ({ userId: "admin-1" })),
-}));
-vi.mock("@/lib/auth/csrf", () => ({
-  requireSameOrigin: vi.fn(),
+  requireAdmin: vi.fn(async () => {
+    if (h.denyAdmin) {
+      const { ForbiddenError } = await import("@/lib/auth/errors");
+      throw new ForbiddenError("Acesso restrito a administradores");
+    }
+    return { userId: "admin-1" };
+  }),
 }));
 vi.mock("@/lib/campaign/persistence", () => ({
   getCampaign: vi.fn(async () => h.campaign),
@@ -60,20 +62,31 @@ function body(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function request(overrides: Record<string, unknown> = {}) {
+function request(
+  overrides: Record<string, unknown> = {},
+  origin: string | null = "http://localhost",
+) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    host: "localhost",
+  };
+  if (origin !== null) headers.origin = origin;
   return new NextRequest(
     "http://localhost/api/admin/product-two-format-pending",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body(overrides)),
     },
   );
 }
 
-async function call(overrides: Record<string, unknown> = {}) {
+async function call(
+  overrides: Record<string, unknown> = {},
+  origin: string | null = "http://localhost",
+) {
   const { POST } = await import("../route");
-  return POST(request(overrides) as never);
+  return POST(request(overrides, origin) as never);
 }
 
 beforeEach(() => {
@@ -86,6 +99,7 @@ beforeEach(() => {
   };
   h.resolveCalls = [];
   h.throwOnResolve = false;
+  h.denyAdmin = false;
   h.campaign = {
     id: "22222222-2222-4222-8222-222222222222",
     store_id: "11111111-1111-4111-8111-111111111111",
@@ -151,6 +165,19 @@ describe("F60.7 C4 — rota administrativa conjunta", () => {
     const response = await call();
     expect(response.status).toBe(502);
     expect((await response.json()).error.code).toBe("resolution_unavailable");
+  });
+
+  it("administrador negado retorna 403 sem chamar o serviço", async () => {
+    h.denyAdmin = true;
+    const response = await call();
+    expect(response.status).toBe(403);
+    expect(h.resolveCalls).toHaveLength(0);
+  });
+
+  it("CSRF negado retorna 403 sem chamar o serviço", async () => {
+    const response = await call({}, "http://evil.example");
+    expect(response.status).toBe(403);
+    expect(h.resolveCalls).toHaveLength(0);
   });
 
   it("recusa corpo estrito sem chamar o serviço", async () => {

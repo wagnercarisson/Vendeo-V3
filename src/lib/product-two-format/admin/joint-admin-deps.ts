@@ -59,15 +59,25 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function creditStatusOf(
-  rows: readonly { operation_id?: unknown; status?: unknown }[],
-  operationId: string,
-): JointCreditStatus | null {
-  const row = rows.find((candidate) => candidate.operation_id === operationId);
-  if (!row || typeof row.status !== "string") return null;
-  return CREDIT_STATUSES.has(row.status as JointCreditStatus)
-    ? (row.status as JointCreditStatus)
-    : null;
+function malformed(reason: string): { readonly kind: "read_failed"; readonly reason: string } {
+  return { kind: "read_failed", reason };
+}
+
+function recordRows(
+  data: unknown,
+  label: string,
+): { readonly kind: "ok"; readonly rows: Record<string, unknown>[] } | {
+  readonly kind: "read_failed";
+  readonly reason: string;
+} {
+  if (!Array.isArray(data)) return malformed(`${label}_malformed`);
+  const rows: Record<string, unknown>[] = [];
+  for (const row of data) {
+    const record = asRecord(row);
+    if (record === null) return malformed(`${label}_malformed`);
+    rows.push(record);
+  }
+  return { kind: "ok", rows };
 }
 
 function outcomeKindOf(
@@ -100,11 +110,14 @@ export async function readJointResolutionState(
     .eq("id", input.campaignId)
     .maybeSingle();
   if (campaignResult.error) {
-    return { kind: "read_failed", reason: campaignResult.error.message };
+    return malformed(campaignResult.error.message);
+  }
+  if (campaignResult.data === null) {
+    return { kind: "absent" };
   }
   const campaign = asRecord(campaignResult.data);
   if (!campaign || typeof campaign.store_id !== "string") {
-    return { kind: "absent" };
+    return malformed("campaign_malformed");
   }
   const storeId = campaign.store_id;
 
@@ -114,29 +127,52 @@ export async function readJointResolutionState(
     .eq("campaign_id", input.campaignId)
     .eq("operation_id", input.operationId);
   if (linksResult.error) {
-    return { kind: "read_failed", reason: linksResult.error.message };
+    return malformed(linksResult.error.message);
   }
-  const links = (linksResult.data ?? []) as LinkRow[];
+  const linksParsed = recordRows(linksResult.data, "links");
+  if (linksParsed.kind !== "ok") return linksParsed;
+  if (linksParsed.rows.length > 2) {
+    return malformed("links_cardinality");
+  }
+
+  const formats = new Set<string>();
+  for (const row of linksParsed.rows) {
+    if (
+      row.campaign_id !== input.campaignId ||
+      row.operation_id !== input.operationId ||
+      row.store_id !== storeId
+    ) {
+      return malformed("links_identity");
+    }
+    if (row.format !== "1:1" && row.format !== "9:16") {
+      return malformed("links_format");
+    }
+    if (formats.has(row.format)) return malformed("links_duplicate");
+    formats.add(row.format);
+    if (typeof row.delivery_operation_id !== "string") {
+      return malformed("links_identity");
+    }
+    if (
+      (row.format === "1:1" &&
+        (row.artifact_role !== "square_original" ||
+          row.delivery_operation_id === input.operationId)) ||
+      (row.format === "9:16" &&
+        (row.artifact_role !== "vertical" ||
+          row.delivery_operation_id !== input.operationId))
+    ) {
+      return malformed("links_role");
+    }
+  }
+
+  const links = linksParsed.rows as LinkRow[];
   const squareLink = links.find((row) => row.format === "1:1");
   const verticalLink = links.find((row) => row.format === "9:16");
-
-  const identityOk = (row: LinkRow | undefined): boolean =>
-    row !== undefined &&
-    row.campaign_id === input.campaignId &&
-    row.operation_id === input.operationId &&
-    row.store_id === storeId &&
-    typeof row.delivery_operation_id === "string";
-
   const linkComplete =
     links.length === 2 &&
-    identityOk(squareLink) &&
-    identityOk(verticalLink) &&
-    squareLink?.artifact_role === "square_original" &&
-    verticalLink?.artifact_role === "vertical" &&
-    squareLink?.delivery_operation_id !== input.operationId &&
-    verticalLink?.delivery_operation_id === input.operationId &&
-    (squareLink?.delivery_operation_id === input.deliveryOperationId ||
-      verticalLink?.delivery_operation_id === input.deliveryOperationId);
+    squareLink !== undefined &&
+    verticalLink !== undefined &&
+    (squareLink.delivery_operation_id === input.deliveryOperationId ||
+      verticalLink.delivery_operation_id === input.deliveryOperationId);
 
   const operationIds = [
     ...new Set(
@@ -156,7 +192,7 @@ export async function readJointResolutionState(
   const [creditsResult, outcomesResult, claimsResult] = await Promise.all([
     client
       .from("product_1_1_campaign_credit_operations")
-      .select("operation_id, status")
+      .select("operation_id, store_id, status")
       .eq("campaign_id", input.campaignId)
       .in("operation_id", operationIds),
     client
@@ -171,30 +207,75 @@ export async function readJointResolutionState(
       .in("operation_id", operationIds),
   ]);
 
-  if (creditsResult.error) {
-    return { kind: "read_failed", reason: creditsResult.error.message };
-  }
-  if (outcomesResult.error) {
-    return { kind: "read_failed", reason: outcomesResult.error.message };
-  }
-  if (claimsResult.error) {
-    return { kind: "read_failed", reason: claimsResult.error.message };
+  if (creditsResult.error) return malformed(creditsResult.error.message);
+  if (outcomesResult.error) return malformed(outcomesResult.error.message);
+  if (claimsResult.error) return malformed(claimsResult.error.message);
+
+  const creditsParsed = recordRows(creditsResult.data, "credits");
+  if (creditsParsed.kind !== "ok") return creditsParsed;
+  const creditByOperation = new Map<string, JointCreditStatus>();
+  for (const row of creditsParsed.rows) {
+    if (
+      typeof row.operation_id !== "string" ||
+      typeof row.store_id !== "string" ||
+      typeof row.status !== "string" ||
+      !CREDIT_STATUSES.has(row.status as JointCreditStatus) ||
+      !operationIds.includes(row.operation_id)
+    ) {
+      return malformed("credits_malformed");
+    }
+    if (row.store_id !== storeId) return malformed("credits_identity");
+    if (creditByOperation.has(row.operation_id)) {
+      return malformed("credits_duplicate");
+    }
+    creditByOperation.set(row.operation_id, row.status as JointCreditStatus);
   }
 
-  const credits = (creditsResult.data ?? []) as Array<{
-    operation_id?: unknown;
-    status?: unknown;
-  }>;
-  const creditStatus = creditStatusOf(credits, input.deliveryOperationId);
-  const sharedCreditStatus = creditStatusOf(credits, input.operationId);
-  if (linkComplete && (creditStatus === null || sharedCreditStatus === null)) {
-    return { kind: "read_failed", reason: "credit_operation_missing" };
+  const creditStatus = creditByOperation.get(input.deliveryOperationId) ?? null;
+  const sharedCreditStatus = creditByOperation.get(input.operationId) ?? null;
+  if (linkComplete) {
+    const squareDeliveryId = squareLink?.delivery_operation_id;
+    const verticalDeliveryId = verticalLink?.delivery_operation_id;
+    if (
+      creditStatus === null ||
+      sharedCreditStatus === null ||
+      typeof squareDeliveryId !== "string" ||
+      typeof verticalDeliveryId !== "string" ||
+      !creditByOperation.has(squareDeliveryId) ||
+      !creditByOperation.has(verticalDeliveryId)
+    ) {
+      return malformed("credit_operation_missing");
+    }
   }
 
-  const outcomes = (outcomesResult.data ?? []) as Array<{
-    operation_id?: unknown;
-    outcome?: unknown;
-  }>;
+  const outcomesParsed = recordRows(outcomesResult.data, "outcomes");
+  if (outcomesParsed.kind !== "ok") return outcomesParsed;
+  const seenOutcomes = new Set<string>();
+  for (const row of outcomesParsed.rows) {
+    if (
+      typeof row.operation_id !== "string" ||
+      typeof row.outcome !== "string" ||
+      !operationIds.includes(row.operation_id)
+    ) {
+      return malformed("outcomes_malformed");
+    }
+    if (seenOutcomes.has(row.operation_id)) {
+      return malformed("outcomes_duplicate");
+    }
+    seenOutcomes.add(row.operation_id);
+  }
+  const outcomes = outcomesParsed.rows;
+
+  const claimsParsed = recordRows(claimsResult.data, "claims");
+  if (claimsParsed.kind !== "ok") return claimsParsed;
+  for (const row of claimsParsed.rows) {
+    if (
+      typeof row.operation_id !== "string" ||
+      !operationIds.includes(row.operation_id)
+    ) {
+      return malformed("claims_malformed");
+    }
+  }
 
   const state: JointResolutionState = Object.freeze({
     storeId,
@@ -202,7 +283,7 @@ export async function readJointResolutionState(
     outcomeKind: outcomeKindOf(outcomes, input.deliveryOperationId),
     sharedOutcomeKind: outcomeKindOf(outcomes, input.operationId),
     sharedCreditStatus: sharedCreditStatus ?? "reserved",
-    activeClaim: (claimsResult.data ?? []).length > 0,
+    activeClaim: claimsParsed.rows.length > 0,
     linkComplete,
   });
   return { kind: "found", state };
