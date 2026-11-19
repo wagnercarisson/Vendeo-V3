@@ -70,10 +70,12 @@ function resumeInput() {
   };
 }
 
-async function openBaseSquare() {
+async function openBaseSquare(
+  options: Parameters<typeof createJointWorldDeps>[1] = {},
+) {
   const world = createJointOfflineWorld();
   world.seedScenario();
-  const deps = await createJointWorldDeps(world);
+  const deps = await createJointWorldDeps(world, options);
   const opened = await openJointOperation(jointOpenInput(), {
     openJointDelivery: (input) => deps.joint.jointClient.openJointDelivery(input),
   });
@@ -87,6 +89,8 @@ async function openBaseSquare() {
 
 async function fullSuccess() {
   const { world, deps } = await openBaseSquare();
+  const preflight = await deps.nine.deps.preflightExpansion();
+  expect(preflight.ok).toBe(true);
   const vertical = await deliverTwoFormatVertical(
     jointVerticalInput(),
     deps.verticalDeps,
@@ -138,7 +142,12 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
   });
 
   it("Teste 4: falha definitiva da expansão estorna só o vertical", async () => {
-    const { world, deps } = await openBaseSquare();
+    const { world, deps } = await openBaseSquare({ expansionMode: "definitive" });
+    const expansion = await deliverTwoFormatVertical(
+      jointVerticalInput(),
+      deps.verticalDeps,
+    );
+    expect(expansion.kind).toBe("definitive");
     const outcome = await finalizeJointFailure(
       finalizeInput("expansion", "definitive"),
       deps.finalizeDeps,
@@ -152,7 +161,12 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
   });
 
   it("Teste 5: indeterminação não estorna nem repete provider", async () => {
-    const { world, deps } = await openBaseSquare();
+    const { world, deps } = await openBaseSquare({ expansionMode: "unknown" });
+    const expansion = await deliverTwoFormatVertical(
+      jointVerticalInput(),
+      deps.verticalDeps,
+    );
+    expect(expansion.kind).toBe("unknown");
     const beforeProviders =
       deps.counters.baseProviderCalls + deps.counters.expansionProviderCalls;
     const outcome = await finalizeJointFailure(
@@ -174,7 +188,6 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     world.seedJointState({
       squareStatus: "reserved",
       verticalStatus: "refunded",
-      squareOutcome: "failed",
       sharedOutcome: "failed",
     });
     const deps = await createJointWorldDeps(world);
@@ -185,6 +198,22 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     expect(outcome.kind).toBe("refunded");
     expect(creditStatus(world, SQUARE_DELIVERY_ID)).toBe("refunded");
     expect(rpcCount(world, "product_two_format_refund_format", "1:1")).toBe(1);
+    expect(
+      world.rows.some(
+        (row) =>
+          row.__table === "product_1_1_generation_outcomes" &&
+          row.operation_id === SQUARE_DELIVERY_ID &&
+          row.outcome === "failed",
+      ),
+    ).toBe(true);
+    const outcomeIndex = world.rpcOrder.indexOf(
+      "product_1_1_record_generation_outcome:",
+    );
+    const refundIndex = world.rpcOrder.indexOf(
+      "product_two_format_refund_format:1:1",
+    );
+    expect(outcomeIndex).toBeGreaterThanOrEqual(0);
+    expect(refundIndex).toBeGreaterThan(outcomeIndex);
     const replay = await finalizeJointFailure(
       finalizeInput("base", "definitive"),
       deps.finalizeDeps,
@@ -227,10 +256,16 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
 
   it("Teste 9: resposta tardia não regride etapa nem estorna", async () => {
     const { world, deps } = await fullSuccess();
-    const late = await deliverJointSquare(jointSquareInput(), deps.squareDeps);
-    expect(late.kind).toBe("terminal_conflict");
+    const beforeExpansion = deps.counters.expansionProviderCalls;
+    const late = await deliverTwoFormatVertical(
+      jointVerticalInput({ expansionStatus: "in_progress" }),
+      deps.verticalDeps,
+    );
+    expect(late.kind).not.toBe("definitive");
+    expect(creditStatus(world, OPERATION_ID)).toBe("delivered");
     expect(creditStatus(world, SQUARE_DELIVERY_ID)).toBe("delivered");
-    expect(rpcCount(world, "product_two_format_refund_format", "1:1") ?? 0).toBe(0);
+    expect(rpcCount(world, "product_two_format_refund_format", "9:16")).toBe(0);
+    expect(deps.counters.expansionProviderCalls).toBe(beforeExpansion);
   });
 
   it("Teste 10: recuperação atua só no formato faltante", async () => {
@@ -274,6 +309,15 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     expect(repaired.kind).toBe("repaired");
     expect(world.rpcCounts["product_two_format_project_campaign"]).toBe(1);
     expect(campaign(world)?.status).toBe("ready");
+    const callsAfterFirst = deps.thumbnailCalls();
+    expect(callsAfterFirst).toBeGreaterThan(0);
+    const second = await deps.resumeDeps.repairProjection({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+    expect(second.kind).toBe("repaired");
+    expect(deps.thumbnailCalls()).toBe(callsAfterFirst);
   });
 
   it("Teste 13: leitura parcial bloqueia e não estorna", async () => {
@@ -306,16 +350,21 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     expect(creditStatus(world, SQUARE_DELIVERY_ID)).toBe("delivered");
   });
 
-  it("Teste 14: interleaving não duplica entrega", async () => {
+  it("Teste 14: interleaving controlado não duplica entrega", async () => {
     const world = createJointOfflineWorld();
     world.seedScenario();
     world.seedJointState();
     await world.seedJointArtifact({ role: "square_original", operationId: OPERATION_ID });
     const deps = await createJointWorldDeps(world);
-    const first = await deliverJointSquare(jointSquareInput(), deps.squareDeps);
-    const second = await deliverJointSquare(jointSquareInput(), deps.squareDeps);
-    expect(first.kind).toBe("delivered");
-    expect(second.kind).toBe("terminal_conflict");
+    world.interleaveBeginPublication();
+    const [first, second] = await Promise.all([
+      deliverJointSquare(jointSquareInput(), deps.squareDeps),
+      deliverJointSquare(jointSquareInput(), deps.squareDeps),
+    ]);
+    expect([first.kind, second.kind].sort()).toEqual([
+      "delivered",
+      "publication_pending",
+    ]);
     expect(rpcCount(world, "product_two_format_deliver_format", "1:1")).toBe(1);
     expect(creditStatus(world, SQUARE_DELIVERY_ID)).toBe("delivered");
   });
@@ -374,7 +423,6 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     world.seedJointState({
       squareStatus: "reserved",
       verticalStatus: "reserved",
-      squareOutcome: "failed",
       sharedOutcome: "failed",
     });
     const deps = await createJointWorldDeps(world);

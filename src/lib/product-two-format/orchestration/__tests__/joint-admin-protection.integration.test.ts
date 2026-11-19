@@ -272,7 +272,6 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
       state: {
         squareStatus: "reserved",
         verticalStatus: "refunded",
-        squareOutcome: "failed",
         sharedOutcome: "failed",
       },
       squareArtifact: false,
@@ -285,6 +284,22 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
     expect(world.creditRowFor(SQUARE_DELIVERY_ID)?.status).toBe("refunded");
     expect(rpcCount(world, "product_two_format_refund_format", "1:1")).toBe(1);
     expect(world.rows.filter((row) => row.__table === "admin_audit_log")).toHaveLength(1);
+    expect(
+      world.rows.some(
+        (row) =>
+          row.__table === "product_1_1_generation_outcomes" &&
+          row.operation_id === SQUARE_DELIVERY_ID &&
+          row.outcome === "failed",
+      ),
+    ).toBe(true);
+    const outcomeIndex = world.rpcOrder.indexOf(
+      "product_1_1_record_generation_outcome:",
+    );
+    const refundIndex = world.rpcOrder.indexOf(
+      "product_two_format_refund_format:1:1",
+    );
+    expect(outcomeIndex).toBeGreaterThanOrEqual(0);
+    expect(refundIndex).toBeGreaterThan(outcomeIndex);
 
     const unknown = await setup({
       state: {
@@ -328,5 +343,102 @@ describe("F60.7-10 — proteção administrativa integrada", () => {
       },
     );
     expect(rpc.error?.message).toBe("finality_not_recorded");
+  });
+
+  it("Teste 10: simulador recusa finalidade, arte, publicação, replay divergente e par incoerente", async () => {
+    const noFinality = await setup({ state: {}, squareArtifact: false });
+    const missing = await noFinality.world.client.rpc(
+      "product_two_format_refund_format",
+      {
+        p_store_id: STORE_ID,
+        p_campaign_id: CAMPAIGN_ID,
+        p_operation_id: OPERATION_ID,
+        p_format: "1:1",
+        p_art_kind: "absent",
+        p_observed_epoch: 0,
+        p_reason: "motivo",
+      },
+    );
+    expect(missing.error?.message).toBe("shared_operation_not_final");
+
+    const present = await setup({
+      state: { sharedOutcome: "failed" },
+      squareArtifact: true,
+    });
+    const artifactPresent = await present.world.client.rpc(
+      "product_two_format_refund_format",
+      {
+        p_store_id: STORE_ID,
+        p_campaign_id: CAMPAIGN_ID,
+        p_operation_id: OPERATION_ID,
+        p_format: "1:1",
+        p_art_kind: "absent",
+        p_observed_epoch: 0,
+        p_reason: "motivo",
+      },
+    );
+    expect(artifactPresent.data).toMatchObject({
+      success: false,
+      reason: "artifact_present",
+    });
+
+    const publishing = await setup({
+      state: { sharedOutcome: "failed" },
+      squareArtifact: false,
+    });
+    const squareCredit = publishing.world.creditRowFor(SQUARE_DELIVERY_ID);
+    if (squareCredit) squareCredit.publication_state = "in_flight";
+    const publication = await publishing.world.client.rpc(
+      "product_two_format_refund_format",
+      {
+        p_store_id: STORE_ID,
+        p_campaign_id: CAMPAIGN_ID,
+        p_operation_id: OPERATION_ID,
+        p_format: "1:1",
+        p_art_kind: "absent",
+        p_observed_epoch: 0,
+        p_reason: "motivo",
+      },
+    );
+    expect(publication.error?.message).toBe("publication_in_progress");
+
+    const replay = createJointOfflineWorld();
+    replay.seedScenario();
+    const openParams = {
+      p_store_id: STORE_ID,
+      p_campaign_id: CAMPAIGN_ID,
+      p_operation_id: OPERATION_ID,
+      p_square_delivery_id: SQUARE_DELIVERY_ID,
+      p_expansion_model: "gpt-image-2.5-sunburst",
+      p_expansion_quality: "low",
+      p_expansion_config_version_id: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+    };
+    await replay.client.rpc("product_two_format_open_delivery", openParams);
+    const divergent = await replay.client.rpc(
+      "product_two_format_open_delivery",
+      { ...openParams, p_expansion_quality: "medium" },
+    );
+    expect(divergent.data).toMatchObject({
+      success: false,
+      reason: "operation_config_conflict",
+    });
+
+    const incoherent = createJointOfflineWorld();
+    incoherent.seedScenario();
+    incoherent.seedJointState();
+    for (let index = incoherent.rows.length - 1; index >= 0; index -= 1) {
+      const row = incoherent.rows[index];
+      if (
+        row.__table === "product_two_format_deliveries" &&
+        row.format === "9:16"
+      ) {
+        incoherent.rows.splice(index, 1);
+      }
+    }
+    const projection = await incoherent.client.rpc(
+      "product_two_format_project_campaign",
+      { p_campaign_id: CAMPAIGN_ID },
+    );
+    expect(projection.error?.message).toBe("delivery_links_inconsistent");
   });
 });

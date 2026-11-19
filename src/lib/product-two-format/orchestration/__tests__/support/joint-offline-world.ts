@@ -53,6 +53,11 @@ import type { ThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-genera
 import { THUMBNAIL_BUCKET } from "@/lib/campaign/thumbnail/thumbnail-path";
 import { runSquareBase } from "@/lib/campaign/square-base/run-square-base";
 import { runSquareBaseCopy } from "@/lib/campaign/square-base/copy";
+import {
+  reconstructFirstExecution,
+  reconstructForComplete,
+  reconstructForRepair,
+} from "@/lib/product-9-16-two-stage/orchestration/reconstruction";
 import { TwoFormatJointFinancialClient } from "@/lib/product-two-format/joint-financial-client";
 import { readTwoFormatDelivery } from "@/lib/product-two-format/delivery-reader";
 import { createJointDeps } from "@/lib/product-two-format/orchestration/joint-deps";
@@ -196,6 +201,8 @@ export function createJointOfflineWorld() {
   const rpcCounts: RpcCounts = {};
   const rpcOrder: string[] = [];
   const refundFailures = new Map<string, "throw" | "deliver">();
+  let beginBarrier: { count: number; release: () => void; promise: Promise<void> } | null =
+    null;
   const clockBase = Date.now();
   let snapshotSeq = 0;
 
@@ -234,6 +241,10 @@ export function createJointOfflineWorld() {
   function builder(table: string, filters: [string, unknown][] = [], order?: [string, boolean]) {
     const self: Record<string, unknown> = {
       eq(column: string, value: unknown) {
+        filters.push([column, value]);
+        return self;
+      },
+      is(column: string, value: unknown) {
         filters.push([column, value]);
         return self;
       },
@@ -407,6 +418,49 @@ export function createJointOfflineWorld() {
       identity_snapshot: null,
     });
     base.putObject(PRODUCT_STORAGE_PATH, PRODUCT_BYTES, {}, "campaign-images");
+    rows.push(
+      {
+        __table: "nine_sixteen_expansion_model_config",
+        scope: "expansion",
+        model: "gpt-image-2.5-sunburst",
+        quality: "low",
+        config_version_id: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+        reason: null,
+        updated_by: null,
+        updated_at: "2026-11-18T00:00:00.000Z",
+        created_at: "2026-11-18T00:00:00.000Z",
+      },
+      {
+        __table: "ai_model_catalog",
+        id: "0f7f1c1a-5f2b-4a4b-9d1e-2a3b4c5d6e7f",
+        capability: "campaign_product_image",
+        segment: "product",
+        provider: "openai",
+        model: "gpt-image-2.5-sunburst",
+        protocol: "images",
+        label: null,
+        status: "active",
+        source_note: null,
+        validated_at: null,
+        created_at: "2026-11-18T00:00:00.000Z",
+        updated_at: "2026-11-18T00:00:00.000Z",
+      },
+      {
+        __table: "ai_model_pricing",
+        id: "pricing-1",
+        provider: "openai",
+        model: "gpt-image-2.5-sunburst",
+        quality: "low",
+        effective_until: null,
+        input_token_usd_per_1m: 1,
+        output_token_usd_per_1m: 2,
+        cached_input_token_usd_per_1m: 0.5,
+        image_unit_usd: 0.05,
+        image_token_usd_per_1m: 4,
+        image_input_token_usd_per_1m: 3,
+        image_cached_input_token_usd_per_1m: 5,
+      },
+    );
   }
 
   function seedFrozenState(input: {
@@ -1308,7 +1362,12 @@ export function createJointOfflineWorld() {
     };
   }
 
-  function beginPublication(params: Record<string, unknown>) {
+  async function beginPublication(params: Record<string, unknown>) {
+    if (beginBarrier !== null) {
+      beginBarrier.count += 1;
+      if (beginBarrier.count >= 2) beginBarrier.release();
+      await beginBarrier.promise;
+    }
     const operationId = String(params.p_operation_id ?? OPERATION_ID);
     const credit = creditRowFor(operationId);
     if (!credit) throw new Error("operation_not_found");
@@ -1458,9 +1517,36 @@ export function createJointOfflineWorld() {
     return "generating";
   }
 
+  function assertJointPair(): void {
+    const squareLink = jointLink("1:1");
+    const verticalLink = jointLink("9:16");
+    if (
+      !squareLink ||
+      !verticalLink ||
+      squareLink.delivery_operation_id !== SQUARE_DELIVERY_ID ||
+      verticalLink.delivery_operation_id !== OPERATION_ID ||
+      !creditRowFor(SQUARE_DELIVERY_ID) ||
+      !creditRowFor(OPERATION_ID)
+    ) {
+      throw new Error("delivery_links_inconsistent");
+    }
+  }
+
+  function hasFormatArtifact(format: string): boolean {
+    const role = format === "1:1" ? "square_original" : "vertical";
+    const path = `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/${role}.jpg`;
+    return (
+      base
+        .rowsForTable("campaign_composition_artifacts")
+        .some((row) => row.role === role && row.operation_id === OPERATION_ID) ||
+      base.hasObject(path)
+    );
+  }
+
   function jointProject() {
     const campaign = tableRows("campaigns").find((row) => row.id === CAMPAIGN_ID);
     if (!campaign) return { success: false, reason: "campaign_not_found" };
+    assertJointPair();
     const square = creditRowFor(SQUARE_DELIVERY_ID)?.status === "delivered";
     const vertical = creditRowFor(OPERATION_ID)?.status === "delivered";
     const previous = campaign.storage_path;
@@ -1526,6 +1612,19 @@ export function createJointOfflineWorld() {
 
   function jointOpen(params: Record<string, unknown>) {
     const existing = creditRowFor(OPERATION_ID) !== null;
+    if (existing) {
+      const opened = operation();
+      if (!opened || Number(opened.contract_version) !== 2) {
+        return { success: false, reason: "operation_origin_conflict" };
+      }
+      if (
+        opened.expansion_model !== params.p_expansion_model ||
+        opened.expansion_quality !== params.p_expansion_quality ||
+        opened.expansion_config_version_id !== params.p_expansion_config_version_id
+      ) {
+        return { success: false, reason: "operation_config_conflict" };
+      }
+    }
     if (!existing) {
       rows.push(
         {
@@ -1602,6 +1701,7 @@ export function createJointOfflineWorld() {
     const id = jointFormatId(format);
     const credit = creditRowFor(id);
     if (!credit) throw new Error("credit_operation_missing");
+    assertJointPair();
     assertOwnToken(credit, params.p_publication_token);
     if (credit.status === "refunded") return { success: false, reason: "operation_terminal" };
     if (credit.status === "delivered") {
@@ -1659,6 +1759,12 @@ export function createJointOfflineWorld() {
       throw new Error("publication_in_progress");
     }
     if (credit.status === "delivered") return { success: false, reason: "delivered_not_refundable" };
+    if (["in_flight", "result_unknown", "published"].includes(credit.publication_state)) {
+      throw new Error("publication_in_progress");
+    }
+    if (hasFormatArtifact(format)) {
+      return { success: false, reason: "artifact_present" };
+    }
     if (credit.status === "refunded") {
       return {
         success: true,
@@ -1682,13 +1788,15 @@ export function createJointOfflineWorld() {
     if (params.p_art_kind !== "absent") throw new Error("absent_not_confirmed");
     if (params.p_observed_epoch !== credit.state_epoch) throw new Error("evidence_stale");
     const shared = outcome();
+    const sharedFinal =
+      shared?.outcome === "failed" ||
+      creditRowFor(OPERATION_ID)?.status === "refunded";
+    if (!sharedFinal) throw new Error("shared_operation_not_final");
     if (format === "1:1") {
       const own = tableRows("product_1_1_generation_outcomes").find(
         (row) => row.operation_id === SQUARE_DELIVERY_ID && row.outcome === "failed",
       );
       if (!own) throw new Error("finality_not_recorded");
-    } else if (shared?.outcome !== "failed" && creditRowFor(OPERATION_ID)?.status !== "refunded") {
-      throw new Error("shared_operation_not_final");
     }
     credit.status = "refunded";
     credit.refund_tx_id = "refund";
@@ -1887,7 +1995,7 @@ export function createJointOfflineWorld() {
     storage,
     rpc: async (name: string, params: Record<string, unknown>) => {
       try {
-        const data = rpc(name, params);
+        const data = await rpc(name, params);
         return { data, error: null };
       } catch (error) {
         return {
@@ -1918,6 +2026,16 @@ export function createJointOfflineWorld() {
     clock: () => clockBase,
     failNextRefund: (format: "1:1" | "9:16", mode: "throw" | "deliver" = "throw") => {
       refundFailures.set(format, mode);
+    },
+    interleaveBeginPublication: () => {
+      let release!: () => void;
+      const promise = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      beginBarrier = { count: 0, release, promise };
+      return () => {
+        beginBarrier = null;
+      };
     },
   };
 }
@@ -2163,6 +2281,15 @@ export async function createOfflineDeps(
     clock: () => now,
     callIdFactory: () => `base-call-${counters.baseProviderCalls + 1}`,
     runCopy: runSquareBaseCopy,
+    runPreflight: async () => ({
+      config: {
+        primary: { model: "gpt-image-2.5-sunburst", quality: "medium" },
+        fallback: { model: "gpt-image-2", quality: "low" },
+        origin: "selection",
+        configVersionId: "cfg-1",
+      },
+      pricing: {} as never,
+    }),
     readFrozenState: (async (
       input: { campaignId: string; operationId: string },
       deps?: { client?: SupabaseClient },
@@ -2170,73 +2297,6 @@ export async function createOfflineDeps(
       const mod = await import("@/lib/campaign/square-base/frozen-state");
       return mod.readSquareBaseFrozenState(input, { client: deps?.client ?? world.client });
     }) as never,
-    probe: (async () => ({ kind: "proceed" })) as never,
-    resolveFirstComposition: (async (input: SquareBaseInput) => {
-      const referenceSelections = input.productImagesDataUrls.map(
-        (dataUrl: string, index: number) => ({
-          kind: index === 0 ? ("product" as const) : ("reference" as const),
-          id: sha256(dataUrl),
-          index,
-        }),
-      );
-      const content = {
-        briefing: input.briefing,
-        identityDirective: input.identityDirective ?? null,
-        referenceSelections,
-        ...(input.references === undefined ? {} : { references: input.references }),
-      };
-      const composition = composeSquareBasePrompt(content);
-      const candidate = buildCandidatePayload(input, {
-        promptBase: undefined,
-      });
-      if (!candidate) throw new Error("candidate_unavailable");
-      const serialized = serializeFrozenPayload(candidate);
-      const fingerprint = frozenFingerprint(candidate, serialized);
-      const snapshotId = "7a8b9c0d-7a8b-4c0d-9e1f-7a8b9c0d1e2f";
-      world.seedFrozenState({
-        snapshotId,
-        fingerprint,
-        serialized,
-        payload: candidate,
-      });
-      return {
-        ok: true,
-        snapshot: {
-          campaignId: CAMPAIGN_ID,
-          primaryModel: "gpt-image-2.5-sunburst",
-          primaryQuality: "medium",
-          fallbackModel: "gpt-image-2",
-          fallbackQuality: "low",
-          configVersionId: "cfg-1",
-          origin: "selection",
-          createdAt: "2026-11-13T00:00:00.000Z",
-        },
-        evidence: {} as never,
-        snapshotOriginalId: snapshotId,
-        frozenPayload: candidate,
-        composition,
-      };
-    }) as never,
-    resolveResumeConfig: (async () => ({
-      ok: true,
-      snapshot: {
-        id: "7a8b9c0d-7a8b-4c0d-9e1f-7a8b9c0d1e2f",
-        campaignId: CAMPAIGN_ID,
-        primaryModel: "gpt-image-2.5-sunburst",
-        primaryQuality: "medium",
-        fallbackModel: "gpt-image-2",
-        fallbackQuality: "low",
-        configVersionId: "cfg-1",
-        origin: "selection",
-        runId: null,
-        traceId: null,
-        createdAt: "2026-11-13T00:00:00.000Z",
-      },
-      pair: {
-        primary: { model: "gpt-image-2.5-sunburst", quality: "medium" },
-        fallback: { model: "gpt-image-2", quality: "low" },
-      },
-    })) as never,
     imageGateway: {
       prepare: async (_capability: unknown, target: "primary" | "fallback") => ({
         capability: "campaign_product_image",
@@ -2394,71 +2454,8 @@ export async function createOfflineDeps(
    * catálogo/pricing (nunca lê a configuração administrativa e nunca toca
    * banco/rede). O controlador `frozenPreflight` força os três desfechos.
    */
-  const preflightFrozenExpansion: RunNineSixteenDeps["preflightFrozenExpansion"] = async (
-    selection,
-  ) => {
-    counters.frozenPreflightCalls += 1;
-    const forced = options.frozenPreflight;
-    if (forced === "configuration_read_failed") {
-      return {
-        ok: false,
-        failure: "configuration_read_failed",
-        reason: "catalog_read_failed",
-        missing: [],
-      };
-    }
-    if (forced === "model_unavailable") {
-      return {
-        ok: false,
-        failure: "model_unavailable",
-        reason: "catalog_row_missing",
-        missing: [],
-      };
-    }
-    if (forced === "pricing_unavailable") {
-      return {
-        ok: false,
-        failure: "pricing_unavailable",
-        reason: "incomplete_coverage",
-        missing: ["imageTokenUsdPer1M"],
-      };
-    }
-
-    const catalogRows = await expandSeams.catalog!.getActiveCatalogRows();
-    const catalogRow = catalogRows.find(
-      (row) =>
-        row.model === selection.model &&
-        row.status === "active" &&
-        row.capability === "campaign_product_image",
-    );
-    if (!catalogRow) {
-      return {
-        ok: false,
-        failure: "model_unavailable",
-        reason: "catalog_row_missing",
-        missing: [],
-      };
-    }
-    const read = await expandSeams.pricing!.getModelPricing({
-      provider: "openai",
-      model: selection.model,
-      quality: selection.quality,
-    });
-    if (!read || !read.pricing) {
-      return {
-        ok: false,
-        failure: "pricing_unavailable",
-        reason: "row_missing",
-        missing: ["pricing_row"],
-      };
-    }
-    return { ok: true, selection };
-  };
-
   const deps: RunNineSixteenDeps = {
     ...real,
-    preflightExpansion: async () => ({ ok: true, selection: CONFIGURED_SELECTION }),
-    preflightFrozenExpansion,
     base: (input, inner) =>
       real.base(input, { ...baseSeams, ...(inner ?? {}) }),
     prepare: (input, inner) => real.prepare(input, inner),
@@ -2579,6 +2576,8 @@ export async function createJointWorldDeps(
     }) => readTwoFormatDelivery(input, { client: world.client }),
   };
 
+  const thumbnails = new Set<string>();
+  let thumbnailCalls = 0;
   const resumeDeps = {
     readDelivery: (input: {
       campaignId: string;
@@ -2588,7 +2587,40 @@ export async function createJointWorldDeps(
     readOperationView: (input: { campaignId: string; operationId: string }) =>
       joint.control.getOperationView(input),
     probeSquare: squareProbe.probeSquareOriginal.bind(squareProbe),
-    reconstruct: async () => ({ ok: false as const, reason: "offline_reconstruction" }),
+    reconstruct: async (input: {
+      storeId: string;
+      campaignId: string;
+      operationId: string;
+    }) => {
+      const frozen = await nine.deps.readFrozenState({
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+      });
+      const deps = {
+        client: world.client,
+        readInputBytes: nine.deps.reconstruction?.readInputBytes,
+        readFrozenState: nine.deps.readFrozenState,
+      };
+      if (frozen.kind === "complete") {
+        const result = await reconstructForComplete({ ...input, frozen }, deps);
+        return result.ok
+          ? { ok: true as const, content: result.content, frozenState: frozen }
+          : result;
+      }
+      if (frozen.kind === "repairable") {
+        const result = await reconstructForRepair({ ...input, frozen }, deps);
+        return result.ok
+          ? { ok: true as const, content: result.content, frozenState: frozen }
+          : result;
+      }
+      if (frozen.kind === "absent") {
+        const result = await reconstructFirstExecution({ ...input, frozen }, deps);
+        return result.ok
+          ? { ok: true as const, content: result.content, frozenState: frozen }
+          : result;
+      }
+      return { ok: false as const, reason: "frozen_state_indeterminate", definitive: true };
+    },
     runBase: (input: Parameters<typeof runJointBase>[0]) =>
       runJointBase(input, baseDeps),
     deliverSquare: (input: Parameters<typeof deliverJointSquare>[0]) =>
@@ -2605,8 +2637,21 @@ export async function createJointWorldDeps(
           readTwoFormatDelivery(readInput, { client: world.client }),
         projectCampaign: (projectInput) =>
           jointClient.projectCampaign(projectInput),
-        thumbnailExists: async () => false,
-        generateThumbnail: joint.generateThumbnail,
+        thumbnailExists: async ({ campaignId, role }) =>
+          thumbnails.has(`${campaignId}:${role}`),
+        generateThumbnail: async (thumbnailInput) => {
+          const result = await joint.generateThumbnail(thumbnailInput);
+          thumbnailCalls += 1;
+          if (
+            typeof result === "object" &&
+            result !== null &&
+            ((result as { status?: unknown }).status === "created" ||
+              (result as { status?: unknown }).status === "already_exists")
+          ) {
+            thumbnails.add(`${thumbnailInput.campaignId}:${thumbnailInput.role}`);
+          }
+          return result;
+        },
         clock: joint.clock,
       }),
   };
@@ -2768,6 +2813,7 @@ export async function createJointWorldDeps(
     resumeDeps,
     adminDeps,
     counters: nine.counters,
+    thumbnailCalls: () => thumbnailCalls,
   };
 }
 
