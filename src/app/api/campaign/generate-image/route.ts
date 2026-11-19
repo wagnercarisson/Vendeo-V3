@@ -512,6 +512,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
         const { handleJointGenerateRequest } = await import(
           "@/lib/product-two-format/orchestration/handle-joint-generate"
         );
+        const { loadC4HttpInjection } = await import(
+          "@/lib/product-two-format/testing/c4-http-injection-loader"
+        );
+        const injection = await loadC4HttpInjection(supabaseAdmin);
         return handleJointGenerateRequest(
           {
             newFlow,
@@ -521,6 +525,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             requestStartedAtMs,
             signal: request.signal,
             economicSnapshot,
+            ...(injection === undefined ? {} : { nineDeps: injection }),
           },
         );
       }

@@ -14,8 +14,11 @@ import {
 import { isProduct9_16TwoStageEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import { readJointResumeContext } from "@/lib/product-two-format/orchestration/joint-resume-context";
-import { createTwoFormatRunDeps } from "@/lib/product-two-format/orchestration/run-two-format-deps";
+import {
+  createTwoFormatRunDeps,
+} from "@/lib/product-two-format/orchestration/run-two-format-deps";
 import { runTwoFormatGeneration } from "@/lib/product-two-format/orchestration/run-two-format";
+import { loadC4HttpInjection } from "@/lib/product-two-format/testing/c4-http-injection-loader";
 import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
 import { computeInvocationDeadline } from "@/lib/product-9-16-two-stage/orchestration/deadline-budget";
 import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
@@ -102,7 +105,11 @@ export const POST = apiHandler(
           { status: 409 },
         );
       }
-      const deps = createTwoFormatRunDeps({ client: supabaseAdmin });
+      const injection = await loadC4HttpInjection(supabaseAdmin);
+      const deps = createTwoFormatRunDeps({
+        client: supabaseAdmin,
+        ...(injection === undefined ? {} : { nineDeps: injection }),
+      });
       return runTwoFormatGeneration(
         {
           mode: "continue",
