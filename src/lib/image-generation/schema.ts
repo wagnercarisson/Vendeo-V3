@@ -87,7 +87,7 @@ export const NewFlowGenerateImageRequestSchema = GenerateImageRequestSchema.exte
   operationId: z.string().uuid(),
   // F59/D-03 — opcional e exclusivo do fluxo NOVO. O `1:1` NÃO envia o campo;
   // o `format: string` legado acima NÃO é reutilizado.
-  campaignFormat: z.enum(["1:1", "9:16"]).optional(),
+  campaignFormat: z.enum(["1:1", "9:16", "1:1+9:16"]).optional(),
 });
 
 export type NewFlowGenerateImageRequest = z.infer<
@@ -127,6 +127,24 @@ export const ContinueGenerationRequestSchema = z
 
 export type ContinueGenerationRequest = z.infer<
   typeof ContinueGenerationRequestSchema
+>;
+
+/**
+ * F60.7 C1 — continuidade dedicada do caminho conjunto.
+ *
+ * Uma única ação por requisição. `requestId` é a aquisição da tentativa:
+ * reenviar o MESMO requestId é replay; uma nova tentativa autorizada usa um
+ * requestId NOVO. Nenhum conteúdo/identidade financeira vem do navegador.
+ */
+export const ContinueTwoFormatRequestSchema = z
+  .object({
+    operationId: z.string().uuid(),
+    requestId: z.string().uuid(),
+  })
+  .strict();
+
+export type ContinueTwoFormatRequest = z.infer<
+  typeof ContinueTwoFormatRequestSchema
 >;
 
 // ─── Success Response (200) ───────────────────────────────────────────────
