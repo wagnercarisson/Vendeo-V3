@@ -17,6 +17,7 @@ import { readJointResumeContext } from "@/lib/product-two-format/orchestration/j
 import { createTwoFormatRunDeps } from "@/lib/product-two-format/orchestration/run-two-format-deps";
 import { runTwoFormatGeneration } from "@/lib/product-two-format/orchestration/run-two-format";
 import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
+import { computeInvocationDeadline } from "@/lib/product-9-16-two-stage/orchestration/deadline-budget";
 import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -47,6 +48,7 @@ export const POST = apiHandler(
   ) => {
     requireSameOrigin(request);
     const user = await requireApiUser();
+    const requestStartedAtMs = Date.now();
 
     const { id } = await params;
     if (!UUID_V4_REGEX.test(id)) {
@@ -109,11 +111,12 @@ export const POST = apiHandler(
           operationId: body.operationId,
           authorization: { kind: "owner", userId: user.userId },
           allowNewPaidStep: await allowNewPaidStep(),
-          requestStartedAtMs: Date.now(),
-          deadlineAtMs: Date.now() + 120_000,
+          requestStartedAtMs,
+          deadlineAtMs: computeInvocationDeadline(requestStartedAtMs),
           inputSnapshot: campaign.input_snapshot,
           squareDeliveryId: context.context.squareDeliveryId,
           requestId: body.requestId,
+          signal: request.signal,
         },
         deps,
       );

@@ -1,13 +1,16 @@
 import "server-only";
 
 import type { AttemptTarget, OperationViewLookup } from "@/lib/product-9-16-two-stage/types";
-import type { JointBaseInput, JointBaseOutcome } from "./joint-base";
+import { canAffordStep } from "@/lib/product-9-16-two-stage/orchestration/deadline-budget";
 
+import type { JointBaseOutcome } from "./joint-base";
+import type { JointFinalizeOutcome } from "./finalize-joint-failure";
 import {
   type JointOpenInput,
   type JointOpenOutcome,
 } from "./joint-operation-service";
 import type { JointPreflightResult } from "./preflight";
+import type { JointProjectionRepairOutcome } from "./repair-joint-projection";
 import {
   type JointResumeOperationInput,
   type JointResumeOutcome,
@@ -18,6 +21,8 @@ import type {
   TwoFormatFormatStatus,
   TwoFormatStatusSnapshot,
 } from "./two-format-events";
+import type { JointSquareDeliveryOutcome } from "./deliver-square";
+import type { JointVerticalDeliveryOutcome } from "./deliver-joint-vertical";
 import type { TwoFormatFormat } from "../types";
 
 export interface TwoFormatRunInput {
@@ -33,7 +38,6 @@ export interface TwoFormatRunInput {
   readonly squareDeliveryId: string;
   readonly initialRequestId?: string;
   readonly requestId?: string;
-  readonly content?: JointBaseInput["content"];
   readonly preflight?: JointPreflightResult;
   readonly signal?: AbortSignal;
 }
@@ -56,26 +60,23 @@ export interface TwoFormatRunDeps {
   readonly resumeJointOperation: (
     input: JointResumeOperationInput,
   ) => Promise<JointResumeOutcome>;
-  readonly runInitialBase: (input: {
-    storeId: string;
-    campaignId: string;
-    operationId: string;
-    authorization: JointResumeOperationInput["authorization"];
-    content: JointBaseInput["content"];
-    acquisitionId: string;
-    attemptReference: string;
-    deadlineAtMs: number;
-    allowNewPaidStep: boolean;
-    attemptTarget: AttemptTarget;
-    signal?: AbortSignal;
-  }) => Promise<JointBaseOutcome>;
+  /** Deriva o alvo da AUTORIDADE persistida; `null` nunca é substituído. */
   readonly resolveAttemptTarget: (input: {
     campaignId: string;
     operationId: string;
-  }) => Promise<AttemptTarget>;
+  }) => Promise<AttemptTarget | null>;
+  readonly finalizeJointFailure: (input: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+    stage: "base" | "preparation" | "expansion";
+    outcomeKind: "definitive" | "unknown";
+  }) => Promise<JointFinalizeOutcome>;
   readonly clock: () => number;
   readonly callIdFactory: () => string;
 }
+
+type Stream = ReturnType<typeof createTwoFormatStream>;
 
 function formats(
   left: TwoFormatFormatStatus,
@@ -106,6 +107,7 @@ function processingEvent(
 function resultEvent(
   input: TwoFormatRunInput,
   snapshot: TwoFormatStatusSnapshot,
+  options: { readonly partial?: boolean; readonly operationTerminal?: boolean } = {},
 ): TwoFormatEvent {
   const delivered = (["1:1", "9:16"] as const).filter(
     (format) => snapshot.formats[format].state === "delivered",
@@ -115,11 +117,12 @@ function resultEvent(
     campaignId: input.campaignId,
     operationId: input.operationId,
     responseTerminal: true,
-    operationTerminal: snapshot.operationTerminal,
+    operationTerminal:
+      options.operationTerminal ?? snapshot.operationTerminal,
     campaignUrl: `/campanhas/${input.campaignId}`,
     formats: snapshot.formats,
     preferredFormat: snapshot.preferredFormat,
-    partial: delivered.length === 1,
+    partial: options.partial ?? delivered.length === 1,
   };
 }
 
@@ -127,124 +130,399 @@ function errorEvent(
   input: TwoFormatRunInput,
   code: string,
   message: string,
+  options: {
+    readonly operationTerminal?: boolean;
+    readonly refunded?: boolean;
+    readonly format?: TwoFormatFormat;
+  } = {},
 ): TwoFormatEvent {
   return {
     type: "error",
     campaignId: input.campaignId,
     operationId: input.operationId,
     responseTerminal: true,
-    operationTerminal: false,
+    operationTerminal: options.operationTerminal ?? false,
     code,
     message,
+    ...(options.format === undefined ? {} : { format: options.format }),
+    ...(options.refunded === undefined ? {} : { refunded: options.refunded }),
   };
 }
 
-function terminalForStatus(
+function unknownEvent(input: TwoFormatRunInput): TwoFormatEvent {
+  return {
+    type: "unknown",
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+    responseTerminal: true,
+    operationTerminal: false,
+    reference: input.operationId,
+  };
+}
+
+/**
+ * Deriva o terminal da RESPOSTA a partir dos DOIS formatos, nunca de um único
+ * campo. Ambos estornados NÃO são sucesso; indeterminação não é terminal.
+ */
+export function terminalForStatus(
   input: TwoFormatRunInput,
   snapshot: TwoFormatStatusSnapshot,
 ): TwoFormatEvent {
-  if (
-    snapshot.operationTerminal ||
-    snapshot.formats["1:1"].state === "delivered" ||
-    snapshot.formats["9:16"].state === "delivered"
-  ) {
-    return resultEvent(input, snapshot);
+  const square = snapshot.formats["1:1"].state;
+  const vertical = snapshot.formats["9:16"].state;
+  const deliveredCount =
+    (square === "delivered" ? 1 : 0) + (vertical === "delivered" ? 1 : 0);
+
+  if (deliveredCount === 2) {
+    return resultEvent(input, snapshot, {
+      partial: false,
+      operationTerminal: true,
+    });
   }
+
+  if (deliveredCount === 1) {
+    const other = square === "delivered" ? vertical : square;
+    if (other === "processing") return processingEvent(input, snapshot);
+    if (other === "absent") {
+      return resultEvent(input, snapshot, {
+        partial: true,
+        operationTerminal: true,
+      });
+    }
+    // unknown/unavailable: preserva o entregue, sem declarar terminal.
+    return resultEvent(input, snapshot, {
+      partial: true,
+      operationTerminal: false,
+    });
+  }
+
+  if (square === "absent" && vertical === "absent") {
+    if (snapshot.operationTerminal) {
+      return errorEvent(
+        input,
+        "joint_refunded",
+        "A operação conjunta foi estornada.",
+        { operationTerminal: true, refunded: true },
+      );
+    }
+    return processingEvent(input, snapshot);
+  }
+
+  if (
+    square === "unknown" ||
+    vertical === "unknown" ||
+    square === "unavailable" ||
+    vertical === "unavailable"
+  ) {
+    return unknownEvent(input);
+  }
+
   return processingEvent(input, snapshot);
 }
 
-async function finishFromStatus(
-  stream: ReturnType<typeof createTwoFormatStream>,
+async function readStatus(
   input: TwoFormatRunInput,
   deps: TwoFormatRunDeps,
-): Promise<void> {
-  const snapshot = await deps.readStatus({
+): Promise<TwoFormatStatusSnapshot> {
+  return deps.readStatus({
     storeId: input.storeId,
     campaignId: input.campaignId,
     operationId: input.operationId,
     allowNewPaidStep: input.allowNewPaidStep,
   });
+}
+
+async function finishFromStatus(
+  stream: Stream,
+  input: TwoFormatRunInput,
+  deps: TwoFormatRunDeps,
+): Promise<void> {
+  let snapshot: TwoFormatStatusSnapshot;
+  try {
+    snapshot = await readStatus(input, deps);
+  } catch {
+    stream.emitTerminal(unknownEvent(input));
+    return;
+  }
   stream.emitTerminal(terminalForStatus(input, snapshot));
 }
 
+async function finalizeAndFinish(
+  stream: Stream,
+  input: TwoFormatRunInput,
+  deps: TwoFormatRunDeps,
+  stage: "base" | "preparation" | "expansion",
+  outcomeKind: "definitive" | "unknown",
+): Promise<void> {
+  let outcome: JointFinalizeOutcome;
+  try {
+    outcome = await deps.finalizeJointFailure({
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      stage,
+      outcomeKind,
+    });
+  } catch {
+    stream.emitTerminal(unknownEvent(input));
+    return;
+  }
+  if (outcome.kind === "unknown") {
+    stream.emitTerminal(unknownEvent(input));
+    return;
+  }
+  if (outcome.kind === "unavailable") {
+    stream.emitTerminal(
+      errorEvent(input, "joint_finalize_unavailable", "Operação indisponível."),
+    );
+    return;
+  }
+  // `refunded`, `partial`, `delivery_required` e `blocked` são refletidos pelo
+  // estado durável (nunca inventamos terminal a partir do retorno do estorno).
+  await finishFromStatus(stream, input, deps);
+}
+
+function verticalStage(snapshot: TwoFormatStatusSnapshot): "base" | "expansion" {
+  return snapshot.formats["1:1"].state === "delivered" ? "expansion" : "base";
+}
+
+function mapBaseOutcome(
+  stream: Stream,
+  input: TwoFormatRunInput,
+  deps: TwoFormatRunDeps,
+  outcome: JointBaseOutcome,
+): Promise<void> {
+  switch (outcome.kind) {
+    case "completed":
+      stream.emitPhase("square_base", "complete");
+      return finishFromStatus(stream, input, deps);
+    case "skipped":
+      stream.emitPhase("square_base", "skipped");
+      return finishFromStatus(stream, input, deps);
+    case "processing":
+      return finishFromStatus(stream, input, deps);
+    case "retryable":
+      return finishFromStatus(stream, input, deps);
+    case "definitive":
+      stream.emitPhase("square_base", "failed", outcome.reason);
+      return finalizeAndFinish(stream, input, deps, "base", "definitive");
+    case "unknown":
+      stream.emitPhase("square_base", "failed", outcome.reason);
+      return finalizeAndFinish(stream, input, deps, "base", "unknown");
+  }
+}
+
+function mapVerticalOutcome(
+  stream: Stream,
+  input: TwoFormatRunInput,
+  deps: TwoFormatRunDeps,
+  outcome: JointVerticalDeliveryOutcome,
+): Promise<void> {
+  switch (outcome.kind) {
+    case "delivered":
+      stream.emitPhase("vertical_delivery", "complete");
+      return finishFromStatus(stream, input, deps);
+    case "processing":
+    case "retryable":
+    case "publication_pending":
+    case "terminal_conflict":
+      return finishFromStatus(stream, input, deps);
+    case "definitive":
+    case "failed":
+    case "artifact_absent":
+    case "artifact_incompatible":
+      stream.emitPhase("vertical_delivery", "failed");
+      return finalizeAndFinish(stream, input, deps, "expansion", "definitive");
+    case "indeterminate":
+    case "unknown":
+      return finalizeAndFinish(stream, input, deps, "expansion", "unknown");
+  }
+}
+
+function mapSquareOutcome(
+  stream: Stream,
+  input: TwoFormatRunInput,
+  deps: TwoFormatRunDeps,
+  outcome: JointSquareDeliveryOutcome,
+): Promise<void> {
+  switch (outcome.kind) {
+    case "delivered":
+      stream.emitPhase("square_delivery", "complete");
+      return finishFromStatus(stream, input, deps);
+    case "publication_pending":
+    case "terminal_conflict":
+      return finishFromStatus(stream, input, deps);
+    case "artifact_absent":
+    case "artifact_incompatible":
+    case "failed":
+      stream.emitPhase("square_delivery", "failed");
+      return finalizeAndFinish(stream, input, deps, "base", "definitive");
+    case "indeterminate":
+      return finalizeAndFinish(stream, input, deps, "base", "unknown");
+  }
+}
+
+function mapRepairOutcome(
+  stream: Stream,
+  input: TwoFormatRunInput,
+  deps: TwoFormatRunDeps,
+  outcome: JointProjectionRepairOutcome,
+): Promise<void> {
+  if (outcome.kind === "repaired") {
+    stream.emitPhase("projection", "complete");
+  }
+  return finishFromStatus(stream, input, deps);
+}
+
+async function handleResumeOutcome(
+  stream: Stream,
+  input: TwoFormatRunInput,
+  deps: TwoFormatRunDeps,
+  outcome: JointResumeOutcome,
+): Promise<void> {
+  switch (outcome.kind) {
+    case "executed":
+      if (outcome.action === "run_base") {
+        return mapBaseOutcome(stream, input, deps, outcome.outcome);
+      }
+      if (outcome.action === "run_vertical_only") {
+        return mapVerticalOutcome(stream, input, deps, outcome.outcome);
+      }
+      return mapRepairOutcome(stream, input, deps, outcome.outcome);
+    case "settle_square":
+      return mapSquareOutcome(stream, input, deps, outcome.outcome);
+    case "partial_terminal":
+      return finishFromStatus(stream, input, deps);
+    case "pending_finalization": {
+      // Um formato já estornado e o outro reservado: finaliza SOMENTE o escopo
+      // pendente, com epoch/sonda novos e sem repetir o estorno efetivado.
+      let snapshot: TwoFormatStatusSnapshot;
+      try {
+        snapshot = await readStatus(input, deps);
+      } catch {
+        stream.emitTerminal(unknownEvent(input));
+        return;
+      }
+      return finalizeAndFinish(
+        stream,
+        input,
+        deps,
+        verticalStage(snapshot),
+        "definitive",
+      );
+    }
+    case "terminal_error":
+      return finishFromStatus(stream, input, deps);
+    case "blocked":
+      switch (outcome.reason) {
+        case "operation_in_progress":
+        case "operation_terminal":
+          return finishFromStatus(stream, input, deps);
+        case "failed_outcome": {
+          // Outcome durável já gravado: finaliza o que ficou pendente
+          // (estorno/entrega), sem reexecutar etapa paga.
+          let view: OperationViewLookup;
+          try {
+            view = await deps.readOperationView({
+              campaignId: input.campaignId,
+              operationId: input.operationId,
+            });
+          } catch {
+            stream.emitTerminal(unknownEvent(input));
+            return;
+          }
+          if (view.kind !== "found") {
+            stream.emitTerminal(unknownEvent(input));
+            return;
+          }
+          let snapshot: TwoFormatStatusSnapshot;
+          try {
+            snapshot = await readStatus(input, deps);
+          } catch {
+            stream.emitTerminal(unknownEvent(input));
+            return;
+          }
+          return finalizeAndFinish(
+            stream,
+            input,
+            deps,
+            verticalStage(snapshot),
+            view.view.unknown ? "unknown" : "definitive",
+          );
+        }
+        case "unknown":
+          stream.emitTerminal(unknownEvent(input));
+          return;
+        case "read_failed":
+        case "partial_read":
+        case "probe_failed":
+        case "operation_read_failed":
+        case "operation_absent":
+          stream.emitTerminal(
+            errorEvent(input, "operation_unavailable", "Operação indisponível."),
+          );
+          return;
+        case "reconstruction_failed":
+          stream.emitTerminal(
+            errorEvent(
+              input,
+              "reconstruction_failed",
+              "Não foi possível reconstruir o conteúdo durável.",
+            ),
+          );
+          return;
+        default:
+          stream.emitTerminal(
+            errorEvent(input, "joint_blocked", outcome.reason),
+          );
+          return;
+      }
+  }
+}
+
 async function runResume(
-  stream: ReturnType<typeof createTwoFormatStream>,
+  stream: Stream,
   input: TwoFormatRunInput,
   deps: TwoFormatRunDeps,
   acquisitionId: string,
 ): Promise<void> {
-  const attemptTarget = await deps.resolveAttemptTarget({
-    campaignId: input.campaignId,
-    operationId: input.operationId,
-  });
-  const outcome = await deps.resumeJointOperation({
-    storeId: input.storeId,
-    campaignId: input.campaignId,
-    operationId: input.operationId,
-    authorization: input.authorization,
-    acquisitionId,
-    attemptReference: deps.callIdFactory(),
-    deadlineAtMs: input.deadlineAtMs,
-    allowNewPaidStep: input.allowNewPaidStep,
-    attemptTarget,
-    ...(input.signal === undefined ? {} : { signal: input.signal }),
-  });
+  let attemptTarget: AttemptTarget | null;
+  try {
+    attemptTarget = await deps.resolveAttemptTarget({
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+    });
+  } catch {
+    stream.emitTerminal(unknownEvent(input));
+    return;
+  }
 
-  if (outcome.kind === "executed") {
-    const phase =
-      outcome.action === "run_base"
-        ? "square_base"
-        : outcome.action === "run_vertical_only"
-          ? "vertical_delivery"
-          : "projection";
-    stream.emitPhase(phase, "complete");
-    await finishFromStatus(stream, input, deps);
-    return;
-  }
-  if (outcome.kind === "settle_square") {
-    stream.emitPhase("square_delivery", "complete");
-    await finishFromStatus(stream, input, deps);
-    return;
-  }
-  if (outcome.kind === "blocked") {
-    if (outcome.reason === "operation_in_progress") {
-      await finishFromStatus(stream, input, deps);
-      return;
-    }
-    stream.emitTerminal(errorEvent(input, "joint_blocked", outcome.reason));
-    return;
-  }
-  if (outcome.kind === "partial_terminal") {
-    const snapshot = await deps.readStatus({
+  let outcome: JointResumeOutcome;
+  try {
+    outcome = await deps.resumeJointOperation({
       storeId: input.storeId,
       campaignId: input.campaignId,
       operationId: input.operationId,
+      authorization: input.authorization,
+      acquisitionId,
+      attemptReference: deps.callIdFactory(),
+      deadlineAtMs: input.deadlineAtMs,
       allowNewPaidStep: input.allowNewPaidStep,
+      ...(attemptTarget === null ? {} : { attemptTarget }),
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
     });
-    stream.emitTerminal({
-      type: "result",
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      responseTerminal: true,
-      operationTerminal: true,
-      campaignUrl: `/campanhas/${input.campaignId}`,
-      formats: snapshot.formats,
-      preferredFormat: snapshot.preferredFormat,
-      partial: true,
-    });
+  } catch {
+    stream.emitTerminal(unknownEvent(input));
     return;
   }
-  if (outcome.kind === "pending_finalization") {
-    await finishFromStatus(stream, input, deps);
-    return;
-  }
-  stream.emitTerminal(errorEvent(input, "joint_terminal_error", "Operação não concluída."));
+
+  await handleResumeOutcome(stream, input, deps, outcome);
 }
 
 async function execute(
   input: TwoFormatRunInput,
   deps: TwoFormatRunDeps,
-  stream: ReturnType<typeof createTwoFormatStream>,
+  stream: Stream,
 ): Promise<void> {
   let lookup: OperationViewLookup;
   try {
@@ -299,20 +577,37 @@ async function execute(
       );
       return;
     }
-    if (!input.content) {
-      stream.emitTerminal(errorEvent(input, "missing_content", "Conteúdo inicial ausente."));
+
+    // A abertura reserva crédito: revalidar cancelamento e orçamento DEPOIS de
+    // todas as leituras e IMEDIATAMENTE antes do efeito financeiro.
+    if (input.signal?.aborted) {
+      stream.emitTerminal(
+        errorEvent(input, "request_aborted", "Requisição cancelada antes da abertura."),
+      );
+      return;
+    }
+    if (!canAffordStep(deps.clock(), input.deadlineAtMs, "base")) {
+      stream.emitTerminal(
+        errorEvent(input, "deadline_exceeded", "Prazo esgotado antes da abertura."),
+      );
       return;
     }
 
-    const opened = await deps.openJointOperation({
-      mode: "new",
-      storeId: input.storeId,
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      squareDeliveryId: input.squareDeliveryId,
-      inputSnapshot: input.inputSnapshot,
-      selection: preflight.selection,
-    });
+    let opened: JointOpenOutcome;
+    try {
+      opened = await deps.openJointOperation({
+        mode: "new",
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        squareDeliveryId: input.squareDeliveryId,
+        inputSnapshot: input.inputSnapshot,
+        selection: preflight.selection,
+      });
+    } catch {
+      stream.emitTerminal(unknownEvent(input));
+      return;
+    }
     if (opened.kind !== "opened") {
       stream.emitTerminal(
         errorEvent(
@@ -324,28 +619,7 @@ async function execute(
       return;
     }
     stream.emitPhase("square_base", "running");
-    const target = await deps.resolveAttemptTarget({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-    });
-    const base = await deps.runInitialBase({
-      storeId: input.storeId,
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      authorization: input.authorization,
-      content: input.content,
-      acquisitionId: input.initialRequestId,
-      attemptReference: deps.callIdFactory(),
-      deadlineAtMs: input.deadlineAtMs,
-      allowNewPaidStep: input.allowNewPaidStep,
-      attemptTarget: target,
-      ...(input.signal === undefined ? {} : { signal: input.signal }),
-    });
-    stream.emitPhase(
-      "square_base",
-      base.kind === "completed" ? "complete" : "skipped",
-    );
-    await finishFromStatus(stream, input, deps);
+    await runResume(stream, input, deps, input.initialRequestId);
     return;
   }
 

@@ -9,7 +9,12 @@ import type {
   CreateCampaignInput,
 } from "./types";
 
-export async function createCampaign(
+/**
+ * INSERT da campanha VINCULADO ao cliente informado. O cliente é a única
+ * autoridade de banco da operação (inclusive em testes de composição real).
+ */
+export async function createCampaignWithClient(
+  client: SupabaseClient,
   storeId: string,
   input: CreateCampaignInput,
   campaignId?: string
@@ -20,7 +25,7 @@ export async function createCampaign(
   // F38.1 (D1/D2): operation_run_id persistido na criação da campanha — o
   // operationRunId do run (campaign_delivery) é gravado aqui, preparando o reuso
   // do mesmo run pela F37 (recomposição cross-request). Ausente -> NULL.
-  const { error } = await supabaseAdmin
+  const { error } = await client
     .from("campaigns")
     .insert({
       id: campaignIdFinal,
@@ -38,6 +43,19 @@ export async function createCampaign(
   }
 
   return { id: campaignIdFinal, storagePath };
+}
+
+export async function createCampaign(
+  storeId: string,
+  input: CreateCampaignInput,
+  campaignId?: string
+): Promise<{ id: string; storagePath: string }> {
+  return createCampaignWithClient(
+    supabaseAdmin as unknown as SupabaseClient,
+    storeId,
+    input,
+    campaignId,
+  );
 }
 
 export function dataUrlToCampaignImage(
@@ -339,7 +357,8 @@ export async function downloadCampaignInputFile(
   return downloadInputBytes(storagePath, supabaseAdmin as unknown as SupabaseClient);
 }
 
-export async function uploadCampaignInputFile(
+export async function uploadCampaignInputFileWithClient(
+  client: SupabaseClient,
   storeId: string,
   campaignId: string,
   input: {
@@ -353,7 +372,7 @@ export async function uploadCampaignInputFile(
   const storagePath = `${storeId}/${campaignId}/inputs/${input.contentId}.${extension}`;
   let uploadError: unknown = null;
   try {
-    const uploaded = await supabaseAdmin.storage.from("campaign-images").upload(
+    const uploaded = await client.storage.from("campaign-images").upload(
       storagePath,
       input.buffer,
       { contentType: input.mimeType, upsert: false },
@@ -364,10 +383,7 @@ export async function uploadCampaignInputFile(
   }
   if (!uploadError) return { kind: "uploaded" };
 
-  const existing = await downloadInputBytes(
-    storagePath,
-    supabaseAdmin as unknown as SupabaseClient,
-  );
+  const existing = await downloadInputBytes(storagePath, client);
   if (existing.kind === "absent") return { kind: "indeterminate" };
   if (existing.kind === "indeterminate") return { kind: "indeterminate" };
   if (!existing.bytes.equals(input.buffer)) {
@@ -380,4 +396,22 @@ export async function uploadCampaignInputFile(
     return { kind: "conflict", reason: "content_mismatch" };
   }
   return { kind: "reused" };
+}
+
+export async function uploadCampaignInputFile(
+  storeId: string,
+  campaignId: string,
+  input: {
+    readonly contentId: string;
+    readonly mimeType: string;
+    readonly dataUrlPrefix: string;
+    readonly buffer: Buffer;
+  },
+): Promise<CampaignInputUploadResult> {
+  return uploadCampaignInputFileWithClient(
+    supabaseAdmin as unknown as SupabaseClient,
+    storeId,
+    campaignId,
+    input,
+  );
 }

@@ -432,10 +432,22 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     exact: ["@/lib/product-1-1/credit-operation/types"],
   },
   // F60.7 C1 — composition root do runtime conjunto importa o cliente de
-  // crédito real. Par EXATO; nenhum prefixo.
+  // crédito real e o outcome próprio do quadrado. Pares EXATOS; nenhum prefixo.
   ["src/lib/product-two-format/orchestration/run-two-format-deps.ts"]: {
     prefixes: [],
-    exact: ["@/lib/product-1-1/credit-operation/credit-operation-client"],
+    exact: [
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+    ],
+  },
+  // F60.7 C1 — snapshot inicial usa a copy/preço e o bloco de identidade já
+  // aceitos do novo fluxo. Pares EXATOS; nenhum runtime de geração.
+  ["src/lib/product-two-format/orchestration/joint-initial-snapshot.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/commercial-price",
+      "@/lib/product-1-1/identity-context",
+    ],
   },
 });
 const SIDE_EFFECT_IMPORT_RE =
@@ -1468,6 +1480,7 @@ describe("F60.7 B — pares exatos joint-deps/deliver-square ↔ product-1-1 (te
     "src/lib/product-two-format/orchestration/finalize-joint-failure.ts",
     "src/lib/product-two-format/orchestration/resolve-joint-pending.ts",
     "src/lib/product-two-format/orchestration/run-two-format-deps.ts",
+    "src/lib/product-two-format/orchestration/joint-initial-snapshot.ts",
   ] as const;
 
   it("cada importador conjunto corresponde EXATAMENTE ao conjunto real de specifiers", () => {

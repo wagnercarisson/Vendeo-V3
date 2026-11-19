@@ -512,10 +512,17 @@ export const POST = apiHandler(async (request: NextRequest) => {
         const { handleJointGenerateRequest } = await import(
           "@/lib/product-two-format/orchestration/handle-joint-generate"
         );
-        return handleJointGenerateRequest({
-          newFlow,
-          userId: guardUser.userId,
-        });
+        return handleJointGenerateRequest(
+          {
+            newFlow,
+            userId: guardUser.userId,
+          },
+          {
+            requestStartedAtMs,
+            signal: request.signal,
+            economicSnapshot,
+          },
+        );
       }
       const requestedFormat = newFlow.campaignFormat ?? "1:1";
       const newFlowBackgroundDirection: ProductOneToOneBackgroundDirection =

@@ -12,8 +12,12 @@ import {
 } from "@/lib/product-9-16-two-stage/orchestration/reconstruction";
 import { runPreparationStep } from "@/lib/product-9-16-two-stage/orchestration/preparation-step";
 import { runExpansionStep } from "@/lib/product-9-16-two-stage/orchestration/expansion-step";
-import { createNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestration/delivery-deps";
+import {
+  createNineSixteenDeps,
+} from "@/lib/product-9-16-two-stage/orchestration/delivery-deps";
+import type { RunNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestration/types";
 import { ProductOneToOneCreditOperationClient } from "@/lib/product-1-1/credit-operation/credit-operation-client";
+import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { readTwoFormatDelivery } from "../delivery-reader";
@@ -26,11 +30,19 @@ import { deliverTwoFormatVertical } from "./deliver-joint-vertical";
 import { repairJointProjection } from "./repair-joint-projection";
 import { runJointBase } from "./joint-base";
 import { resumeJointOperation } from "./resume-joint-operation";
+import { finalizeJointFailure } from "./finalize-joint-failure";
 import type { TwoFormatRunDeps } from "./run-two-format";
-import type { TwoFormatStatusSnapshot } from "./two-format-events";
-import type { TwoFormatNextStep } from "./two-format-events";
+import type {
+  TwoFormatFormatStatus,
+  TwoFormatNextStep,
+  TwoFormatStatusSnapshot,
+} from "./two-format-events";
+import type { TwoFormatFormat } from "../types";
 
-function nextStepFor(action: string): TwoFormatNextStep {
+function nextStepFor(
+  action: string,
+  formats: Readonly<Record<TwoFormatFormat, TwoFormatFormatStatus>>,
+): TwoFormatNextStep {
   switch (action) {
     case "acquire_base":
     case "retry_base":
@@ -39,16 +51,36 @@ function nextStepFor(action: string): TwoFormatNextStep {
     case "retry_expansion":
       return "expansion";
     case "deliver":
+      if (
+        formats["1:1"].state === "processing" &&
+        formats["9:16"].state === "delivered"
+      ) {
+        return "square_delivery";
+      }
       return "delivery";
     default:
       return null;
   }
 }
 
+function terminalFormatState(state: TwoFormatFormatStatus["state"]): boolean {
+  return state === "delivered" || state === "absent";
+}
+
+/** Etapas GRATUITAS (entrega/reparo) podem continuar mesmo com a flag OFF. */
+function isFreeStep(step: TwoFormatNextStep): boolean {
+  return step === "delivery" || step === "square_delivery";
+}
+
 export interface TwoFormatRunDepsOptions {
   readonly client?: SupabaseClient;
   readonly clock?: () => number;
   readonly callIdFactory?: () => string;
+  /**
+   * Costura de PROVIDER/etapas já compostas. Em produção é omitida; testes de
+   * composição real injetam apenas os seams de provider/DB/Storage.
+   */
+  readonly nineDeps?: RunNineSixteenDeps;
 }
 
 /**
@@ -63,9 +95,10 @@ export function createTwoFormatRunDeps(
   const clock = options.clock ?? (() => Date.now());
   const callIdFactory = options.callIdFactory ?? (() => randomUUID());
   const joint = createJointDeps({ client, clock, callIdFactory });
-  const nine = createNineSixteenDeps({ client });
+  const nine = options.nineDeps ?? createNineSixteenDeps({ client, clock });
   const control = new ProductTwoStageOperationClient(client);
   const credit = new ProductOneToOneCreditOperationClient(client);
+  const attempt = new ProductOneToOneAttemptStartClient(client);
   const jointClient = new TwoFormatJointFinancialClient(client);
 
   const readOperationView: TwoFormatRunDeps["readOperationView"] = (input) =>
@@ -99,7 +132,7 @@ export function createTwoFormatRunDeps(
       throw new Error(`joint_operation_${operation.kind}`);
     }
     const view = delivery.view;
-    const formats = {
+    const formats: Record<TwoFormatFormat, TwoFormatFormatStatus> = {
       "1:1": {
         state: view.square.state,
         deliveryOperationId: view.square.deliveryOperationId,
@@ -108,27 +141,40 @@ export function createTwoFormatRunDeps(
         state: view.vertical.state,
         deliveryOperationId: view.vertical.deliveryOperationId,
       },
-    } as const;
+    };
     const preferredFormat =
       formats["1:1"].state === "delivered"
         ? ("1:1" as const)
         : formats["9:16"].state === "delivered"
           ? ("9:16" as const)
           : null;
+    const nextStep = nextStepFor(operation.view.nextAction, formats);
+    // Terminal dos DOIS formatos. Cada estado terminal do read model só existe
+    // com crédito terminal (entregue ou estornado). Um único formato NÃO declara
+    // a operação terminal.
+    const operationTerminal =
+      terminalFormatState(formats["1:1"].state) &&
+      terminalFormatState(formats["9:16"].state);
+    const canContinue =
+      !operationTerminal &&
+      operation.view.canContinue &&
+      (input.allowNewPaidStep ||
+        !(nextStep === "base" || nextStep === "expansion") ||
+        isFreeStep(nextStep));
     return {
       campaignStatus: String(campaign.data?.status ?? "generating"),
       formats,
       preferredFormat,
-      nextStep: nextStepFor(operation.view.nextAction),
-      canContinue: operation.view.canContinue && input.allowNewPaidStep,
-      operationTerminal: operation.view.credit.terminal,
+      nextStep,
+      canContinue,
+      operationTerminal,
     } satisfies TwoFormatStatusSnapshot;
   };
 
   const reconstruct: Parameters<typeof resumeJointOperation>[1]["reconstruct"] = async (
     input,
   ) => {
-    const frozen = await joint.readFrozenState({
+    const frozen = await nine.readFrozenState({
       campaignId: input.campaignId,
       operationId: input.operationId,
     });
@@ -230,20 +276,31 @@ export function createTwoFormatRunDeps(
         openJointDelivery: (open) => jointClient.openJointDelivery(open),
       }),
     resumeJointOperation: (input) => resumeJointOperation(input, resumeDeps),
-    runInitialBase: (input) =>
-      runJointBase(
-        {
-          ...input,
-          baseStatus: "pending",
-          frozenState: { kind: "absent" },
-        },
-        baseDeps,
-      ),
     resolveAttemptTarget: async (input) => {
       const resumed = await control.resume(input);
-      if (!resumed.success) return "primary";
-      return (resumed.nextTarget ?? "primary") satisfies AttemptTarget;
+      if (!resumed.success) return null;
+      return (resumed.nextTarget ?? null) satisfies AttemptTarget | null;
     },
+    finalizeJointFailure: (input) =>
+      finalizeJointFailure(input, {
+        finish: (finish) => control.finish(finish),
+        recordOutcome: (record) => control.recordOutcome(record),
+        recordFormatOutcome: async (record) => {
+          await attempt.recordOperationOutcome({
+            campaignId: record.campaignId,
+            operationId: record.operationId,
+            outcome: record.outcome,
+            supportReference: record.supportReference ?? null,
+          });
+        },
+        probeSquare: (probe) => joint.probeSquare.probeSquareOriginal(probe),
+        probeVertical: (probe) =>
+          joint.probeVertical.probeVerticalArtifact(probe),
+        getPublicationEpoch: (campaignId, operationId) =>
+          credit.getPublicationEpoch(campaignId, operationId),
+        refundFormat: (refund) => jointClient.refundFormat(refund),
+        readFormatStatuses: (read) => readTwoFormatDelivery(read, { client }),
+      }),
     clock,
     callIdFactory,
   };

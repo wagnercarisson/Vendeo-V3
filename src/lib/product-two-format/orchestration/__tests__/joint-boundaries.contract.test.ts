@@ -174,6 +174,7 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
         "src/lib/product-two-format/orchestration/deliver-square.ts",
         "src/lib/product-two-format/orchestration/finalize-joint-failure.ts",
         "src/lib/product-two-format/orchestration/joint-deps.ts",
+        "src/lib/product-two-format/orchestration/joint-initial-snapshot.ts",
         "src/lib/product-two-format/orchestration/resolve-joint-pending.ts",
         "src/lib/product-two-format/orchestration/run-two-format-deps.ts",
       ].sort(),
