@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { RunNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestration/types";
+import type { C4HttpInjection } from "./c4-http-injection";
 
 /**
  * Loader TEST-ONLY da injeção determinística para a jornada HTTP real de C4-I.
@@ -17,7 +17,7 @@ import type { RunNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestrat
  */
 export async function loadC4HttpInjection(
   client: SupabaseClient,
-): Promise<RunNineSixteenDeps | undefined> {
+): Promise<C4HttpInjection | undefined> {
   if (process.env.F60_7_C4_TEST_INJECTION !== "1") return undefined;
   if (process.env.NODE_ENV === "production") return undefined;
   if (process.env.VERCEL === "1") return undefined;

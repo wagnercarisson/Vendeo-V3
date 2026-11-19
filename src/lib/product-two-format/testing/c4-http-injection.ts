@@ -21,6 +21,29 @@ import type { RunNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestrat
 
 const DETERMINISTIC_MODEL = "c4-deterministic-provider";
 
+export type C4ActivationStep = "base_image" | "copy" | "vertical_expansion";
+
+export interface C4ActivationEvent {
+  readonly step: C4ActivationStep;
+  readonly source: "deterministic";
+  readonly model: typeof DETERMINISTIC_MODEL;
+}
+
+export interface C4HttpInjection extends RunNineSixteenDeps {
+  /** Evidência test-only; sem usage, custo, provider pago ou envelope fictício. */
+  readonly activation: readonly C4ActivationEvent[];
+  readonly seams: {
+    readonly imageGateway: SquareBaseImageGateway;
+    readonly copyInvoker: AiInvoker;
+    readonly expansionInvoker: ReturnType<
+      typeof createDeterministicExpansionInvoker
+    >;
+  };
+}
+
+const activationEvent = (step: C4ActivationStep): C4ActivationEvent =>
+  Object.freeze({ step, source: "deterministic", model: DETERMINISTIC_MODEL });
+
 const COPY_JSON = JSON.stringify({
   title: "Oferta C4",
   caption: "Legenda determinística da jornada C4.",
@@ -54,38 +77,59 @@ async function deterministicImageBase64(
   return created;
 }
 
-const deterministicCopyInvoker: AiInvoker = {
-  invoke: async () => ({ content: COPY_JSON, model: DETERMINISTIC_MODEL }),
-  hasFallback: async () => false,
-};
+function createDeterministicCopyInvoker(
+  record: (step: C4ActivationStep) => void,
+): AiInvoker {
+  return {
+    invoke: async () => {
+      record("copy");
+      return { content: COPY_JSON, model: DETERMINISTIC_MODEL };
+    },
+    hasFallback: async () => false,
+  };
+}
 
-const deterministicImageGateway: SquareBaseImageGateway = {
-  prepare: async (capability, target) => ({
-    capability,
-    target,
-    provider: "openai",
-    model: DETERMINISTIC_MODEL,
-    protocol: "images",
-    resolved: {
+function createDeterministicImageGateway(
+  record: (step: C4ActivationStep) => void,
+): SquareBaseImageGateway {
+  return {
+    prepare: async (capability, target) => ({
+      capability,
+      target,
       provider: "openai",
       model: DETERMINISTIC_MODEL,
       protocol: "images",
+      resolved: {
+        provider: "openai",
+        model: DETERMINISTIC_MODEL,
+        protocol: "images",
+      },
+    }),
+    invokePrepared: async () => {
+      record("base_image");
+      return {
+        imageBase64: await deterministicImageBase64("square"),
+        mimeType: "image/jpeg",
+        model: DETERMINISTIC_MODEL,
+      };
     },
-  }),
-  invokePrepared: async () => ({
-    imageBase64: await deterministicImageBase64("square"),
-    mimeType: "image/jpeg",
-    model: DETERMINISTIC_MODEL,
-  }),
-};
+  };
+}
 
-const deterministicExpansionInvoker = {
-  invokePrepared: async () => ({
-    imageBase64: await deterministicImageBase64("vertical"),
-    mimeType: "image/jpeg",
-    model: DETERMINISTIC_MODEL,
-  }),
-};
+function createDeterministicExpansionInvoker(
+  record: (step: C4ActivationStep) => void,
+) {
+  return {
+    invokePrepared: async () => {
+      record("vertical_expansion");
+      return {
+        imageBase64: await deterministicImageBase64("vertical"),
+        mimeType: "image/jpeg",
+        model: DETERMINISTIC_MODEL,
+      };
+    },
+  };
+}
 
 /** Exportado para teste offline dos bytes determinísticos. */
 export function c4DeterministicImageBase64(
@@ -96,10 +140,17 @@ export function c4DeterministicImageBase64(
 
 export function createC4HttpInjection(input: {
   readonly client: SupabaseClient;
-}): RunNineSixteenDeps {
+}): C4HttpInjection {
+  const activation: C4ActivationEvent[] = [];
+  const record = (step: C4ActivationStep) => {
+    activation.push(activationEvent(step));
+  };
+  const copyInvoker = createDeterministicCopyInvoker(record);
+  const imageGateway = createDeterministicImageGateway(record);
+  const expansionInvoker = createDeterministicExpansionInvoker(record);
   const baseDeps = createNineSixteenDeps({
     client: input.client,
-    copyInvoker: deterministicCopyInvoker,
+    copyInvoker,
   });
   return {
     ...baseDeps,
@@ -107,14 +158,16 @@ export function createC4HttpInjection(input: {
       runSquareBase(baseInput, {
         ...(deps ?? {}),
         client: input.client,
-        imageGateway: deterministicImageGateway,
-        copyInvoker: deterministicCopyInvoker,
+        imageGateway,
+        copyInvoker,
       }),
     expand: (expandInput, deps) =>
       expandVerticalToNineSixteen(expandInput, {
         ...deps,
         client: input.client,
-        invoker: deterministicExpansionInvoker,
+        invoker: expansionInvoker,
       }),
+    activation,
+    seams: { imageGateway, copyInvoker, expansionInvoker },
   };
 }

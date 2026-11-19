@@ -2146,6 +2146,12 @@ export interface OfflineProviderOptions {
     | "invalid_output";
   /** Texto devolvido pelo invoker SIMULADO da copy (provider). */
   readonly copyText?: string;
+  /** Costuras determinísticas TEST-ONLY (C4-I), sem provider externo. */
+  readonly providerSeams?: {
+    readonly imageGateway?: SquareBaseDeps["imageGateway"];
+    readonly copyInvoker?: SquareBaseDeps["copyInvoker"];
+    readonly expansionInvoker?: ExpandVerticalSeams["invoker"];
+  };
   /** Avanca o relogio injetado depois da chamada da base (orcamento). */
   readonly baseClockAdvanceMs?: number;
   /**
@@ -2468,6 +2474,12 @@ export async function createOfflineDeps(
         pricing: COMPLETE_PRICING,
       },
     })) as never,
+    ...(options.providerSeams?.imageGateway === undefined
+      ? {}
+      : { imageGateway: options.providerSeams.imageGateway }),
+    ...(options.providerSeams?.copyInvoker === undefined
+      ? {}
+      : { copyInvoker: options.providerSeams.copyInvoker }),
   };
 
   const expandSeams: ExpandVerticalSeams = {
@@ -2522,6 +2534,9 @@ export async function createOfflineDeps(
     pricing: {
       getModelPricing: async () => ({ pricing: COMPLETE_PRICING, versionId: "pricing-1" }),
     },
+    ...(options.providerSeams?.expansionInvoker === undefined
+      ? {}
+      : { invoker: options.providerSeams.expansionInvoker }),
   };
 
   const real = composeNineSixteenDeps({
