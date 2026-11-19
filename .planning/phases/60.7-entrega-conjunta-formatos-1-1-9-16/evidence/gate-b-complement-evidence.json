@@ -1,0 +1,216 @@
+{
+  "kind": "f60.7-gate-b-complement-base",
+  "executed_at": "2026-11-19T16:43:58.740Z",
+  "authorization_ref": "066f4d8b+base",
+  "target": {
+    "database": "127.0.0.1:57782/postgres",
+    "postgrest": "http://127.0.0.1:57781"
+  },
+  "scope": "base sem Storage; J3/restore não executados",
+  "baseline": {
+    "stores": 32,
+    "campaigns": 126,
+    "credit_ops": 73,
+    "tx": 203,
+    "balances": 29,
+    "artifacts": 27,
+    "outcomes11": 6,
+    "outcomes916": 8,
+    "audit": 102,
+    "deliveries": 16,
+    "storage": 345
+  },
+  "final": {
+    "stores": 38,
+    "campaigns": 132,
+    "credit_ops": 84,
+    "tx": 223,
+    "balances": 35,
+    "artifacts": 27,
+    "outcomes11": 7,
+    "outcomes916": 12,
+    "audit": 107,
+    "deliveries": 27,
+    "storage": 345
+  },
+  "results": [
+    {
+      "id": "J1",
+      "status": "PASS",
+      "result": {
+        "outcome": {
+          "kind": "resolved",
+          "action": "refund",
+          "format": "9:16",
+          "idempotent": false,
+          "auditRecorded": true
+        },
+        "audit": {
+          "operation_id": "f6072101-0000-4000-8000-000000000004",
+          "metadata": {
+            "flow": "two_format",
+            "kind": "resolution",
+            "action": "refund",
+            "format": "9:16",
+            "art_kind": "absent",
+            "atomicity": "effect_then_audit",
+            "authorship": "admin",
+            "campaign_id": "f6072101-0000-4000-8000-000000000003",
+            "control_operation_id": "f6072101-0000-4000-8000-000000000004",
+            "delivery_operation_id": "f6072101-0000-4000-8000-000000000004"
+          }
+        }
+      }
+    },
+    {
+      "id": "J2",
+      "status": "PASS",
+      "result": {
+        "outcome": {
+          "kind": "resolved",
+          "action": "refund",
+          "format": "1:1",
+          "idempotent": false,
+          "auditRecorded": true
+        },
+        "own": {
+          "outcome": "failed"
+        },
+        "audit": {
+          "flow": "two_format",
+          "kind": "resolution",
+          "action": "refund",
+          "format": "1:1",
+          "art_kind": "absent",
+          "atomicity": "effect_then_audit",
+          "authorship": "admin",
+          "campaign_id": "f6072102-0000-4000-8000-000000000003",
+          "control_operation_id": "f6072102-0000-4000-8000-000000000004",
+          "delivery_operation_id": "f6072102-0000-4000-8000-000000000005"
+        }
+      }
+    },
+    {
+      "id": "J4",
+      "status": "PASS",
+      "result": {
+        "outcome": {
+          "kind": "resolved",
+          "action": "refund",
+          "format": "9:16",
+          "idempotent": true,
+          "auditRecorded": true,
+          "alreadyAudited": true
+        }
+      }
+    },
+    {
+      "id": "J5",
+      "status": "PASS",
+      "result": {
+        "outcome": {
+          "kind": "audit_conflict"
+        }
+      }
+    },
+    {
+      "id": "J6a",
+      "status": "PASS",
+      "result": {
+        "first": {
+          "kind": "resolved",
+          "action": "refund",
+          "format": "9:16",
+          "idempotent": true,
+          "auditRecorded": true,
+          "alreadyAudited": true
+        },
+        "second": {
+          "kind": "resolved",
+          "action": "refund",
+          "format": "9:16",
+          "idempotent": false,
+          "auditRecorded": true
+        }
+      }
+    },
+    {
+      "id": "J6b",
+      "status": "PASS",
+      "result": {
+        "first": {
+          "kind": "audit_conflict"
+        },
+        "second": {
+          "kind": "audit_conflict"
+        }
+      }
+    },
+    {
+      "id": "J7",
+      "status": "PASS",
+      "result": {
+        "outcome": {
+          "kind": "blocked",
+          "block": "delivery_link_incomplete",
+          "outcomeRecorded": false
+        }
+      }
+    },
+    {
+      "id": "J8",
+      "status": "PASS",
+      "result": {
+        "flow": "legacy",
+        "note": "S13 legado; fora da cobertura conjunta"
+      }
+    },
+    {
+      "id": "P1-P3",
+      "status": "PASS",
+      "result": {
+        "anonSelect": 401,
+        "serviceSelect": 200,
+        "anonRpc": 401
+      }
+    },
+    {
+      "id": "P4-P5",
+      "status": "PASS",
+      "result": {
+        "wrongStore": 400,
+        "notFinal": 400
+      }
+    }
+  ],
+  "storage_checks": [
+    {
+      "fixture": "J1",
+      "path": "f6072101-0000-4000-8000-000000000002/f6072101-0000-4000-8000-000000000003/f6072101-0000-4000-8000-000000000004/vertical.jpg",
+      "kind": "absent"
+    },
+    {
+      "fixture": "J1",
+      "path": "f6072101-0000-4000-8000-000000000002/f6072101-0000-4000-8000-000000000003/f6072101-0000-4000-8000-000000000004/square_original.jpg",
+      "kind": "absent"
+    },
+    {
+      "fixture": "J2",
+      "path": "f6072102-0000-4000-8000-000000000002/f6072102-0000-4000-8000-000000000003/f6072102-0000-4000-8000-000000000004/square_original.jpg",
+      "kind": "absent"
+    }
+  ],
+  "postgrest_checks": [
+    {
+      "id": "P1-P3",
+      "anonSelect": 401,
+      "serviceSelect": 200,
+      "anonRpc": 401
+    },
+    {
+      "id": "P4-P5",
+      "wrongStore": 400,
+      "notFinal": 400
+    }
+  ]
+}

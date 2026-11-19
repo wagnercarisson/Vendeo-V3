@@ -69,7 +69,7 @@
 - [ ] 5.4 Validar que as RPCs/consultas dos fluxos 1:1/9:16 individuais e históricos permanecem intactas.
 - [ ] 5.5 Registrar evidência e limitações; se a autorização não existir, bloquear a liberação da Subfatia C e não declarar a migration validada.
 
-> **Execução do Gate de banco (2026-11-19):** `5.1–5.5` **executados parcialmente** no homolog autorizado, com backup, aplicação transacional, ledger 156→157 e **17 cenários de banco PASS**. **S13/S14 são apenas regressão legada** e **S17 é offline**; resolução conjunta (`resolveJointPending`), PostgREST real e preservação de conteúdo ficam no complemento `60.7-GATE-B-DB-COMPLEMENT.md`. **Os checkboxes permanecem abertos** — a execução não aprova o gate nem libera a Subfatia C.
+> **Execução do Gate de banco (2026-11-19):** `5.1–5.5` **executados parcialmente**. Primeiro: backup, aplicação transacional, ledger 156→157 e **17 cenários de banco PASS**; S13/S14 apenas regressão legada e S17 offline. Depois: **complemento base 10/10 PASS** com `resolveJointPending` real (J2 comprova o handoff do outcome próprio do quadrado) e PostgREST real, **sem Storage de arte**. **J3/Storage sintético e preservação de conteúdo não foram executados**; conteúdo segue não comprovado. Evidências em `60.7-GATE-B-DB-APPLY.md` e `60.7-GATE-B-DB-COMPLEMENT-APPLY.md`. **Os checkboxes permanecem abertos** — a execução não aprova o gate nem libera a Subfatia C.
 
 ## 6. Subfatia C — Jornada e apresentação
 

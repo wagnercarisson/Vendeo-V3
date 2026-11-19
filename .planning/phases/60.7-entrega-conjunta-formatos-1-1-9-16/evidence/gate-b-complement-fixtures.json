@@ -1,0 +1,207 @@
+{
+  "kind": "f60.7-gate-b-complement-fixtures",
+  "generated_at": "2026-11-19T16:44:36.894Z",
+  "preserved_in_homolog": true,
+  "authorization_ref": "066f4d8b+base",
+  "prefix": "f60721",
+  "scope": "camada base; J3/Storage sintético e restore/conteúdo não executados",
+  "baseline": {
+    "stores": 32,
+    "campaigns": 126,
+    "credit_ops": 73,
+    "tx": 203,
+    "balances": 29,
+    "artifacts": 27,
+    "outcomes11": 6,
+    "outcomes916": 8,
+    "audit": 102,
+    "deliveries": 16,
+    "storage": 345
+  },
+  "final": {
+    "stores": 38,
+    "campaigns": 132,
+    "credit_ops": 84,
+    "tx": 223,
+    "balances": 35,
+    "artifacts": 27,
+    "outcomes11": 7,
+    "outcomes916": 12,
+    "audit": 107,
+    "deliveries": 27,
+    "storage": 345
+  },
+  "delta": {
+    "stores": 6,
+    "campaigns": 6,
+    "credit_ops": 11,
+    "transactions": 20,
+    "balances": 6,
+    "artifacts": 0,
+    "outcomes11": 1,
+    "outcomes916": 4,
+    "audit": 5,
+    "deliveries": 11,
+    "storage": 0
+  },
+  "stores": [
+    "f6072101-0000-4000-8000-000000000002",
+    "f6072102-0000-4000-8000-000000000002",
+    "f6072104-0000-4000-8000-000000000002",
+    "f6072105-0000-4000-8000-000000000002",
+    "f6072106-0000-4000-8000-000000000002",
+    "f6072107-0000-4000-8000-000000000002"
+  ],
+  "campaigns": [
+    "f6072101-0000-4000-8000-000000000003",
+    "f6072102-0000-4000-8000-000000000003",
+    "f6072104-0000-4000-8000-000000000003",
+    "f6072105-0000-4000-8000-000000000003",
+    "f6072106-0000-4000-8000-000000000003",
+    "f6072107-0000-4000-8000-000000000003"
+  ],
+  "tables": {
+    "auth.users": [
+      "f6072101-0000-4000-8000-000000000001",
+      "f6072102-0000-4000-8000-000000000001",
+      "f6072104-0000-4000-8000-000000000001",
+      "f6072105-0000-4000-8000-000000000001",
+      "f6072106-0000-4000-8000-000000000001",
+      "f6072107-0000-4000-8000-000000000001"
+    ],
+    "public.stores": [
+      "f6072101-0000-4000-8000-000000000002",
+      "f6072102-0000-4000-8000-000000000002",
+      "f6072104-0000-4000-8000-000000000002",
+      "f6072105-0000-4000-8000-000000000002",
+      "f6072106-0000-4000-8000-000000000002",
+      "f6072107-0000-4000-8000-000000000002"
+    ],
+    "public.campaigns": [
+      "f6072101-0000-4000-8000-000000000003",
+      "f6072102-0000-4000-8000-000000000003",
+      "f6072104-0000-4000-8000-000000000003",
+      "f6072105-0000-4000-8000-000000000003",
+      "f6072106-0000-4000-8000-000000000003",
+      "f6072107-0000-4000-8000-000000000003"
+    ],
+    "public.credit_balances": [
+      "f6072101-0000-4000-8000-000000000002",
+      "f6072102-0000-4000-8000-000000000002",
+      "f6072104-0000-4000-8000-000000000002",
+      "f6072105-0000-4000-8000-000000000002",
+      "f6072106-0000-4000-8000-000000000002",
+      "f6072107-0000-4000-8000-000000000002"
+    ],
+    "public.credit_transactions": [
+      "0a843c42-ae04-45f4-a783-b735b4d1e62d",
+      "0bb5bb6b-dc68-4636-a152-b730980d9051",
+      "106825f8-b293-4f9e-9a2c-f9c0e78960d6",
+      "1faf7959-71c0-4c18-a08b-5009b309fa6f",
+      "57d9344f-1a9a-4ec2-8617-4e72621211df",
+      "6472afb4-d734-404a-bfdf-1cb5f7d9a7ca",
+      "6530e5f7-18dd-4f9e-ad7f-97b8532ab302",
+      "70f9b4c3-825a-46de-890c-c75cb34b2c6e",
+      "7896e511-32da-4beb-9f35-848ad8fa7df9",
+      "8497c01c-8b1e-4b7d-8681-4fdce3f88854",
+      "85126736-92af-4706-a413-5f1dd94c7714",
+      "9017db80-4595-4797-a3f0-0dbafca6267c",
+      "a127a865-5f0e-40c9-a64a-9150d659bdd0",
+      "b318ee8e-ee1f-47ac-9339-b7a6656750ea",
+      "b9953d0e-3d8e-4935-84d7-804aead12bf7",
+      "c6417550-3c74-4fa6-9825-e6d23ae31c45",
+      "d1728783-e4ff-4a85-bcbb-bd44a41000cc",
+      "d9ed79b8-7d28-4101-a536-faa9138b40ee",
+      "da7c0de9-338f-4da7-b196-c900a9857f88",
+      "f08af5c0-cdb1-4c20-8e60-205e6d2ecf71"
+    ],
+    "public.product_1_1_campaign_credit_operations": [
+      "1d995437-b51f-43bb-b3a7-03595c2f81aa",
+      "25deb0d7-1c88-48b8-a35d-6d01d0c912d8",
+      "40677afc-52bf-456f-83b4-ef22b360ed08",
+      "4aba8c41-acf5-400d-bddd-73812e3974d5",
+      "4d5e08fc-25f2-4bee-9d7c-60a48d40e285",
+      "753bc3ce-2918-45e1-adf2-1b7c899f1299",
+      "83bbff97-7a31-468b-914b-65a0b9ee0f7b",
+      "c7d4457a-240b-46fc-8070-179254444fd5",
+      "d83a1a3c-6a84-495f-9025-93ae42a3c5ae",
+      "d8ac1da2-fa49-4a1a-a116-fb8ad6f732f9",
+      "ed5155f5-82f7-44c1-8025-f2686aba513b"
+    ],
+    "public.product_1_1_generation_outcomes": [
+      "cbec96e6-ac09-47ef-b373-9dde7dae959f"
+    ],
+    "public.product_1_1_generation_attempt_claims": [],
+    "public.product_9_16_two_stage_operations": [
+      "0436ae92-b6d3-4aed-a6d0-617baebaae6e",
+      "54b8a161-ba12-4e66-a3c6-10ca2f38b70b",
+      "6c683496-239e-45ab-86fd-c299ac7a11bc",
+      "782b5869-3959-44f9-85f4-abefaf54ce60",
+      "8cc820bc-82e7-4ea0-996f-0e57dfff3eda",
+      "e93846d0-cbe9-4946-8d0c-8a071ee3536e"
+    ],
+    "public.product_9_16_two_stage_steps": [
+      "0cad815c-c22f-499b-86dd-386ac121d208",
+      "24de5e54-e6d3-466c-b9b6-4d04596c1aa1",
+      "33ef3dca-a73f-40a9-b9c7-6c9bb47bff02",
+      "55b3b2f0-426a-4386-924b-86c3ad1a1c5b",
+      "6c19b3e4-6041-4f05-83cc-4fb61ef8d105",
+      "7095385c-21ec-4b4a-9981-6b503d444295",
+      "79f120ad-42c5-44c5-a5f7-e91d3edb02f5",
+      "cab33caf-2ba0-4793-9983-60890e9312b9",
+      "cb2eb6f5-c8c8-464a-8176-d8ed53146b0a",
+      "d18e7dbf-09cc-41ef-b891-0a65621ea5f9",
+      "d7d8ee3f-8605-4f01-a5cc-3d789fa345fe",
+      "dd23240e-5900-4c32-984f-84974987e89d"
+    ],
+    "public.product_9_16_two_stage_attempt_claims": [],
+    "public.product_9_16_two_stage_outcomes": [
+      "6c04d438-a77d-481b-998e-f8666692fbfc",
+      "881b83ce-b0df-4867-9165-78306bceb4eb",
+      "d4546a88-a364-45a1-aae8-b9cbdc8e6db3",
+      "ed273007-365c-4083-ae9e-50662fe03e6a"
+    ],
+    "public.product_two_format_deliveries": [
+      "24e93c21-cf64-472f-87e7-4f22394ef9a2",
+      "3158125c-c909-497c-9c38-d43c5270dad9",
+      "3f05e8a3-d1e5-4899-a288-0121a7fcf635",
+      "53d8bf1d-b104-4101-863d-da3fcfe707e5",
+      "747a8172-44b1-4a9c-87e1-e8ae00c44bb5",
+      "7725c35a-3f77-4f00-b13f-27051cf7c647",
+      "a06e7ee9-9553-4b66-8386-9ad55769d4fd",
+      "a7eb75d4-2898-4b1c-bb4f-d91b56f7e6c1",
+      "ab94d5b6-db1a-4def-a3de-cb79f744ce4e",
+      "ae1a01b8-9cc6-4794-8e2f-7aea86e2cddb",
+      "e82f4e49-a8a8-48a7-865f-922354d4a929"
+    ],
+    "public.admin_audit_log": [
+      "041d07e7-62ba-4135-8ef8-0f208de82a43",
+      "586aa0ac-b5a8-4bb6-8e39-c5e5657facc0",
+      "9c420721-0450-4ca1-8f3a-3cc8c780e8ab",
+      "b11cfa5b-31c7-443e-83f2-b393337c07e1",
+      "db963e78-9727-40ee-aad0-cc47b7f7562e"
+    ],
+    "public.campaign_composition_artifacts": [],
+    "storage.objects": []
+  },
+  "counts": {
+    "auth.users": 6,
+    "public.stores": 6,
+    "public.campaigns": 6,
+    "public.credit_balances": 6,
+    "public.credit_transactions": 20,
+    "public.product_1_1_campaign_credit_operations": 11,
+    "public.product_1_1_generation_outcomes": 1,
+    "public.product_1_1_generation_attempt_claims": 0,
+    "public.product_9_16_two_stage_operations": 6,
+    "public.product_9_16_two_stage_steps": 12,
+    "public.product_9_16_two_stage_attempt_claims": 0,
+    "public.product_9_16_two_stage_outcomes": 4,
+    "public.product_two_format_deliveries": 11,
+    "public.admin_audit_log": 5,
+    "public.campaign_composition_artifacts": 0,
+    "storage.objects": 0
+  },
+  "no_storage_objects": true,
+  "note": "Fixtures do complemento base preservadas no homolog; nenhum objeto de Storage foi criado. Preservação de conteúdo não foi verificada (restore não autorizado)."
+}
