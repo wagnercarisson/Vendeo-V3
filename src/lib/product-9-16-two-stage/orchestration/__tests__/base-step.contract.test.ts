@@ -2,8 +2,22 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+
+/**
+ * Quick 261120-qvp (D-09): a base NÃO pode consultar o parâmetro econômico
+ * VIGENTE. Espião zerado prova, por comportamento, que a reconstrução durável
+ * é a única fonte dos valores econômicos da base.
+ */
+const economicParameterSpy = vi.hoisted(() => ({ getParameter: vi.fn() }));
+vi.mock("@/lib/economic/economic-parameter-service", () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: economicParameterSpy.getParameter };
+  }),
+}));
+
 import { runBaseStep } from "../base-step";
 import type { TwoStageOperationView } from "../../types";
+import type { SquareBaseInput } from "@/lib/campaign/square-base/types";
 import { durableReconstruction } from "./fixtures";
 
 const content = {
@@ -229,5 +243,30 @@ describe("runBaseStep", () => {
       canContinue: true,
     });
     expect(calls(d, "control.acquire")).toHaveLength(0);
+  });
+
+  it("recebe o snapshot econômico CONGELADO da reconstrução, nunca o parâmetro vigente", async () => {
+    // Parâmetros VIGENTES simulados, alterados depois da captura do snapshot.
+    let currentUsdBrlRate = 5.1;
+    let currentCreditValueBrl = 1;
+    currentUsdBrlRate = 6.9;
+    currentCreditValueBrl = 2.3;
+
+    const d = deps();
+    const result = await runBaseStep(stepInput({ kind: "complete" }), d);
+
+    expect(result).toEqual({ kind: "completed" });
+    const baseCalls = calls(d, "base") as Array<[SquareBaseInput]>;
+    expect(baseCalls).toHaveLength(1);
+    const baseInput = baseCalls[0][0];
+
+    // Valores do snapshot durável (fixtures 5,1 / 1)...
+    expect(baseInput.usdBrlRateAtGeneration).toBe(5.1);
+    expect(baseInput.creditValueBrlAtGeneration).toBe(1);
+    // ...nunca os vigentes simulados.
+    expect(baseInput.usdBrlRateAtGeneration).not.toBe(currentUsdBrlRate);
+    expect(baseInput.creditValueBrlAtGeneration).not.toBe(currentCreditValueBrl);
+    // A base não consulta o serviço de parâmetros econômicos vigentes.
+    expect(economicParameterSpy.getParameter).not.toHaveBeenCalled();
   });
 });

@@ -299,6 +299,72 @@ describe("F60.3 policy — constantes derivadas (sem literais duplicados)", () =
   });
 });
 
+describe("F60.3 policy — snapshot econômico congelado (D-06, quick 261120-qvp)", () => {
+  it("preserva número finito, inclusive 0 explícito", () => {
+    const parsed = parseExpandVerticalInput(
+      validInput({ usdBrlRateAtGeneration: 5.1, creditValueBrlAtGeneration: 0 }),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.input.usdBrlRateAtGeneration).toBe(5.1);
+    expect(parsed.input.creditValueBrlAtGeneration).toBe(0);
+  });
+
+  it("preserva null explícito", () => {
+    const parsed = parseExpandVerticalInput(
+      validInput({ usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null }),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.input.usdBrlRateAtGeneration).toBeNull();
+    expect(parsed.input.creditValueBrlAtGeneration).toBeNull();
+  });
+
+  it("ausente resulta em null explícito (nunca undefined)", () => {
+    const parsed = parseExpandVerticalInput(validInput());
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(Object.prototype.hasOwnProperty.call(parsed.input, "usdBrlRateAtGeneration")).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(parsed.input, "creditValueBrlAtGeneration")).toBe(true);
+    expect(parsed.input.usdBrlRateAtGeneration).toBeNull();
+    expect(parsed.input.creditValueBrlAtGeneration).toBeNull();
+  });
+
+  it.each([
+    ["NaN", Number.NaN],
+    ["Infinity", Number.POSITIVE_INFINITY],
+    ["-Infinity", Number.NEGATIVE_INFINITY],
+    ["string numérica", "5.1"],
+    ["objeto", { value: 5.1 }],
+    ["booleano", true],
+  ])("normaliza valor inválido (%s) para null sem recusar a entrada", (_label, value) => {
+    const parsed = parseExpandVerticalInput(
+      validInput({ usdBrlRateAtGeneration: value, creditValueBrlAtGeneration: value }),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.input.usdBrlRateAtGeneration).toBeNull();
+    expect(parsed.input.creditValueBrlAtGeneration).toBeNull();
+  });
+
+  it("não cria motivo novo de recusa: os demais campos permanecem inalterados", () => {
+    const parsed = parseExpandVerticalInput(
+      validInput({ usdBrlRateAtGeneration: 5.1, creditValueBrlAtGeneration: 1 }),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.input.source).toEqual({
+      storeId: STORE_ID.toLowerCase(),
+      campaignId: CAMPAIGN_ID.toLowerCase(),
+      operationId: SOURCE_OPERATION_ID.toLowerCase(),
+      role: "square_prepared",
+    });
+    expect(parsed.input.operationId).toBe(DEST_OPERATION_ID.toLowerCase());
+    expect(parsed.input.attempt).toEqual({ number: 1, reference: "attempt-ref-1" });
+    expect(parsed.input.authorization).toEqual({ kind: "system" });
+  });
+});
+
 describe("F60.3 policy — fronteira de módulo", () => {
   it("não importa runtime de servidor, imagem, banco, cripto ou filesystem", () => {
     for (const file of ["../types.ts", "../policy.ts"]) {

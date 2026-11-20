@@ -250,6 +250,18 @@ export interface AiTelemetryContext {
    * gateway copia este campo para o envelope da tentativa real.
    */
   visualSignatureImageUsage?: VisualSignatureImageUsageTarget;
+  /**
+   * Quick 261120-qvp (D-07): snapshot CONTÁBIL congelado do run, propagado às
+   * chamadas filhas para que a apuração BRL use o câmbio capturado no início da
+   * geração — nunca o "parâmetro atual (fallback)". `null` é ausência
+   * EXPLÍCITA (operação antiga/sem snapshot), nunca zero nem valor vigente.
+   * Declarado opcional apenas por compatibilidade de tipo: o
+   * `createDefaultTelemetryContext` (tipado por `AiTelemetrySinkContext`) já
+   * carrega os valores em runtime.
+   */
+  usdBrlRateAtGeneration?: number | null;
+  /** Snapshot ESTIMATIVO do valor do crédito em BRL no início do run. */
+  creditValueBrlAtGeneration?: number | null;
   sink: AiTelemetrySink;
 }
 

@@ -65,6 +65,8 @@ function telemetryInput(
       imageTokenUsdPer1M: 40,
     },
     imageUnitUsd: 0.04,
+    usdBrlRateAtGeneration: 5.42,
+    creditValueBrlAtGeneration: 1.07,
     ...overrides,
   };
 }
@@ -194,6 +196,57 @@ describe("createExpansionTelemetry — contexto e um envelope por chamada", () =
   });
 });
 
+describe("createExpansionTelemetry — snapshot econômico congelado (D-05/D-07)", () => {
+  it("o contexto principal recebe os dois valores do snapshot", () => {
+    const handle = createExpansionTelemetry(telemetryInput());
+
+    expect(handle.telemetry.usdBrlRateAtGeneration).toBe(5.42);
+    expect(handle.telemetry.creditValueBrlAtGeneration).toBe(1.07);
+  });
+
+  it("o contexto por envelope (criado no flush) persiste os mesmos valores", async () => {
+    const handle = createExpansionTelemetry(telemetryInput());
+    await handle.telemetry.sink.emit(envelope({ usage: FULL_USAGE }));
+    handle.finalize({ outcome: "expanded", returnedSize: "1152x2048", durationMs: 10 });
+    await handle.flush();
+
+    expect(captured.events).toHaveLength(1);
+    const event = captured.events[0];
+    expect(event.usdBrlRateAtGeneration).toBe(5.42);
+    expect(event.creditValueBrlAtGeneration).toBe(1.07);
+  });
+
+  it("null explícito quando o snapshot não existe — nunca herda do contexto principal nem vira zero", async () => {
+    const handle = createExpansionTelemetry(
+      telemetryInput({
+        usdBrlRateAtGeneration: null,
+        creditValueBrlAtGeneration: null,
+      }),
+    );
+    await handle.telemetry.sink.emit(envelope({ usage: FULL_USAGE }));
+    handle.finalize({ outcome: "expanded", returnedSize: "1152x2048", durationMs: 10 });
+    await handle.flush();
+
+    const event = captured.events[0];
+    expect(event.usdBrlRateAtGeneration).toBeNull();
+    expect(event.creditValueBrlAtGeneration).toBeNull();
+  });
+
+  it("os campos econômicos NÃO entram em metadata (allowlist intacta)", async () => {
+    const handle = createExpansionTelemetry(telemetryInput());
+    await handle.telemetry.sink.emit(envelope({ usage: FULL_USAGE }));
+    handle.finalize({ outcome: "expanded", returnedSize: "1152x2048", durationMs: 10 });
+    await handle.flush();
+
+    const metadata = captured.events[0].metadata as Record<string, unknown>;
+    expect(metadata).not.toHaveProperty("usdBrlRateAtGeneration");
+    expect(metadata).not.toHaveProperty("creditValueBrlAtGeneration");
+    expect(EXPANSION_TELEMETRY_FIELDS).not.toContain("usdBrlRateAtGeneration");
+    expect(EXPANSION_TELEMETRY_FIELDS).not.toContain("creditValueBrlAtGeneration");
+    assertNoSensitiveFields(metadata);
+  });
+});
+
 describe("createExpansionTelemetry — custo com origem", () => {
   it("providerReportedCostUsd usa provider_reported", async () => {
     const handle = createExpansionTelemetry(telemetryInput());
@@ -206,6 +259,9 @@ describe("createExpansionTelemetry — custo com origem", () => {
     const cost = captured.events[0].cost as Record<string, unknown>;
     expect(cost.costSource).toBe("provider_reported");
     expect(cost.estimatedCostUsd).toBe(0.42);
+    // Snapshot econômico também no caminho de custo REPORTADO pelo provider.
+    expect(captured.events[0].usdBrlRateAtGeneration).toBe(5.42);
+    expect(captured.events[0].creditValueBrlAtGeneration).toBe(1.07);
   });
 
   it("usage real sem custo reportado usa pricing_table", async () => {
@@ -218,6 +274,9 @@ describe("createExpansionTelemetry — custo com origem", () => {
     expect(cost.costSource).toBe("pricing_table");
     expect(typeof cost.estimatedCostUsd).toBe("number");
     expect(cost.estimatedCostUsd as number).toBeGreaterThan(0);
+    // Snapshot econômico também no caminho de custo por tokens.
+    expect(captured.events[0].usdBrlRateAtGeneration).toBe(5.42);
+    expect(captured.events[0].creditValueBrlAtGeneration).toBe(1.07);
   });
 
   it("sem usage e sem custo reportado é not_available com null (nunca zero)", async () => {

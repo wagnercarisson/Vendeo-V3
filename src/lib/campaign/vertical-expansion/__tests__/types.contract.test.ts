@@ -12,10 +12,14 @@ import type { CostResolution, TokenUsage } from "@/lib/ai-cost/types";
 import type { ProviderFailure } from "@/lib/product-9-16-two-stage/types";
 
 import type {
+  ExpandVerticalInput,
+  ExpandVerticalParsedInput,
   ExpandVerticalResult,
   ExpansionCallEvidence,
   ExpansionInvalidReason,
 } from "../types";
+import type { ExpandVerticalParseResult } from "../policy";
+import { parseExpandVerticalInput } from "../policy";
 
 /**
  * F60.3 — contrato puro da expansão.
@@ -265,6 +269,107 @@ describe("F60.3 contract — ExpandVerticalResult", () => {
     // existente e não cria variante própria.
     expect(RESULT_KINDS).toHaveLength(17);
     expect(RESULT_KINDS as readonly string[]).not.toContain("selection_unavailable");
+  });
+});
+
+describe("F60.3 contract — snapshot econômico na entrada (D-06, quick 261120-qvp)", () => {
+  const VALID_INPUT: ExpandVerticalInput = {
+    source: {
+      storeId: "1a2b3c4d-1a2b-4c3d-8e4f-1a2b3c4d5e6f",
+      campaignId: "2b3c4d5e-2b3c-4d5e-8f6a-2b3c4d5e6f7a",
+      operationId: "3c4d5e6f-3c4d-4e5f-8a7b-3c4d5e6f7a8b",
+      role: "square_prepared",
+    },
+    operationId: "4d5e6f7a-4d5e-4f6a-8b8c-4d5e6f7a8b9c",
+    attempt: { number: 1, reference: "attempt-ref-1" },
+    authorization: { kind: "system" },
+  };
+
+  it("ExpandVerticalInput aceita omitir os dois campos, número e null", () => {
+    const omitted: ExpandVerticalInput = { ...VALID_INPUT };
+    const numeric: ExpandVerticalInput = {
+      ...VALID_INPUT,
+      usdBrlRateAtGeneration: 5.1,
+      creditValueBrlAtGeneration: 1,
+    };
+    const explicitNull: ExpandVerticalInput = {
+      ...VALID_INPUT,
+      usdBrlRateAtGeneration: null,
+      creditValueBrlAtGeneration: null,
+    };
+
+    expect("usdBrlRateAtGeneration" in omitted).toBe(false);
+    expect("creditValueBrlAtGeneration" in omitted).toBe(false);
+    expect(numeric.usdBrlRateAtGeneration).toBe(5.1);
+    expect(numeric.creditValueBrlAtGeneration).toBe(1);
+    expect(explicitNull.usdBrlRateAtGeneration).toBeNull();
+    expect(explicitNull.creditValueBrlAtGeneration).toBeNull();
+  });
+
+  it("ExpandVerticalParsedInput declara os dois campos NÃO opcionais como number | null", () => {
+    expectTypeOf<ExpandVerticalParsedInput["usdBrlRateAtGeneration"]>().toEqualTypeOf<
+      number | null
+    >();
+    expectTypeOf<ExpandVerticalParsedInput["creditValueBrlAtGeneration"]>().toEqualTypeOf<
+      number | null
+    >();
+    // Não é `number | null | undefined`: `undefined` não pertence ao contrato.
+    expectTypeOf<ExpandVerticalParsedInput["usdBrlRateAtGeneration"]>().not.toEqualTypeOf<
+      number | null | undefined
+    >();
+  });
+
+  it("o braço ok:true de ExpandVerticalParseResult tipa input como ExpandVerticalParsedInput", () => {
+    type OkBranch = Extract<ExpandVerticalParseResult, { ok: true }>;
+    expectTypeOf<OkBranch["input"]>().toEqualTypeOf<ExpandVerticalParsedInput>();
+  });
+
+  it("o parser devolve as DUAS chaves sempre, com number | null (nunca undefined)", () => {
+    const cases: unknown[] = [
+      VALID_INPUT,
+      { ...VALID_INPUT, usdBrlRateAtGeneration: 5.1, creditValueBrlAtGeneration: 1 },
+      { ...VALID_INPUT, usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null },
+      { ...VALID_INPUT, usdBrlRateAtGeneration: Number.NaN, creditValueBrlAtGeneration: "x" },
+    ];
+
+    for (const raw of cases) {
+      const parsed = parseExpandVerticalInput(raw);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) continue;
+
+      expect(
+        Object.prototype.hasOwnProperty.call(parsed.input, "usdBrlRateAtGeneration"),
+      ).toBe(true);
+      expect(
+        Object.prototype.hasOwnProperty.call(parsed.input, "creditValueBrlAtGeneration"),
+      ).toBe(true);
+      expect(parsed.input.usdBrlRateAtGeneration).not.toBeUndefined();
+      expect(parsed.input.creditValueBrlAtGeneration).not.toBeUndefined();
+
+      for (const value of [
+        parsed.input.usdBrlRateAtGeneration,
+        parsed.input.creditValueBrlAtGeneration,
+      ]) {
+        expect(value === null || typeof value === "number").toBe(true);
+      }
+    }
+  });
+
+  it("ausente e inválido são null explícito (nunca zero nem valor inventado)", () => {
+    const absent = parseExpandVerticalInput(VALID_INPUT);
+    const invalid = parseExpandVerticalInput({
+      ...VALID_INPUT,
+      usdBrlRateAtGeneration: Number.POSITIVE_INFINITY,
+      creditValueBrlAtGeneration: { nope: true },
+    });
+
+    expect(absent.ok).toBe(true);
+    expect(invalid.ok).toBe(true);
+    if (!absent.ok || !invalid.ok) return;
+    expect(absent.input.usdBrlRateAtGeneration).toBeNull();
+    expect(absent.input.creditValueBrlAtGeneration).toBeNull();
+    expect(invalid.input.usdBrlRateAtGeneration).toBeNull();
+    expect(invalid.input.creditValueBrlAtGeneration).toBeNull();
   });
 });
 
