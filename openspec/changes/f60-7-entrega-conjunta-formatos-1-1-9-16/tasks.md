@@ -76,6 +76,8 @@
 > **Reconciliação 2026-11-20:** Subfatia C concluída e aceita tecnicamente com ressalvas (C1–C6). Itens 6.1–8.6 marcados com base em `60.7-C1-VERIFICATION.md`…`60.7-C6-ACCEPTANCE.md` e `60.7-VERIFICATION.md`. Disponibilidade local/homolog não é publicação; produção, deploy e sync/archive permanecem separados.
 >
 > **Reabertura pontual 2026-11-20:** **6.5** (checkboxes) e **6.8** (custo/saldo unificado) foram reabertas para a correção documentada em `60.7-C2-REOPEN-PLAN.md`. As demais tasks permanecem concluídas; nenhum código foi alterado ainda.
+>
+> **Complemento documental 2026-11-20:** **6.22** (clareza da tela de acompanhamento) e **6.23** (robustez do NDJSON/reidratação) foram adicionadas como pendentes, conforme `60.7-C2-C6-COMPLEMENT-PLAN.md`. C2/C6 não foram reconfirmados; nenhum código foi alterado.
 
 > Gate C concluído em 2026-11-20; disponibilidade local/homolog não é publicação. Plano macro em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop). Subfatia C concluída e aceita tecnicamente com ressalvas.
 
@@ -100,6 +102,8 @@
 - [x] 6.19 Adaptar a tela de processamento e o polling para indicar os dois formatos e continuar acompanhando enquanto qualquer formato estiver em processamento.
 - [x] 6.20 Exibir a copy compartilhada uma única vez no detalhe, inclusive em entrega parcial, sem duplicar o painel por formato.
 - [x] 6.21 Cobrir com testes de UI/read model: card único, indicador abre o formato correto, processamento não gera, ausência sem ação, miniatura quadrada preferida, placeholder sem original, preview/download por formato, formato não entregue sem arte, copy única e reload.
+- [ ] 6.22 Revisar a tela de acompanhamento da geração em linguagem de lojista: cabeçalho “Geração da campanha” sem subtítulo de preenchimento; resumo read-only dos dois formatos sem helpers de seleção; uma única mensagem principal por estado (“A geração está em processamento. Aguarde.”, “Quase pronto!”, “Clique em ‘Continuar geração’ para concluir.”, “Não foi possível atualizar o andamento.”); ações somente quando necessárias; rótulos de etapa compreensíveis, sem “Projeção” na interface; sem “Retomar quando autorizado” e sem novo retry pago.
+- [ ] 6.23 Corrigir a robustez do acompanhamento: leitor NDJSON inicial/continuação com flush do decoder e buffer final sem newline, chunks fragmentados, terminal de resposta único, limpeza de continuação pendente em `result`/`error`/`unknown`, reidratação sem concorrência com o stream inicial e resposta de status obsoleta sem sobrescrever estado mais novo.
 
 ## 7. Gate C — Revisão, aceite e liberação da jornada
 
