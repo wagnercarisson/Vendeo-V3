@@ -111,24 +111,31 @@
   "postExecution": {
     "note": "Added during the later offline stage; does not rewrite the execution evidence above.",
     "verticalThumbnail": {
-      "status": "FIXED_OFFLINE_PENDING_REVIEW",
+      "status": "ACCEPTED_LOCAL_OFFLINE",
+      "acceptedHead": "b255c884",
       "change": "deliver-joint-vertical.ts now generates the vertical thumbnail in the normal delivery pass, using the proven vertical artifact path; wiring updated in run-two-format-deps.ts.",
       "tests": [
         "deliver-joint-vertical.contract.test.ts Testes 11b/11c",
         "joint-journeys.integration.test.ts Teste 13b",
         "c4-http-journey.test.ts"
       ],
-      "historicalCampaign0002": "still missing vertical.thumb-v1.webp until an authorized repair/replay"
+      "historicalCampaign0002": "still missing vertical.thumb-v1.webp until an authorized repair/replay; not used as proof of the fix"
     },
     "authorizationDeviation": {
       "status": "DECLARED",
       "file": "deviation-inventory.json",
       "baselineCoversOmittedTables": false,
-      "retroactiveBaselineRebuild": false
+      "retroactiveBaselineRebuild": false,
+      "authInventoryMode": "metadata-only (ids/relations/timestamps; no tokens/payloads)",
+      "sessionRevocation": "targeted by session_id; prior admin sessions preserved"
     },
     "refundComplement": {
-      "status": "PREPARED_NOT_EXECUTED",
-      "file": "../../60.7-C4-I-COMPLEMENT-PLAN.md"
+      "status": "REVISED_NOT_EXECUTED",
+      "file": "../../60.7-C4-I-COMPLEMENT-PLAN.md",
+      "cases": [
+        "A: successful administrative refund with proven absence, epoch, finality, square handoff and replay",
+        "B: normal vertical delivery creating the real thumbnail in the same HTTP pass"
+      ]
     },
     "auditConflict": {
       "status": "RECONCILED_AS_MATRIX_BEHAVIOR",
