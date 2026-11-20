@@ -444,6 +444,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 - **261110-j4z (2026-11-10):** aceite produtivo da F60 registrado no STATE com evidência técnica e confirmação manual separadas; nenhuma nova ação em banco, deploy ou código. Artefatos: `.planning/quick/261110-j4z-registrar-aceite-produtivo-manual-da-f60/`.
 - **261118-sqr (2026-11-18):** investigação + reconciliação documental do estorno do quadrado conjunto; handoff `record_generation_outcome(square,'failed')` documentado nos planos 06/09/10, B-CONTEXT e OpenSpec; sem código/migration; A preservada e reabertura encerrada como omissão da B. Artefatos: `.planning/quick/261118-sqr-estorno-quadrado-conjunto-f60-7/`.
+- **261120-q5y (2026-11-20):** corrigido mock desatualizado de `route-format.test.ts` após F60.5; mock parcial via `importOriginal` preserva `buildAdminPendingRepository` real, fake adapter recebe `twoStageArtifacts` e `resolutionErrorStatus` espelha 400/404/409/500 (técnico nunca vira 409); 5/5 testes verdes, sem alteração de produção. Commit `63f18642`. Artefatos: `.planning/quick/261120-q5y-atualizar-mock-desatualizado-do-teste-ro/`.
 
 **Atualização operacional 261026-pricing (2026-10-26):** após os registros de
 implementação abaixo, migration `20261026191931` aplicada com autorização somente
