@@ -20,21 +20,68 @@ const {
   mockFindPendingOperation,
   mockResolvePendingOperation,
   mockListPendingOperations,
+  mockVerticalArtifacts,
+  mockTwoStageArtifacts,
   MockRepository,
   MockResolutionError,
   repoOptions,
+  resolutionErrorStatus,
 } = vi.hoisted(() => {
   const resolveFormat = vi.fn();
   const projectionFor = vi.fn(() => async () => ({ campaignId: "c" }));
   const findPendingOperation = vi.fn(async () => ({
     storeId: "11111111-1111-4111-8111-111111111111",
   }));
+  // Sondas fake ESTÁVEIS — a identidade precisa sobreviver entre chamadas do
+  // adapter e chegar intacta às opções do repositório (F60.5).
+  const verticalProbe = {
+    probeArtifact: vi.fn(async () => ({ kind: "absent" as const })),
+  };
+  const twoStageProbe = {
+    probeArtifact: vi.fn(async () => ({ kind: "absent" as const })),
+  };
   const optionsSeen: Array<Record<string, unknown>> = [];
   class MockResolutionError extends Error {
     constructor(public readonly code: string) {
       super(code);
     }
   }
+
+  /** Códigos que mapeiam para 400 (espelho de `resolve-pending-operation.ts`). */
+  const BAD_REQUEST_CODES: readonly string[] = [
+    "missing_reason",
+    "missing_actor_id",
+    "missing_campaign_id",
+    "missing_operation_id",
+    "missing_resolution_operation_id",
+    "invalid_action",
+    "invalid_evidence",
+    "insufficient_evidence",
+  ];
+  /** Códigos que mapeiam para 409 (espelho de `resolve-pending-operation.ts`). */
+  const CONFLICT_CODES: readonly string[] = [
+    "operation_terminal",
+    "operation_in_progress",
+    "execution_not_ended",
+    "delivered_not_refundable",
+    "operation_identity_conflict",
+  ];
+
+  /**
+   * Espelho FIEL de `resolutionErrorStatus`: erro técnico/desconhecido vira 500,
+   * nunca 409 — era exatamente o que o stub antigo mascarava.
+   */
+  function resolutionErrorStatus(error: unknown): number {
+    const code =
+      error instanceof MockResolutionError
+        ? error.code
+        : ((error as { code?: string } | null)?.code ?? "unknown");
+    if (BAD_REQUEST_CODES.includes(code)) return 400;
+    if (code === "operation_not_found") return 404;
+    if (CONFLICT_CODES.includes(code)) return 409;
+    return 500;
+  }
+
   class MockRepository {
     constructor(
       public readonly client?: unknown,
@@ -50,7 +97,8 @@ const {
   return {
     mockCreateAdapter: vi.fn(() => ({
       resolveFormat,
-      verticalArtifacts: { probeArtifact: vi.fn() },
+      verticalArtifacts: verticalProbe,
+      twoStageArtifacts: twoStageProbe,
       projectionFor,
     })),
     mockResolveFormat: resolveFormat,
@@ -58,15 +106,25 @@ const {
     mockFindPendingOperation: findPendingOperation,
     mockResolvePendingOperation: vi.fn(async () => ({ status: "delivered" })),
     mockListPendingOperations: vi.fn(async () => []),
+    mockVerticalArtifacts: verticalProbe,
+    mockTwoStageArtifacts: twoStageProbe,
     MockRepository,
     MockResolutionError,
     repoOptions: optionsSeen,
+    resolutionErrorStatus,
   };
 });
 
-vi.mock("@/lib/product-vertical-9-16/recovery/pending-adapter", () => ({
-  createPendingFormatAdapter: mockCreateAdapter,
-}));
+// F60.5 — mock PARCIAL: `buildAdminPendingRepository` deve permanecer REAL (é o
+// objeto do teste); apenas a fábrica do adapter é substituída. Mock total deixa
+// `buildAdminPendingRepository` como `undefined` e transforma a rota em TypeError.
+vi.mock("@/lib/product-vertical-9-16/recovery/pending-adapter", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/lib/product-vertical-9-16/recovery/pending-adapter")
+    >();
+  return { ...actual, createPendingFormatAdapter: mockCreateAdapter };
+});
 vi.mock("@/lib/product-1-1/pending/pending-operations-repository", () => ({
   SupabasePendingOperationsRepository: MockRepository,
 }));
@@ -74,7 +132,7 @@ vi.mock("@/lib/product-1-1/pending/resolve-pending-operation", () => ({
   listPendingOperations: mockListPendingOperations,
   resolvePendingOperation: mockResolvePendingOperation,
   PendingOperationResolutionError: MockResolutionError,
-  resolutionErrorStatus: () => 409,
+  resolutionErrorStatus,
 }));
 
 import { GET, POST } from "../route";
@@ -108,6 +166,7 @@ const validBody = {
 describe("F59/59-06 — GET/POST admin de pendências por formato", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    repoOptions.length = 0;
     mockResolveFormat.mockResolvedValue({ kind: "1:1" });
     mockFindPendingOperation.mockResolvedValue({
       storeId: "11111111-1111-4111-8111-111111111111",
@@ -117,9 +176,12 @@ describe("F59/59-06 — GET/POST admin de pendências por formato", () => {
   it("GET compõe o resolvedor de formato e a sonda vertical no repositório", async () => {
     const res = await GET(request() as never);
     expect(res.status).toBe(200);
+    expect(res.status).not.toBe(409);
+    expect(res.status).not.toBe(500);
     expect(mockCreateAdapter).toHaveBeenCalledTimes(1);
     expect(repoOptions[0]?.resolveFormat).toBe(mockResolveFormat);
-    expect(repoOptions[0]?.verticalArtifacts).toBeDefined();
+    expect(repoOptions[0]?.verticalArtifacts).toBe(mockVerticalArtifacts);
+    expect(repoOptions[0]?.twoStageArtifacts).toBe(mockTwoStageArtifacts);
     expect(mockListPendingOperations).toHaveBeenCalledWith({
       repository: expect.any(MockRepository),
     });
@@ -138,6 +200,8 @@ describe("F59/59-06 — GET/POST admin de pendências por formato", () => {
     mockResolveFormat.mockResolvedValue({ kind: "9:16" });
     const res = await POST(request(validBody) as never);
     expect(res.status).toBe(200);
+    expect(res.status).not.toBe(409);
+    expect(res.status).not.toBe(500);
     expect(mockFindPendingOperation).toHaveBeenCalledWith(CAMPAIGN_ID, OPERATION_ID);
     expect(mockProjectionFor).toHaveBeenCalledWith(
       "11111111-1111-4111-8111-111111111111",
@@ -154,6 +218,8 @@ describe("F59/59-06 — GET/POST admin de pendências por formato", () => {
     mockResolveFormat.mockResolvedValue({ kind: "1:1" });
     const res = await POST(request(validBody) as never);
     expect(res.status).toBe(200);
+    expect(res.status).not.toBe(409);
+    expect(res.status).not.toBe(500);
     expect(mockProjectionFor).not.toHaveBeenCalled();
     const deps = (
       mockResolvePendingOperation.mock.calls as unknown as [
@@ -169,6 +235,8 @@ describe("F59/59-06 — GET/POST admin de pendências por formato", () => {
     mockFindPendingOperation.mockResolvedValueOnce(null as never);
     const res = await POST(request(validBody) as never);
     expect(res.status).toBe(200);
+    expect(res.status).not.toBe(409);
+    expect(res.status).not.toBe(500);
     expect(mockProjectionFor).not.toHaveBeenCalled();
   });
 });
