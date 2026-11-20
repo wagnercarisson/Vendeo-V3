@@ -1,0 +1,265 @@
+// @vitest-environment jsdom
+// DIAGNÓSTICO TEMPORÁRIO — F60.7 C2/C6. Não faz parte da implementação.
+import "@testing-library/jest-dom/vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useCampaignForm } from "../use-campaign-form";
+
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
+const mockRestoreFormState = vi.fn();
+vi.mock("@/hooks/use-input-preservation", () => ({
+  useInputPreservation: () => ({
+    saveFormState: vi.fn(),
+    restoreFormState: mockRestoreFormState,
+    clearFormState: vi.fn(),
+  }),
+  scopedDraftKey: (scope?: string | null) =>
+    scope ? `campaign_draft:${scope}` : "campaign_draft",
+  scopedImageDraftKey: (scope?: string | null) =>
+    scope ? `campaign_draft_image:${scope}` : "campaign_draft_image",
+}));
+
+vi.mock("@/hooks/use-operation-costs", () => ({
+  useOperationCosts: () => ({
+    costs: { campaign_generation: { costCredits: 1, enabled: true } },
+    status: "loaded",
+    refetch: vi.fn(),
+  }),
+}));
+
+vi.mock("@/components/credit/credit-cta", () => ({
+  CreditCta: () => null,
+}));
+
+const CAMPAIGN_ID = "11111111-1111-4111-8111-111111111111";
+const OPERATION_ID = "22222222-2222-4222-8222-222222222222";
+
+function rawNdjson(body: string): Response {
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(body));
+        controller.close();
+      },
+    }),
+    { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+  );
+}
+
+function formats(square: string, vertical: string) {
+  return {
+    "1:1": { state: square, deliveryOperationId: "sq" },
+    "9:16": { state: vertical, deliveryOperationId: OPERATION_ID },
+  };
+}
+
+function terminal(noNewline: boolean): Response {
+  const event = {
+    type: "result",
+    campaignId: CAMPAIGN_ID,
+    operationId: OPERATION_ID,
+    campaignUrl: `/campanhas/${CAMPAIGN_ID}`,
+    operationTerminal: true,
+    formats: formats("delivered", "delivered"),
+  };
+  return rawNdjson(`${JSON.stringify(event)}${noNewline ? "" : "\n"}`);
+}
+
+function initialStatus(): Response {
+  return new Response(
+    JSON.stringify({
+      operation: {
+        origin: "two_format_two_stage",
+        formats: formats("processing", "processing"),
+        canContinue: true,
+        operationTerminal: false,
+        nextStep: "square_delivery",
+      },
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+function unavailableStatus(): Response {
+  return new Response(
+    JSON.stringify({ error: { code: "status_unavailable" } }),
+    { status: 503, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+function gatedInitial(gate: Promise<void>): Response {
+  return new Response(
+    new ReadableStream({
+      async start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `${JSON.stringify({
+              type: "phase",
+              phase: "square_base",
+              status: "running",
+            })}\n`,
+          ),
+        );
+        await gate;
+        controller.enqueue(
+          new TextEncoder().encode(
+            `${JSON.stringify({
+              type: "result",
+              campaignId: CAMPAIGN_ID,
+              operationId: OPERATION_ID,
+              campaignUrl: `/campanhas/${CAMPAIGN_ID}`,
+              operationTerminal: true,
+              formats: formats("delivered", "delivered"),
+            })}\n`,
+          ),
+        );
+        controller.close();
+      },
+    }),
+    { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
+  );
+}
+
+async function run(noNewline: boolean) {
+  sessionStorage.setItem(
+    "campaign_active_operation:store-1",
+    JSON.stringify({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      flowKind: "two_format_two_stage",
+    }),
+  );
+
+  let statusCalls = 0;
+  const fetchMock = vi.fn(async (url: string) => {
+    if (url === "/api/campaign/generation-status") {
+      statusCalls += 1;
+      return statusCalls === 1 ? initialStatus() : unavailableStatus();
+    }
+    if (url === `/api/campaign/${CAMPAIGN_ID}/continue`) {
+      return terminal(noNewline);
+    }
+    throw new Error(`unexpected ${url}`);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const { result } = renderHook(() =>
+    useCampaignForm("store-1", { eligible: true }),
+  );
+  await waitFor(() => expect(result.current.processingResult).not.toBeNull());
+  expect(result.current.processingResult?.canContinue).toBe(true);
+
+  await act(async () => {
+    await result.current.continueGeneration();
+  });
+
+  return {
+    result,
+    statusCalls: () => statusCalls,
+    urls: () => fetchMock.mock.calls.map(([u]) => String(u)),
+  };
+}
+
+describe("DIAGNÓSTICO — continuação NDJSON sem newline final", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+    sessionStorage.clear();
+    mockRestoreFormState.mockReturnValue(null);
+  });
+
+  it("terminal SEM newline é ignorado e dispara consulta de status", async () => {
+    const { result, statusCalls, urls } = await run(true);
+
+    // eslint-disable-next-line no-console
+    console.log("DIAG sem newline", urls(), "statusCalls", statusCalls());
+    expect(statusCalls()).toBe(2);
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(result.current.processingResult?.partial).toBe("unavailable");
+  });
+
+  it("terminal COM newline é aplicado, sem consulta extra de status", async () => {
+    const { statusCalls, urls } = await run(false);
+
+    // eslint-disable-next-line no-console
+    console.log("DIAG com newline", urls(), "statusCalls", statusCalls());
+    expect(statusCalls()).toBe(1);
+    expect(mockPush).toHaveBeenCalledWith(`/campanhas/${CAMPAIGN_ID}`);
+  });
+
+  it("reidratação dispara status em paralelo ao stream inicial e marca indisponível", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mockRestoreFormState.mockReturnValue({
+      productName: "Produto conjunto",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [
+        {
+          id: "img-1",
+          role: "primary",
+          source: "upload",
+          mimeType: "image/jpeg",
+          dataUrl:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        },
+      ],
+      mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
+      backgroundDirection: "studio",
+      campaignFormat: "1:1+9:16",
+    });
+
+    let statusCalls = 0;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/campaign/generate-image") return gatedInitial(gate);
+      if (url === "/api/campaign/generation-status") {
+        statusCalls += 1;
+        return unavailableStatus();
+      }
+      if (url === `/api/campaign/${CAMPAIGN_ID}/continue`) {
+        return terminal(false);
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useCampaignForm("store-1", { eligible: true }),
+    );
+    await waitFor(() =>
+      expect(result.current.fields.productName).toBe("Produto conjunto"),
+    );
+
+    let submitPromise: Promise<void> = Promise.resolve();
+    await act(async () => {
+      submitPromise = result.current.handleSubmit();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(statusCalls).toBe(1));
+
+    expect(result.current.isSubmitting).toBe(true);
+    expect(result.current.processingResult?.partial).toBe("unavailable");
+
+    release();
+    await act(async () => {
+      await submitPromise;
+    });
+  });
+});
