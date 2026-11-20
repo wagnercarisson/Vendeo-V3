@@ -1,0 +1,296 @@
+{
+  "gate": "C4-I complement",
+  "status": "EXECUTED_LOCAL_HOMOLOG_AWAITING_REVIEW",
+  "head": "3d7aa8d7bbb3df3021082cafa273902daefae540",
+  "executedAtUtc": "2026-11-20T00:26:04.409Z",
+  "target": {
+    "environment": "vendeo-homolog",
+    "container": "supabase_db_vendeo-homolog",
+    "postgres": "127.0.0.1:57782/postgres",
+    "postgrest": "127.0.0.1:57781",
+    "app": "127.0.0.1:3000",
+    "production": false
+  },
+  "baseline": {
+    "file": "../c4i-20261119/c5a-baseline.json",
+    "sha256": "C37643C1C391E3406B9589EE41262C1A7E5D33A7DF247941EDF7BC2A8D7196ED",
+    "intact": true,
+    "ledgerBefore": "157|20261118002139",
+    "ledgerAfter": "157|20261118002139",
+    "revalidatedSha256": "C37643C1C391E3406B9589EE41262C1A7E5D33A7DF247941EDF7BC2A8D7196ED",
+    "unchanged": true
+  },
+  "auth": {
+    "preCapturedAt": "2026-11-20T00:21:13.876433+00:00",
+    "created": {
+      "owner": {
+        "email": "f607c4-owner@f607.test",
+        "userId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
+        "sessionId": "baf09891-eacd-4f8c-9181-a7b15857f1c3"
+      },
+      "admin": {
+        "email": "wagnercarisson@gmail.com",
+        "userId": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
+        "sessionId": "0deb6cc3-3a6e-4197-8044-98c736a0147d"
+      }
+    },
+    "revokedSessionIds": [
+      "baf09891-eacd-4f8c-9181-a7b15857f1c3",
+      "0deb6cc3-3a6e-4197-8044-98c736a0147d"
+    ],
+    "beforeSessionIds": [
+      "38929be0-620b-4667-89b8-dd67af142878",
+      "b9a64749-73b2-4a93-95f6-64cacae8ecaf",
+      "5b50843b-fd32-4180-9912-cfca6b4e937b"
+    ],
+    "afterSessionIds": [
+      "38929be0-620b-4667-89b8-dd67af142878",
+      "b9a64749-73b2-4a93-95f6-64cacae8ecaf",
+      "5b50843b-fd32-4180-9912-cfca6b4e937b"
+    ],
+    "sBeforePreserved": true,
+    "duringRefreshTokens": [
+      {
+        "id": 1189,
+        "revoked": false,
+        "user_id": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
+        "created_at": "2026-11-20T00:23:54.791272+00:00",
+        "session_id": "baf09891-eacd-4f8c-9181-a7b15857f1c3",
+        "updated_at": "2026-11-20T00:23:54.791272+00:00"
+      },
+      {
+        "id": 1190,
+        "revoked": false,
+        "user_id": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
+        "created_at": "2026-11-20T00:23:54.891748+00:00",
+        "session_id": "0deb6cc3-3a6e-4197-8044-98c736a0147d",
+        "updated_at": "2026-11-20T00:23:54.891748+00:00"
+      }
+    ],
+    "authAuditLogDelta": 4,
+    "historicalPreservationProven": false,
+    "limitation": "no pre-execution baseline for auth tables; only effect attribution and targeted revocation"
+  },
+  "caseA": {
+    "campaignId": "f607c400-0000-4000-8000-000000000032",
+    "controlOperationId": "f607c400-0000-4000-8000-000000000033",
+    "squareDeliveryId": "f607c400-0000-4000-8000-000000000034",
+    "responses": {
+      "refund": 200,
+      "replay": 200,
+      "negativeDeliver": 409,
+      "negativeCode": "audit_conflict"
+    },
+    "credits": [
+      {
+        "status": "reserved",
+        "state_epoch": 0,
+        "operation_id": "f607c400-0000-4000-8000-000000000033",
+        "refund_tx_id": null,
+        "publication_state": "none"
+      },
+      {
+        "status": "refunded",
+        "state_epoch": 8,
+        "operation_id": "f607c400-0000-4000-8000-000000000034",
+        "refund_tx_id": "1a454275-6a28-4c7d-9757-7409cd77951c",
+        "publication_state": "none"
+      }
+    ],
+    "outcomes11": [
+      {
+        "outcome": "failed",
+        "operation_id": "f607c400-0000-4000-8000-000000000034"
+      }
+    ],
+    "outcomes916": [
+      {
+        "stage": "expansion",
+        "outcome": "failed",
+        "operation_id": "f607c400-0000-4000-8000-000000000033"
+      }
+    ],
+    "refundTransaction": {
+      "type": "refund",
+      "amount": 1,
+      "balance_after": 1,
+      "tx_created_at": "2026-11-20T00:23:57.26731+00:00",
+      "balance_before": 0,
+      "idempotency_key": "p1_1_refund_f607c400-0000-4000-8000-000000000032_f607c400-0000-4000-8000-000000000034"
+    },
+    "handoff": {
+      "outcome": "failed",
+      "operation_id": "f607c400-0000-4000-8000-000000000034",
+      "outcome_created_at": "2026-11-20T00:23:57.230207+00:00"
+    },
+    "audit": [
+      {
+        "id": "0409eb1e-de0a-4876-8f96-11d34df01fac",
+        "action": "product_1_1_pending_resolution",
+        "metadata": {
+          "flow": "two_format",
+          "kind": "resolution",
+          "action": "refund",
+          "format": "1:1",
+          "art_kind": "absent",
+          "atomicity": "effect_then_audit",
+          "authorship": "admin",
+          "campaign_id": "f607c400-0000-4000-8000-000000000032",
+          "control_operation_id": "f607c400-0000-4000-8000-000000000033",
+          "delivery_operation_id": "f607c400-0000-4000-8000-000000000034"
+        },
+        "operation_id": "f607c400-0000-4000-8000-000000000034"
+      }
+    ],
+    "transactionCount": 3,
+    "auditCount": 1,
+    "artifactCount": 0,
+    "objectCount": 0,
+    "campaign": {
+      "id": "f607c400-0000-4000-8000-000000000032",
+      "status": "generating",
+      "storage_path": "",
+      "error_message": null
+    },
+    "epochObservedBefore": 7,
+    "epochAfter": 8,
+    "negativeZeroEffect": true
+  },
+  "caseB": {
+    "campaignId": "f607c400-0000-4000-8000-000000000042",
+    "controlOperationId": "f607c400-0000-4000-8000-000000000043",
+    "squareDeliveryId": "f607c400-0000-4000-8000-000000000044",
+    "continueStatus": 200,
+    "formats": "1:1 delivered; 9:16 delivered; partial=false",
+    "campaign": {
+      "id": "f607c400-0000-4000-8000-000000000042",
+      "status": "ready",
+      "storage_path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_original.jpg",
+      "error_message": null
+    },
+    "credits": [
+      {
+        "status": "delivered",
+        "state_epoch": 3,
+        "operation_id": "f607c400-0000-4000-8000-000000000043",
+        "publication_state": "published"
+      },
+      {
+        "status": "delivered",
+        "state_epoch": 0,
+        "operation_id": "f607c400-0000-4000-8000-000000000044",
+        "publication_state": "none"
+      }
+    ],
+    "artifacts": [
+      {
+        "id": "dfa91fae-528d-4c77-a356-a5623262b30e",
+        "role": "square_original",
+        "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_original.jpg",
+        "width": 1024,
+        "height": 1024,
+        "mimeType": "image/jpeg",
+        "byteSize": 6413,
+        "checksumSha256": "1d74e0e8f77bbfa65ecc5d64077dfaef86a3600e603d2968f1ddbc5a052f195b",
+        "derivedFromArtifactId": null
+      },
+      {
+        "id": "bd488119-cbc7-4279-bd30-16cc404e5b81",
+        "role": "square_prepared",
+        "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_prepared.jpg",
+        "width": 1152,
+        "height": 1152,
+        "mimeType": "image/jpeg",
+        "byteSize": 36899,
+        "checksumSha256": "ccd18da81b33d6f138942a5724be4d123b02fefb2392b231be5e8316dea4bee2",
+        "derivedFromArtifactId": "dfa91fae-528d-4c77-a356-a5623262b30e"
+      },
+      {
+        "id": "1999f9f1-9086-4fb7-b819-5b354ee09101",
+        "role": "vertical",
+        "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.jpg",
+        "width": 1080,
+        "height": 1920,
+        "mimeType": "image/jpeg",
+        "byteSize": 24569,
+        "checksumSha256": "c3e085168da4589969668d834b8d801854194b044a9144ac436bffed3b3ed638",
+        "derivedFromArtifactId": "bd488119-cbc7-4279-bd30-16cc404e5b81"
+      }
+    ],
+    "verticalProbe": "integral (precheck)",
+    "thumbnail": {
+      "source": {
+        "sha256": "c3e085168da4589969668d834b8d801854194b044a9144ac436bffed3b3ed638",
+        "width": 1080,
+        "height": 1920,
+        "format": "jpeg"
+      },
+      "thumbnail": {
+        "sha256": "e6f7ee360ef83426bab5bff5997f03b45b72ee6b16ea20f8bc97f57b9256e5c1",
+        "width": 162,
+        "height": 288,
+        "format": "webp",
+        "bytes": 172
+      },
+      "expected": {
+        "sha256": "e6f7ee360ef83426bab5bff5997f03b45b72ee6b16ea20f8bc97f57b9256e5c1",
+        "width": 162,
+        "height": 288,
+        "bytes": 172
+      },
+      "hashMatchesRecipe": true,
+      "squareThumbPresent": false
+    },
+    "squareThumbPresent": false,
+    "sameRequestEvidence": {
+      "singleContinueRequest": true,
+      "appLog": "POST /api/campaign/.../continue 200 in 2542ms",
+      "noSecondContinue": true,
+      "noActivationLog": true
+    },
+    "thumbnailCreatedAt": "2026-11-20T00:24:00.075420+00:00",
+    "continueDurationMs": 2542,
+    "thumbnailPath": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.thumb-v1.webp"
+  },
+  "deltas": {
+    "complement": {
+      "campaigns": 2,
+      "credit_transactions": 6,
+      "product_1_1_campaign_credit_operations": 4,
+      "product_1_1_generation_outcomes": 1,
+      "product_9_16_two_stage_outcomes": 1,
+      "campaign_composition_artifacts": 3,
+      "admin_audit_log": 1,
+      "product_9_16_two_stage_operations": 2,
+      "product_9_16_two_stage_steps": 2,
+      "product_two_format_deliveries": 4,
+      "storage_objects": 4
+    },
+    "auth": {
+      "sessions": 0,
+      "refresh_tokens": 0,
+      "audit_log_entries": 4,
+      "users": 0,
+      "identities": 0
+    },
+    "protected": {
+      "migrations": 0,
+      "flags": 0,
+      "pricing": 0,
+      "catalog": 0,
+      "store_brand_profiles": 0,
+      "legal_acceptances": 0
+    }
+  },
+  "noProvider": {
+    "activationLog": 0,
+    "generationEvents": 0,
+    "copyState": 0,
+    "externalCalls": 0
+  },
+  "limitations": [
+    "Pre-write artifact precheck failed once due to a local script validation bug; no writes occurred and the corrected check passed.",
+    "Auth tables have no historical baseline; preservation of pre-existing auth rows is not proven, only targeted revocation is proven.",
+    "Per-request RPC call counts are not instrumented; the single continue request and absence of repair/activation evidence are recorded."
+  ]
+}

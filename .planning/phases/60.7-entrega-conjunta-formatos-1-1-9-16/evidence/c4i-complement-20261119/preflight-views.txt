@@ -1,0 +1,2 @@
+﻿PRECHECK_B={"base":"done","expansion":"done","square":"delivered","vertical":"processing"}
+PRECHECK_A={"epoch":7,"squareArtifacts":0}

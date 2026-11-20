@@ -1,0 +1,35 @@
+{
+  "complement": {
+    "campaigns": 2,
+    "credit_transactions": 6,
+    "product_1_1_campaign_credit_operations": 4,
+    "product_1_1_generation_outcomes": 1,
+    "product_9_16_two_stage_outcomes": 1,
+    "campaign_composition_artifacts": 3,
+    "admin_audit_log": 1,
+    "product_9_16_two_stage_operations": 2,
+    "product_9_16_two_stage_steps": 2,
+    "product_two_format_deliveries": 4,
+    "storage_objects": 4
+  },
+  "auth": {
+    "sessions": 0,
+    "refresh_tokens": 0,
+    "users": 0,
+    "identities": 0,
+    "audit_log_entries": 4
+  },
+  "protected": {
+    "migrations": 0,
+    "feature_flags": 0,
+    "pricing": 0,
+    "catalog": 0,
+    "store_brand_profiles": 0,
+    "legal_acceptances": 0
+  },
+  "notes": [
+    "storage_objects: 3 synthetic internal artifacts + 1 vertical thumbnail",
+    "auth sessions/refresh tokens: 2 created and 2 revoked by exact session_id",
+    "auth audit log delta is count-only; no payload read"
+  ]
+}

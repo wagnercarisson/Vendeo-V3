@@ -1,0 +1,10 @@
+﻿{
+    "phase":  "pre-write",
+    "attemptedAtUtc":  "2026-11-20T00:22:38.0326906Z",
+    "result":  "failed_before_any_write",
+    "error":  "source_provenance_digest_mismatch:square_prepared",
+    "cause":  "local validation script compared evidence.provenanceDigest against evidence.provenance (absent) instead of the source artifact row provenance",
+    "environmentDivergence":  false,
+    "writesPerformed":  0,
+    "correction":  "validation moved to compare against campaign_composition_artifacts.provenance and row fields; no retry of a failing environment operation"
+}

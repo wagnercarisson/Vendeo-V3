@@ -1,0 +1,1 @@
+﻿PROBE_RESULT={"kind":"integral","format":"9:16","width":1080,"height":1920,"mimeType":"image/jpeg","storagePath":"f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.jpg","evidenceRef":"1999f9f1-9086-4fb7-b819-5b354ee09101"}

@@ -1,0 +1,30 @@
+﻿{
+    "generatedAtUtc":  "2026-11-20T00:21:09.6154222Z",
+    "head":  "3d7aa8d7bbb3df3021082cafa273902daefae540",
+    "baselineSha256":  "C37643C1C391E3406B9589EE41262C1A7E5D33A7DF247941EDF7BC2A8D7196ED",
+    "ledger":  "157|20261118002139",
+    "tableCounts":  [
+                        "stores=39",
+                        "campaigns=135",
+                        "credit_balances=36",
+                        "credit_transactions=227",
+                        "product_1_1_campaign_credit_operations=90",
+                        "campaign_composition_artifacts=32",
+                        "admin_audit_log=108",
+                        "product_two_format_deliveries=33",
+                        "product_9_16_two_stage_operations=37",
+                        "product_9_16_two_stage_steps=72",
+                        "product_9_16_two_stage_outcomes=12",
+                        "product_1_1_generation_outcomes=7",
+                        "store_brand_profiles=36",
+                        "legal_acceptances=15"
+                    ],
+    "authCounts":  [
+                       "auth.users=40",
+                       "auth.identities=10",
+                       "auth.sessions=9",
+                       "auth.refresh_tokens=12",
+                       "auth.audit_log_entries=356"
+                   ],
+    "storageObjects":  352
+}

@@ -1,0 +1,23 @@
+{
+  "source": {
+    "sha256": "c3e085168da4589969668d834b8d801854194b044a9144ac436bffed3b3ed638",
+    "width": 1080,
+    "height": 1920,
+    "format": "jpeg"
+  },
+  "thumbnail": {
+    "sha256": "e6f7ee360ef83426bab5bff5997f03b45b72ee6b16ea20f8bc97f57b9256e5c1",
+    "width": 162,
+    "height": 288,
+    "format": "webp",
+    "bytes": 172
+  },
+  "expected": {
+    "sha256": "e6f7ee360ef83426bab5bff5997f03b45b72ee6b16ea20f8bc97f57b9256e5c1",
+    "width": 162,
+    "height": 288,
+    "bytes": 172
+  },
+  "hashMatchesRecipe": true,
+  "squareThumbPresent": false
+}

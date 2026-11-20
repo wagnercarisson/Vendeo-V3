@@ -1,0 +1,54 @@
+{
+  "owner": {
+    "email": "f607c4-owner@f607.test",
+    "userId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
+    "sessionId": "baf09891-eacd-4f8c-9181-a7b15857f1c3"
+  },
+  "admin": {
+    "email": "wagnercarisson@gmail.com",
+    "userId": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
+    "sessionId": "0deb6cc3-3a6e-4197-8044-98c736a0147d"
+  },
+  "refund": {
+    "status": 200,
+    "text": "{\"resolution\":{\"kind\":\"resolved\",\"action\":\"refund\",\"format\":\"1:1\",\"idempotent\":false,\"auditRecorded\":true}}",
+    "payload": {
+      "resolution": {
+        "kind": "resolved",
+        "action": "refund",
+        "format": "1:1",
+        "idempotent": false,
+        "auditRecorded": true
+      }
+    }
+  },
+  "replay": {
+    "status": 200,
+    "text": "{\"resolution\":{\"kind\":\"resolved\",\"action\":\"refund\",\"format\":\"1:1\",\"idempotent\":true,\"auditRecorded\":true,\"alreadyAudited\":true}}",
+    "payload": {
+      "resolution": {
+        "kind": "resolved",
+        "action": "refund",
+        "format": "1:1",
+        "idempotent": true,
+        "auditRecorded": true,
+        "alreadyAudited": true
+      }
+    }
+  },
+  "negativeDeliver": {
+    "status": 409,
+    "text": "{\"error\":{\"code\":\"audit_conflict\",\"message\":\"Auditoria divergente para esta operação.\"}}",
+    "payload": {
+      "error": {
+        "code": "audit_conflict",
+        "message": "Auditoria divergente para esta operação."
+      }
+    }
+  },
+  "continue": {
+    "status": 200,
+    "text": "{\"type\":\"phase\",\"campaignId\":\"f607c400-0000-4000-8000-000000000042\",\"operationId\":\"f607c400-0000-4000-8000-000000000043\",\"phase\":\"vertical_delivery\",\"status\":\"complete\"}\n{\"type\":\"result\",\"campaignId\":\"f607c400-0000-4000-8000-000000000042\",\"operationId\":\"f607c400-0000-4000-8000-000000000043\",\"responseTerminal\":true,\"operationTerminal\":true,\"campaignUrl\":\"/campanhas/f607c400-0000-4000-8000-000000000042\",\"formats\":{\"1:1\":{\"state\":\"delivered\",\"deliveryOperationId\":\"f607c400-0000-4000-8000-000000000044\"},\"9:16\":{\"state\":\"delivered\",\"deliveryOperationId\":\"f607c400-0000-4000-8000-000000000043\"}},\"preferredFormat\":\"1:1\",\"partial\":false}\n",
+    "payload": null
+  }
+}

@@ -1,0 +1,227 @@
+{
+    "caseA": {
+        "audit": [
+            {
+                "id": "0409eb1e-de0a-4876-8f96-11d34df01fac",
+                "action": "product_1_1_pending_resolution",
+                "metadata": {
+                    "flow": "two_format",
+                    "kind": "resolution",
+                    "action": "refund",
+                    "format": "1:1",
+                    "art_kind": "absent",
+                    "atomicity": "effect_then_audit",
+                    "authorship": "admin",
+                    "campaign_id": "f607c400-0000-4000-8000-000000000032",
+                    "control_operation_id": "f607c400-0000-4000-8000-000000000033",
+                    "delivery_operation_id": "f607c400-0000-4000-8000-000000000034"
+                },
+                "operation_id": "f607c400-0000-4000-8000-000000000034"
+            }
+        ],
+        "credits": [
+            {
+                "status": "reserved",
+                "state_epoch": 0,
+                "operation_id": "f607c400-0000-4000-8000-000000000033",
+                "refund_tx_id": null,
+                "publication_state": "none"
+            },
+            {
+                "status": "refunded",
+                "state_epoch": 8,
+                "operation_id": "f607c400-0000-4000-8000-000000000034",
+                "refund_tx_id": "1a454275-6a28-4c7d-9757-7409cd77951c",
+                "publication_state": "none"
+            }
+        ],
+        "objects": 0,
+        "campaign": {
+            "id": "f607c400-0000-4000-8000-000000000032",
+            "status": "generating",
+            "storage_path": "",
+            "error_message": null
+        },
+        "artifacts": 0,
+        "outcomes11": [
+            {
+                "outcome": "failed",
+                "operation_id": "f607c400-0000-4000-8000-000000000034"
+            }
+        ],
+        "outcomes916": [
+            {
+                "stage": "expansion",
+                "outcome": "failed",
+                "operation_id": "f607c400-0000-4000-8000-000000000033"
+            }
+        ],
+        "transactions": [
+            {
+                "id": "cb8f191b-a23c-49aa-b1e4-c20bf5e8e07a",
+                "type": "deduction",
+                "amount": -1,
+                "reason": null,
+                "balance_after": 3,
+                "balance_before": 4
+            },
+            {
+                "id": "2239bc66-f19b-404e-83ee-5bb2814de872",
+                "type": "deduction",
+                "amount": -1,
+                "reason": null,
+                "balance_after": 2,
+                "balance_before": 3
+            }
+        ]
+    },
+    "caseB": {
+        "credits": [
+            {
+                "status": "delivered",
+                "state_epoch": 3,
+                "operation_id": "f607c400-0000-4000-8000-000000000043",
+                "publication_state": "published"
+            },
+            {
+                "status": "delivered",
+                "state_epoch": 0,
+                "operation_id": "f607c400-0000-4000-8000-000000000044",
+                "publication_state": "none"
+            }
+        ],
+        "objects": [
+            {
+                "name": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_original.jpg",
+                "size": "6413",
+                "mimetype": "image/jpeg",
+                "bucket_id": "campaign-internal-artifacts",
+                "user_metadata": {
+                    "vendeo_composition_artifact": {
+                        "evidence": {
+                            "v": 1,
+                            "role": "square_original",
+                            "width": 1024,
+                            "height": 1024,
+                            "origin": "provider_generation",
+                            "storeId": "f607c400-0000-4000-8000-000000000001",
+                            "byteSize": 6413,
+                            "mimeType": "image/jpeg",
+                            "campaignId": "f607c400-0000-4000-8000-000000000042",
+                            "sourceKind": "none",
+                            "operationId": "f607c400-0000-4000-8000-000000000043",
+                            "checksumSha256": "1d74e0e8f77bbfa65ecc5d64077dfaef86a3600e603d2968f1ddbc5a052f195b",
+                            "provenanceDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                        },
+                        "evidenceDigest": "56c937d849ebd097f0a44292f925e5785a09a42d2321933a2365eb172ef9cc2a"
+                    }
+                }
+            },
+            {
+                "name": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_prepared.jpg",
+                "size": "36899",
+                "mimetype": "image/jpeg",
+                "bucket_id": "campaign-internal-artifacts",
+                "user_metadata": {
+                    "vendeo_composition_artifact": {
+                        "evidence": {
+                            "v": 1,
+                            "role": "square_prepared",
+                            "width": 1152,
+                            "height": 1152,
+                            "origin": "deterministic_preparation",
+                            "storeId": "f607c400-0000-4000-8000-000000000001",
+                            "byteSize": 36899,
+                            "mimeType": "image/jpeg",
+                            "campaignId": "f607c400-0000-4000-8000-000000000042",
+                            "sourceKind": "internal_artifact",
+                            "operationId": "f607c400-0000-4000-8000-000000000043",
+                            "sourceOrigin": "composition_artifact",
+                            "checksumSha256": "ccd18da81b33d6f138942a5724be4d123b02fefb2392b231be5e8316dea4bee2",
+                            "provenanceDigest": "3da6d14bcf400a278597df8d68a78c277b5430f3eda97ecf09147cb024ebec8a",
+                            "sourceArtifactId": "dfa91fae-528d-4c77-a356-a5623262b30e",
+                            "sourceChecksumSha256": "1d74e0e8f77bbfa65ecc5d64077dfaef86a3600e603d2968f1ddbc5a052f195b"
+                        },
+                        "evidenceDigest": "3908174db3104f3c2f26b102daabe6535f7e0fe451e138c1dcaa4a1b20b5bcfc"
+                    }
+                }
+            },
+            {
+                "name": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.jpg",
+                "size": "24569",
+                "mimetype": "image/jpeg",
+                "bucket_id": "campaign-internal-artifacts",
+                "user_metadata": {
+                    "vendeo_composition_artifact": {
+                        "evidence": {
+                            "v": 1,
+                            "role": "vertical",
+                            "width": 1080,
+                            "height": 1920,
+                            "origin": "ai_expansion",
+                            "storeId": "f607c400-0000-4000-8000-000000000001",
+                            "byteSize": 24569,
+                            "mimeType": "image/jpeg",
+                            "campaignId": "f607c400-0000-4000-8000-000000000042",
+                            "sourceKind": "internal_artifact",
+                            "operationId": "f607c400-0000-4000-8000-000000000043",
+                            "sourceOrigin": "composition_artifact",
+                            "checksumSha256": "c3e085168da4589969668d834b8d801854194b044a9144ac436bffed3b3ed638",
+                            "provenanceDigest": "adcba37605d34917df017dd6b8cb708c57e896c72be2cfaeebe843d11e5ed337",
+                            "sourceArtifactId": "bd488119-cbc7-4279-bd30-16cc404e5b81",
+                            "sourceChecksumSha256": "ccd18da81b33d6f138942a5724be4d123b02fefb2392b231be5e8316dea4bee2"
+                        },
+                        "evidenceDigest": "a75e09937cea4bd590688b593f021f829ac6b39656d0ce9cc186de9870ada3fe"
+                    }
+                }
+            },
+            {
+                "name": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.thumb-v1.webp",
+                "size": "172",
+                "mimetype": "image/webp",
+                "bucket_id": "campaign-images",
+                "user_metadata": {
+                }
+            }
+        ],
+        "campaign": {
+            "id": "f607c400-0000-4000-8000-000000000042",
+            "status": "ready",
+            "storage_path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_original.jpg",
+            "error_message": null
+        },
+        "artifacts": [
+            {
+                "role": "square_original",
+                "width": 1024,
+                "height": 1024,
+                "origin": "provider_generation",
+                "mime_type": "image/jpeg",
+                "storage_path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_original.jpg",
+                "checksum_sha256": "1d74e0e8f77bbfa65ecc5d64077dfaef86a3600e603d2968f1ddbc5a052f195b",
+                "derived_from_artifact_id": null
+            },
+            {
+                "role": "square_prepared",
+                "width": 1152,
+                "height": 1152,
+                "origin": "deterministic_preparation",
+                "mime_type": "image/jpeg",
+                "storage_path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_prepared.jpg",
+                "checksum_sha256": "ccd18da81b33d6f138942a5724be4d123b02fefb2392b231be5e8316dea4bee2",
+                "derived_from_artifact_id": "dfa91fae-528d-4c77-a356-a5623262b30e"
+            },
+            {
+                "role": "vertical",
+                "width": 1080,
+                "height": 1920,
+                "origin": "ai_expansion",
+                "mime_type": "image/jpeg",
+                "storage_path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.jpg",
+                "checksum_sha256": "c3e085168da4589969668d834b8d801854194b044a9144ac436bffed3b3ed638",
+                "derived_from_artifact_id": "bd488119-cbc7-4279-bd30-16cc404e5b81"
+            }
+        ]
+    }
+}
+

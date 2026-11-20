@@ -1,0 +1,219 @@
+﻿[
+    {
+        "table":  "stores",
+        "schema":  "public",
+        "exists":  true,
+        "count":  39,
+        "fingerprint":  "0b6cc2815e209eeafa87e0c6af7c2785"
+    },
+    {
+        "table":  "campaigns",
+        "schema":  "public",
+        "exists":  true,
+        "count":  137,
+        "fingerprint":  "49b6c40cda99272223977a7d9d2b2928"
+    },
+    {
+        "table":  "credit_balances",
+        "schema":  "public",
+        "exists":  true,
+        "count":  36,
+        "fingerprint":  "68e1fe1277d62d4e67b15d6c2b36a35d"
+    },
+    {
+        "table":  "credit_transactions",
+        "schema":  "public",
+        "exists":  true,
+        "count":  233,
+        "fingerprint":  "ac98ccfa5e3038d2a45248a5d4791241"
+    },
+    {
+        "table":  "product_1_1_campaign_credit_operations",
+        "schema":  "public",
+        "exists":  true,
+        "count":  94,
+        "fingerprint":  "d62476292f694350674dccd0b19cb510"
+    },
+    {
+        "table":  "product_1_1_generation_outcomes",
+        "schema":  "public",
+        "exists":  true,
+        "count":  8,
+        "fingerprint":  "d2c2be8580019d19e84ad5af232dcddd"
+    },
+    {
+        "table":  "product_9_16_two_stage_outcomes",
+        "schema":  "public",
+        "exists":  true,
+        "count":  13,
+        "fingerprint":  "1a3261097cef0e5adb16588a9f421396"
+    },
+    {
+        "table":  "campaign_composition_artifacts",
+        "schema":  "public",
+        "exists":  true,
+        "count":  35,
+        "fingerprint":  "42759264815de5a36cdb5460f86429d6"
+    },
+    {
+        "table":  "admin_audit_log",
+        "schema":  "public",
+        "exists":  true,
+        "count":  109,
+        "fingerprint":  "59d830d1a15b914eb24b27143d537aec"
+    },
+    {
+        "table":  "storage.objects",
+        "schema":  "storage",
+        "exists":  true,
+        "count":  356,
+        "fingerprint":  "b9d28d175f49e6121cd3533241ffd53d"
+    },
+    {
+        "table":  "feature_flags",
+        "schema":  "public",
+        "exists":  true,
+        "count":  10,
+        "fingerprint":  "df7ed1ae7a976f26dc66673d6c548a76"
+    },
+    {
+        "table":  "ai_model_pricing",
+        "schema":  "public",
+        "exists":  true,
+        "count":  26,
+        "fingerprint":  "18f605bb5a696e99c6d6a47fa042327b"
+    },
+    {
+        "table":  "ai_model_catalog",
+        "schema":  "public",
+        "exists":  true,
+        "count":  19,
+        "fingerprint":  "a0d49147d8ba406478b031908bbd6b91"
+    },
+    {
+        "table":  "ai_model_selection",
+        "schema":  "public",
+        "exists":  true,
+        "count":  3,
+        "fingerprint":  "d2d137a1120c57b41a808793feb929ff"
+    },
+    {
+        "table":  "image_generation_config_snapshots",
+        "schema":  "public",
+        "exists":  true,
+        "count":  36,
+        "fingerprint":  "436264220440a559a3e9940bee144f15"
+    },
+    {
+        "table":  "image_model_pair_config",
+        "schema":  "public",
+        "exists":  true,
+        "count":  1,
+        "fingerprint":  "6ec80630142fac36e0e395ab51609769"
+    },
+    {
+        "table":  "nine_sixteen_expansion_model_config",
+        "schema":  "public",
+        "exists":  true,
+        "count":  1,
+        "fingerprint":  "72b6ec4bd923903e3553d20235b5a656"
+    },
+    {
+        "table":  "pricing_sync_attempts",
+        "schema":  "public",
+        "exists":  true,
+        "count":  1,
+        "fingerprint":  "639861f0cce5c24fb54ad5ead444813b"
+    },
+    {
+        "table":  "visual_signature_model_config",
+        "schema":  "public",
+        "exists":  true,
+        "count":  1,
+        "fingerprint":  "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+    },
+    {
+        "table":  "visual_signature_model_config_pilot_stores",
+        "schema":  "public",
+        "exists":  true,
+        "count":  0,
+        "fingerprint":  "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+        "table":  "visual_signature_model_config_release",
+        "schema":  "public",
+        "exists":  true,
+        "count":  1,
+        "fingerprint":  "a237fca8b9c22bc1db102070a3d0a0a3"
+    },
+    {
+        "table":  "product_9_16_two_stage_operations",
+        "schema":  "public",
+        "exists":  true,
+        "count":  39,
+        "fingerprint":  "1483350ae7b281ef542b44292450417a"
+    },
+    {
+        "table":  "product_9_16_two_stage_steps",
+        "schema":  "public",
+        "exists":  true,
+        "count":  74,
+        "fingerprint":  "ddd092d5b9e910de7b64e66afcd4e960"
+    },
+    {
+        "table":  "product_9_16_two_stage_attempt_claims",
+        "schema":  "public",
+        "exists":  true,
+        "count":  38,
+        "fingerprint":  "0e3dd4f946a9cf407c654033c2e31722"
+    },
+    {
+        "table":  "product_two_format_deliveries",
+        "schema":  "public",
+        "exists":  true,
+        "count":  37,
+        "fingerprint":  "7976fb48fc365ad3a33680541b623bfd"
+    },
+    {
+        "table":  "product_1_1_copy_state",
+        "schema":  "public",
+        "exists":  true,
+        "count":  36,
+        "fingerprint":  "c8831f755eaed574125049692de2069b"
+    },
+    {
+        "table":  "product_1_1_copy_cancellations",
+        "schema":  "public",
+        "exists":  true,
+        "count":  0,
+        "fingerprint":  "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+        "table":  "product_1_1_snapshot_content_binding",
+        "schema":  "public",
+        "exists":  true,
+        "count":  36,
+        "fingerprint":  "fd79aa67ba85f012658f764c89070a29"
+    },
+    {
+        "table":  "product_1_1_snapshot_frozen_evidence",
+        "schema":  "public",
+        "exists":  true,
+        "count":  36,
+        "fingerprint":  "d39c8b727673fad0dc21e8f1a754c457"
+    },
+    {
+        "table":  "generation_events",
+        "schema":  "public",
+        "exists":  true,
+        "count":  385,
+        "fingerprint":  "114405c1fb0f5901eebff235241865d0"
+    },
+    {
+        "table":  "campaign_art_versions",
+        "schema":  "public",
+        "exists":  true,
+        "count":  0,
+        "fingerprint":  "d41d8cd98f00b204e9800998ecf8427e"
+    }
+]

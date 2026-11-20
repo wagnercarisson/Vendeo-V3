@@ -130,10 +130,12 @@
       "sessionRevocation": "targeted by session_id; prior admin sessions preserved"
     },
     "refundComplement": {
-      "status": "REVISED_NOT_EXECUTED",
-      "file": "../../60.7-C4-I-COMPLEMENT-PLAN.md",
+      "status": "EXECUTED_AWAITING_REVIEW",
+      "head": "3d7aa8d7",
+      "file": "../../60.7-C4-I-COMPLEMENT-SUMMARY.md",
+      "evidence": "../../evidence/c4i-complement-20261119/",
       "cases": [
-        "A: successful administrative refund with proven absence, epoch, finality, square handoff and replay",
+        "A: successful administrative refund with proven absence, epoch 7, finality, square handoff, replay and zero-effect divergent deliver",
         "B: normal vertical delivery creating the real thumbnail in the same HTTP pass"
       ]
     },
