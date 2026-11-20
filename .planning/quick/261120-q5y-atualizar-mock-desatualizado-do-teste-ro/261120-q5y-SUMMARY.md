@@ -65,11 +65,26 @@ Nenhum desvio de execução. Duas notas de escopo (aplicadas de propósito, conf
 
 | Comando | Resultado |
 |---|---|
-| `npx vitest run src/app/api/admin/product-1-1-pending/__tests__/route-format.test.ts --reporter=dot` | **5 passed / 0 failed** (baseline: 4 failed / 1 passed) |
-| `npx vitest run src/lib/product-9-16-two-stage/__tests__/admin-pending-route.test.ts --reporter=dot` | **2 passed** (teste vizinho não regrediu) |
+| `npx vitest run src/app/api/admin/product-1-1-pending/__tests__/route-format.test.ts` | **5 passed / 0 failed** (baseline: 4 failed / 1 passed) |
+| `npx vitest run` nas 4 suítes de `product-9-16-two-stage` (`admin-pending-route`, `admin-pending-two-stage.contract`, `admin-pending-wiring.contract`, `pending-operations-repository`) | **4 files, 10 passed / 10** (nenhuma regressão) |
+| `npx vitest run` nas **5 suítes juntas** (route-format + as 4 acima) | **5 files, 15 passed / 15** |
 | `npm.cmd run typecheck` (`tsc -p tsconfig.typecheck.json --noEmit`) | **limpo** |
-| `npx eslint <arquivo>` | 0 errors (arquivo ignorado pela config) |
+| `npm.cmd run lint` (`eslint .`) | **projeto limpo, 0 erros**; ressalva: o ESLint **ignora** `__tests__/route-format.test.ts` (sem configuração correspondente), então o lint **não cobre** este arquivo |
+| `git diff --check` | **limpo** |
 | `git diff --stat` | 1 arquivo de código (o teste) + 2 `__pycache__` pré-existentes, não stageados |
+
+### Revisão independente (2026-11-20)
+
+Revisão do usuário aprovou a correção técnica sem bloqueadores:
+
+- fábrica real preservada pelo mock parcial confirmada;
+- sondas encaminhadas corretamente ao repositório;
+- mapeamento de erros confere com o código atual;
+- nenhum código de produção alterado;
+- reexecução das **5 suítes juntas: 15/15 testes passaram**;
+- diff limpo; apenas os dois `__pycache__` preexistentes permanecem modificados.
+
+A suíte global **não foi reexecutada** nesta quick; a contagem geral de falhas externas permanece não atualizada.
 
 Gates do plano (`rg -n "importOriginal" <arquivo>` ⇒ 1 ocorrência; `twoStageArtifacts` presente; `resolutionErrorStatus: () => 409` ⇒ 0 ocorrências) confirmados.
 
