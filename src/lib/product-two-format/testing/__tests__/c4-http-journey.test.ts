@@ -73,6 +73,21 @@ describe("F60.7 C4-I — jornada offline com injeção determinística", () => {
     );
     expect(vertical.kind).toBe("delivered");
 
+    const thumbnailPaths = world.base.handles.uploads
+      .filter(
+        (upload) =>
+          upload.bucket === "campaign-images" &&
+          upload.path.endsWith(".thumb-v1.webp"),
+      )
+      .map((upload) => upload.path);
+    expect(
+      thumbnailPaths.some((path) => path.endsWith("/square_original.thumb-v1.webp")),
+    ).toBe(true);
+    expect(
+      thumbnailPaths.some((path) => path.endsWith("/vertical.thumb-v1.webp")),
+    ).toBe(true);
+    expect(world.rpcCounts["product_two_format_project_campaign"] ?? 0).toBe(0);
+
     expect(injection.activation.map((event) => event.step).sort()).toEqual([
       "base_image",
       "copy",

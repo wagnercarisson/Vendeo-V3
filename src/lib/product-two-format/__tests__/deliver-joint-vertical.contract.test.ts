@@ -167,6 +167,7 @@ function makeDeps(config: DepsConfig = {}) {
       if (config.deliverThrows !== undefined) throw config.deliverThrows;
       return config.deliver ?? delivered();
     }),
+    generateThumbnail: vi.fn(async () => ({ status: "created" as const })),
   };
   return { deps, order };
 }
@@ -382,6 +383,46 @@ describe("F60.7-06 — entrega vertical dedicada", () => {
       format: "9:16",
       publicationToken: TOKEN,
     });
+  });
+
+  it("Teste 11b: miniatura do vertical é gerada na entrega normal, com o caminho do artefato 9:16", async () => {
+    const { deps } = makeDeps({
+      deliver: delivered({ storagePath: `${STORE}/${CAMPAIGN}/projected-square.jpg` }),
+    });
+    const outcome = await deliverTwoFormatVertical(input(), deps);
+    expect(outcome.kind).toBe("delivered");
+    expect(deps.generateThumbnail).toHaveBeenCalledTimes(1);
+    expect(deps.generateThumbnail).toHaveBeenCalledWith({
+      storeId: STORE,
+      campaignId: CAMPAIGN,
+      operationId: OPERATION,
+      role: "vertical",
+      storagePath: PATH_916,
+    });
+
+    const refusedRun = makeDeps({ deliver: refused("invalid_transition") });
+    await deliverTwoFormatVertical(input(), refusedRun.deps);
+    expect(refusedRun.deps.generateThumbnail).not.toHaveBeenCalled();
+
+    const replay = makeDeps({
+      resume: envelope({ action: "blocked", creditStatus: "delivered" }),
+    });
+    await deliverTwoFormatVertical(input(), replay.deps);
+    expect(replay.deps.generateThumbnail).not.toHaveBeenCalled();
+  });
+
+  it("Teste 11c: falha da miniatura é best-effort e não desfaz a entrega", async () => {
+    const { deps } = makeDeps();
+    vi.mocked(deps.generateThumbnail).mockRejectedValueOnce(
+      new Error("thumbnail_upload_failed"),
+    );
+    expect(await deliverTwoFormatVertical(input(), deps)).toEqual({
+      kind: "delivered",
+      idempotent: false,
+      campaignStatus: "ready",
+      storagePath: PATH_916,
+    });
+    expect(deps.deliverFormat).toHaveBeenCalledTimes(1);
   });
 
   it("Teste 12: sonda invalid/absent/indeterminate ⇒ sem token/entrega", async () => {

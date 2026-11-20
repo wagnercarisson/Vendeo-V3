@@ -359,6 +359,7 @@ export function createTwoFormatRunDeps(
         abortPublication: (campaignId, operationId, token, phase) =>
           credit.abortPublication(campaignId, operationId, token, phase),
         deliverFormat: (deliver) => jointClient.deliverFormat(deliver),
+        generateThumbnail: (thumb) => joint.generateThumbnail(thumb),
         clock,
       }),
     repairProjection: (input) =>

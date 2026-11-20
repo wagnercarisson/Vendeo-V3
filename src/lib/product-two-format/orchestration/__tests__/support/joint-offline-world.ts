@@ -2630,6 +2630,7 @@ export async function createJointWorldDeps(
     beginPublication: joint.credit.beginPublication,
     abortPublication: joint.credit.abortPublication,
     deliverFormat: jointClient.deliverFormat.bind(jointClient),
+    generateThumbnail: joint.generateThumbnail,
     clock: joint.clock,
   };
 

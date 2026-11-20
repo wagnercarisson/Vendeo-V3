@@ -316,7 +316,10 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     expect(campaign(world)?.status).toBe("ready");
     const callsAfterFirst = deps.thumbnailCalls();
     expect(callsAfterFirst).toBeGreaterThan(0);
-    expect(deps.thumbnailStatuses()).toContain("created");
+    // As duas miniaturas já vieram da entrega normal: o reparo não cria outra.
+    expect(deps.thumbnailStatuses().every((status) => status === "already_exists")).toBe(
+      true,
+    );
     expect(
       world.base.handles.uploads.some(
         (upload) => upload.bucket === "campaign-images",
@@ -329,6 +332,24 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     });
     expect(second.kind).toBe("repaired");
     expect(deps.thumbnailCalls()).toBe(callsAfterFirst);
+  });
+
+  it("Teste 13b: jornada normal entrega o vertical E gera as duas miniaturas, sem reparo posterior", async () => {
+    const { world } = await fullSuccess();
+    const thumbnailUploads = world.base.handles.uploads.filter(
+      (upload) =>
+        upload.bucket === "campaign-images" &&
+        upload.path.endsWith(".thumb-v1.webp"),
+    );
+    const paths = thumbnailUploads.map((upload) => upload.path);
+    expect(paths.some((path) => path.endsWith("/square_original.thumb-v1.webp"))).toBe(
+      true,
+    );
+    expect(paths.some((path) => path.endsWith("/vertical.thumb-v1.webp"))).toBe(
+      true,
+    );
+    // A miniatura veio da entrega normal: nenhuma projeção/reparo foi acionado.
+    expect(world.rpcCounts["product_two_format_project_campaign"] ?? 0).toBe(0);
   });
 
   it("Teste 13: leitura parcial bloqueia e não estorna", async () => {

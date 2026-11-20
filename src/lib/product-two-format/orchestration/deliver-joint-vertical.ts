@@ -82,6 +82,17 @@ export interface JointVerticalDeliveryDeps {
   readonly deliverFormat: (
     input: TwoFormatDeliverInput,
   ) => Promise<TwoFormatDeliverResult>;
+  /**
+   * Miniatura best-effort do vertical entregue. Gerada na MESMA passagem em
+   * que a entrega é confirmada (não depende de reparo/continuação posterior).
+   */
+  readonly generateThumbnail: (input: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+    role: "vertical";
+    storagePath: string;
+  }) => Promise<unknown>;
   readonly clock?: () => number;
 }
 
@@ -360,6 +371,22 @@ export async function deliverTwoFormatVertical(
       return { kind: "terminal_conflict", code: "invalid_transition" };
     }
     return { kind: "failed", code: reason };
+  }
+
+  // F60.7-06 — a miniatura do vertical é gerada na entrega NORMAL, com o
+  // caminho do artefato vertical comprovado pela sonda (não o `storagePath`
+  // projetado, que pode apontar para o quadrado). Best-effort: falha de
+  // miniatura nunca desfaz a entrega nem o estorno.
+  try {
+    await deps.generateThumbnail({
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      role: "vertical",
+      storagePath: probe.storagePath,
+    });
+  } catch {
+    // Best-effort: a entrega já está confirmada.
   }
 
   return {
