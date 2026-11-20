@@ -68,6 +68,7 @@ import { probeExpansionTarget } from "./probe";
 import {
   createExpansionTelemetry,
   expansionOutcomeFor,
+  frozenCreditValueField,
   type ExpansionTelemetryDetails,
 } from "./telemetry";
 import {
@@ -79,6 +80,7 @@ import {
 } from "./transport";
 import type {
   ExpandVerticalInput,
+  ExpandVerticalParsedInput,
   ExpandVerticalResult,
   ExpansionCallEvidence,
   ExpansionInvalidReason,
@@ -288,7 +290,7 @@ export async function expandVerticalToNineSixteen(
   // (1) Entrada — nenhum I/O antes da recusa.
   const parsed = parseExpandVerticalInput(input);
   if (!parsed.ok) return invalidInput(parsed.reason);
-  const valid = parsed.input;
+  const valid: ExpandVerticalParsedInput = parsed.input;
 
   const client = deps.client;
   const clock = deps.clock ?? (() => Date.now());
@@ -475,6 +477,8 @@ export async function expandVerticalToNineSixteen(
     pricingVersion: pricingResolution.versionId,
     tokenPricing: pricingResolution.pricing,
     imageUnitUsd: pricingResolution.imageUnitUsd,
+    usdBrlRateAtGeneration: valid.usdBrlRateAtGeneration,
+    ...frozenCreditValueField(valid),
   });
 
   const abortHandle = createExpansionAbortSignal(valid.timeoutMs, valid.signal);

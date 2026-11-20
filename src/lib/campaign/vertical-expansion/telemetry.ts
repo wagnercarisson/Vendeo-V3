@@ -135,6 +135,26 @@ export interface ExpansionTelemetryInput {
    * `null` = estimativa indisponível (nunca zero nem custo efetivo).
    */
   readonly imageUnitUsd: number | null;
+  /**
+   * Quick 261120-qvp (D-05/D-07): snapshot econômico CONGELADO do run. Obrigatório
+   * (espelha `square-base/telemetry.ts`): os valores são repassados aos DOIS
+   * contextos (`createDefaultTelemetryContext`) — o principal e o criado por
+   * envelope no flush. `null` é ausência explícita.
+   */
+  readonly usdBrlRateAtGeneration: number | null;
+  readonly creditValueBrlAtGeneration: number | null;
+}
+
+/**
+ * Quick 261120-qvp: repassa o valor de crédito CONGELADO da entrada validada
+ * para o input da telemetria. O helper existe para que `expand.ts` não repita no
+ * call-site o identificador do valor de crédito (guard de fronteira do módulo),
+ * mantendo a origem do dado explícita e tipada — nunca um parâmetro vigente.
+ */
+export function frozenCreditValueField(input: {
+  readonly creditValueBrlAtGeneration: number | null;
+}): Pick<ExpansionTelemetryInput, "creditValueBrlAtGeneration"> {
+  return { creditValueBrlAtGeneration: input.creditValueBrlAtGeneration };
 }
 
 export interface ExpansionTelemetryDetails {
@@ -234,6 +254,8 @@ export function createExpansionTelemetry(
           resolved = cost;
         },
         ...(internalCost === undefined ? {} : { internalCost }),
+        usdBrlRateAtGeneration: input.usdBrlRateAtGeneration,
+        creditValueBrlAtGeneration: input.creditValueBrlAtGeneration,
       });
 
       await context.sink.emit(decorateEnvelope(input, details, envelope));
@@ -249,6 +271,8 @@ export function createExpansionTelemetry(
     ...(input.userId === undefined ? {} : { userId: input.userId }),
     attemptNumber: input.attemptNumber,
     sink: buffering,
+    usdBrlRateAtGeneration: input.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: input.creditValueBrlAtGeneration,
   });
 
   return {

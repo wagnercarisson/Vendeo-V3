@@ -53,8 +53,27 @@ export interface ExpandVerticalInput {
   readonly authorization: AuthorizationContext;
   /** Prazo do chamador; só pode encurtar o teto do módulo. */
   readonly timeoutMs?: number;
+  /**
+   * Quick 261120-qvp (D-06): snapshot econômico CONGELADO do run. Usado apenas
+   * para apuração/telemetria — NUNCA decide gasto, cobrança, reserva ou pricing.
+   * `null` é ausência EXPLÍCITA (operação antiga/sem snapshot), nunca zero.
+   */
+  readonly usdBrlRateAtGeneration?: number | null;
+  /** Snapshot ESTIMATIVO do valor do crédito em BRL. Mesmas regras acima. */
+  readonly creditValueBrlAtGeneration?: number | null;
   readonly signal?: AbortSignal;
 }
+
+/**
+ * Saída VALIDADA do parser: os dois campos econômicos estão SEMPRE presentes
+ * (nunca opcionais) como `number | null`. É o contrato devolvido no braço
+ * `ok: true` de `ExpandVerticalParseResult` e consumido pela telemetria sem
+ * `undefined`, `?? null` ou cast.
+ */
+export type ExpandVerticalParsedInput = ExpandVerticalInput & {
+  readonly usdBrlRateAtGeneration: number | null;
+  readonly creditValueBrlAtGeneration: number | null;
+};
 
 /**
  * Evidência da chamada real (uma por invocação paga). `returnedSize` é medido

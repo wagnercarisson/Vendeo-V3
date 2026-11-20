@@ -24,7 +24,11 @@ import {
 import { ROLE_POLICY } from "@/lib/campaign/composition-artifacts/role-policy";
 import { PROVIDER_SIZE } from "@/lib/product-vertical-9-16/dimensions";
 
-import type { ExpandVerticalInput, ExpansionInvalidReason } from "./types";
+import type {
+  ExpandVerticalInput,
+  ExpandVerticalParsedInput,
+  ExpansionInvalidReason,
+} from "./types";
 
 export { PROVIDER_SIZE };
 
@@ -129,7 +133,7 @@ export const EXPANSION_FORBIDDEN_KEYS: readonly string[] = Object.freeze(
 );
 
 export type ExpandVerticalParseResult =
-  | { readonly ok: true; readonly input: ExpandVerticalInput }
+  | { readonly ok: true; readonly input: ExpandVerticalParsedInput }
   | { readonly ok: false; readonly reason: ExpansionInvalidReason };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -138,6 +142,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasOwn(record: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+/**
+ * Normaliza um valor econômico congelado (quick 261120-qvp, D-06): aceita
+ * SOMENTE número finito (incluindo `0`, que é valor válido) e `null`; qualquer
+ * outro valor — ausente, `undefined`, `NaN`, ±`Infinity`, string, booleano ou
+ * objeto — vira `null` explícito. Nunca recusa a entrada e nunca inventa valor.
+ */
+function normalizeEconomicSnapshotValue(
+  record: Record<string, unknown>,
+  key: string,
+): number | null {
+  if (!hasOwn(record, key)) return null;
+  const value = record[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return null;
 }
 
 function invalidInput(reason: ExpansionInvalidReason): ExpandVerticalParseResult {
@@ -246,6 +266,8 @@ export function parseExpandVerticalInput(raw: unknown): ExpandVerticalParseResul
       }),
       authorization: authorizationResult.authorization,
       timeoutMs,
+      usdBrlRateAtGeneration: normalizeEconomicSnapshotValue(raw, "usdBrlRateAtGeneration"),
+      creditValueBrlAtGeneration: normalizeEconomicSnapshotValue(raw, "creditValueBrlAtGeneration"),
       ...(signal === undefined ? {} : { signal }),
     }),
   });
