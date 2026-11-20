@@ -9,6 +9,10 @@ import { probeExpansionTarget } from "@/lib/campaign/vertical-expansion/probe";
 import type { ProductTwoStageOperationClient } from "../two-stage-operation-client";
 import type { AttemptTarget, TwoStageStepStatus } from "../types";
 import { canAffordStep, remainingForStep } from "./deadline-budget";
+import {
+  readExpansionEconomicSnapshot,
+  withEconomicReadBudget,
+} from "./economic-snapshot-reader";
 import { mapModuleOutcomeToControl, type ModuleOutcome } from "./failure-mapping";
 import { finishStepWithAck } from "./finish-ack";
 import { reconcileExpansionArtifact } from "./reconciliation";
@@ -48,6 +52,13 @@ export interface ExpansionStepDeps {
       authorization: AuthorizationContext;
       timeoutMs: number;
       signal?: AbortSignal;
+      /**
+       * Quick 261120-qvp (D-01): snapshot econômico CONGELADO do run,
+       * encaminhado ao módulo de expansão para a telemetria. `null` explícito
+       * quando indisponível — nunca valor vigente.
+       */
+      usdBrlRateAtGeneration?: number | null;
+      creditValueBrlAtGeneration?: number | null;
     },
     deps: { readonly selection: ExpansionSelection },
   ) => Promise<ExpandVerticalResult>;
@@ -64,6 +75,21 @@ export interface ExpansionStepDeps {
   readonly clock: () => number;
   readonly client?: unknown;
   readonly reconcile?: typeof reconcileExpansionArtifact;
+  /**
+   * Quick 261120-qvp (D-01/D-02): leitura do snapshot econômico durável,
+   * injetável para teste. Default `readExpansionEconomicSnapshot`. Deve ser
+   * best-effort; o step ainda a envolve no limite de espera.
+   */
+  readonly readEconomicSnapshot?: (input: {
+    campaignId: string;
+    storeId: string;
+    client?: unknown;
+  }) => Promise<{
+    usdBrlRateAtGeneration: number | null;
+    creditValueBrlAtGeneration: number | null;
+  }>;
+  /** Limite de espera da leitura econômica (default 2.000 ms). */
+  readonly economicSnapshotTimeoutMs?: number;
 }
 
 function outcomeForFailure(result: Exclude<ExpandVerticalResult, { kind: "expanded" | "reused" }>): ModuleOutcome {
@@ -228,6 +254,22 @@ export async function runExpansionStep(
     }
   }
 
+  // Quick 261120-qvp (D-01): snapshot econômico durável lido UMA única vez por
+  // execução, DEPOIS do preflight e ANTES do recheck final. Best-effort: toda
+  // degradação vira `null` explícito e a expansão prossegue. O thunk é criado
+  // aqui e só é invocado (uma vez) pelo wrapper de limite de espera. Este ponto
+  // fica FORA do bloco condicional do preflight, então o caminho de artefato
+  // reutilizado também executa a leitura exatamente uma vez.
+  const economicSnapshot = await withEconomicReadBudget(
+    () =>
+      (deps.readEconomicSnapshot ?? readExpansionEconomicSnapshot)({
+        campaignId: input.campaignId,
+        storeId: input.storeId,
+        ...(deps.client === undefined ? {} : { client: deps.client }),
+      }),
+    deps.economicSnapshotTimeoutMs,
+  );
+
   // Recheck obrigatório imediatamente antes de adquirir: cancelamento ou
   // orçamento esgotado durante o preflight não podem consumir tentativa.
   const recheck = preCallGate(input, deps);
@@ -263,6 +305,8 @@ export async function runExpansionStep(
       authorization: input.authorization,
       timeoutMs: remainingForStep(deps.clock(), input.deadlineAtMs),
       ...(input.signal === undefined ? {} : { signal: input.signal }),
+      usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
     },
     { selection: input.selection },
   );

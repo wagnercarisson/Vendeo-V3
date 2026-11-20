@@ -789,8 +789,8 @@ describe("runExpansionStep — snapshot econômico durável (D-01/D-02/D-08)", (
     expect(expandCalls[0][0].creditValueBrlAtGeneration).toBeNull();
     expect(calls(d, "control.acquire")).toHaveLength(1);
     expect(calls(d, "control.finish")).toHaveLength(1);
-    const finishCalls = calls(d, "control.finish") as Array<[{ request: { status: string } }]>;
-    expect(finishCalls[0][0].request.status).toBe("completed");
+    const finishCalls = calls(d, "control.finish") as Array<[{ status: string }]>;
+    expect(finishCalls[0][0].status).toBe("completed");
   });
 
   it("timeout da leitura: expand recebe null/null, sem consumir tentativa extra", async () => {
