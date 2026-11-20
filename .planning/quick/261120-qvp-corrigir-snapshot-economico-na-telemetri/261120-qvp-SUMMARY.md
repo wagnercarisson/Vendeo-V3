@@ -1,8 +1,21 @@
 # Quick 261120-qvp — Corrigir snapshot econômico na telemetria da expansão 9:16
 
-**Status:** CONCLUÍDA (offline, sem banco/Storage/provider)
+**Status:** CONCLUÍDA E ACEITA TECNICAMENTE (offline, sem banco/Storage/provider)
 **Branch:** `fix/telemetria-snapshot-economico-9-16`
-**Change OpenSpec:** `fix-snapshot-economico-telemetria-expansao-9-16` (implementada; sem sync/archive)
+**Change OpenSpec:** `fix-snapshot-economico-telemetria-expansao-9-16` (verificada, sincronizada e arquivada em `openspec/changes/archive/2026-11-20-fix-snapshot-economico-telemetria-expansao-9-16/`)
+**Verificação:** `261120-qvp-VERIFICATION.md` (GSD, passed) e `261120-qvp-OPSX-VERIFY.md` (OpenSpec, PASS)
+
+## Aceite independente (2026-11-20)
+
+O responsável revisou a correção e **não encontrou bloqueadores**. Confirmou:
+
+- helper de contorno removido e campo econômico encaminhado diretamente;
+- exceção do guard restrita ao identificador autorizado, com operações financeiras ainda recusadas;
+- leitura limitada e recheck antes do `acquire` preservados;
+- base, cobrança, reservas, entrega e rotas não alteradas;
+- reexecução independente: **109 arquivos / 1.306 testes PASS**; typecheck PASS sem cache incremental; lint PASS (com a ressalva de cobertura); OpenSpec strict e diff-check PASS.
+
+A validação é offline e **não equivale a teste em produção**; a suíte global **não** foi reexecutada. Merge, push e deploy permanecem etapas separadas. Este aceite autoriza o fechamento documental da change, não a publicação.
 
 ---
 
