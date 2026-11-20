@@ -328,13 +328,18 @@ function stepInput() {
 }
 
 function stepHarness(overrides: Record<string, unknown> = {}) {
-  const expand = vi.fn(async () => ({
-    kind: "expanded",
-    artifact: {},
-    bytes: Buffer.alloc(0),
-    persistence: "created",
-    call: {},
-  }));
+  const expand = vi.fn(
+    async (_input: {
+      usdBrlRateAtGeneration?: number | null;
+      creditValueBrlAtGeneration?: number | null;
+    }) => ({
+      kind: "expanded",
+      artifact: {},
+      bytes: Buffer.alloc(0),
+      persistence: "created",
+      call: {},
+    }),
+  );
   const deps = {
     control: {
       acquire: vi.fn(async () => ({
@@ -392,9 +397,7 @@ describe("runExpansionStep — continuação/retry e operação antiga (D-04)", 
     });
 
     for (const harness of [first, second]) {
-      const expandCalls = harness.expand.mock.calls as Array<
-        [{ usdBrlRateAtGeneration: unknown; creditValueBrlAtGeneration: unknown }]
-      >;
+      const expandCalls = harness.expand.mock.calls;
       expect(expandCalls).toHaveLength(1);
       expect(expandCalls[0][0].usdBrlRateAtGeneration).toBe(5.1);
       expect(expandCalls[0][0].creditValueBrlAtGeneration).toBe(1);
@@ -415,9 +418,7 @@ describe("runExpansionStep — continuação/retry e operação antiga (D-04)", 
         kind: "completed",
       });
 
-      const expandCalls = harness.expand.mock.calls as Array<
-        [{ usdBrlRateAtGeneration: unknown; creditValueBrlAtGeneration: unknown }]
-      >;
+      const expandCalls = harness.expand.mock.calls;
       expect(expandCalls).toHaveLength(1);
       expect(expandCalls[0][0].usdBrlRateAtGeneration).toBeNull();
       expect(expandCalls[0][0].creditValueBrlAtGeneration).toBeNull();
