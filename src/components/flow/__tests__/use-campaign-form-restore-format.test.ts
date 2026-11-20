@@ -123,7 +123,7 @@ describe("F59/59-08 — hidratação do formato restaurado", () => {
       }),
     );
     expect(screen.getByText("Formato")).toBeInTheDocument();
-    expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
+    expect(screen.getByText("Vertical 9:16 (Stories/Reels)")).toBeInTheDocument();
   });
 
   it("restore 1:1 mantém 1:1 e o body fica sem a chave", async () => {

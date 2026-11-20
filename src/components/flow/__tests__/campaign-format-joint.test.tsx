@@ -123,7 +123,11 @@ describe("F60.7 C2 — review conjunto", () => {
 
   it("mostra dois formatos e 2 créditos; saldo < 2 bloqueia", () => {
     const { unmount } = renderReview(1);
-    expect(screen.getByText(/Quadrado 1:1 \+ Vertical 9:16/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Quadrado 1:1 (Feed) + Vertical 9:16 (Stories/Reels)",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText(/2 créditos/)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Confirmar e gerar campanha" }),

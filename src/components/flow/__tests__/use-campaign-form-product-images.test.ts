@@ -256,20 +256,25 @@ describe("useCampaignForm productImages (F41)", () => {
     // Caso 2: só primary → body.productImageDataUrl legado (sem productImages)
     mockPush.mockClear();
     fetchMock.mockClear();
+    // A transição encerra a tela anterior; o segundo caso usa um novo hook.
+    const second = renderHook(() => useCampaignForm("store-1"));
     await act(async () => {
-      result.current.setField("productImages", [
+      second.result.current.setField("productName", "Produto Teste");
+      second.result.current.setField("discountedPriceCents", 1990);
+      second.result.current.setField("badge", "Oferta");
+      second.result.current.setField("productImages", [
         { id: "a", role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
       ]);
     });
     await act(async () => {
-      await result.current.enterReview();
+      await second.result.current.enterReview();
     });
     await act(async () => {
-      await result.current.confirmReview();
+      await second.result.current.confirmReview();
     });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
-    expect(result.current.submitError).toBeNull();
+    expect(second.result.current.submitError).toBeNull();
     await waitFor(() => expect(mockPush).toHaveBeenCalled());
     const bodyLegado = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(bodyLegado.productImageDataUrl).toBe(VALID_DATA_URL);

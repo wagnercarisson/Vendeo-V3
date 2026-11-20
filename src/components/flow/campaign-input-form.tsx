@@ -49,6 +49,7 @@ import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
 import { resolvePresentedCredits } from "@/lib/campaign/two-format-credits";
 import {
+  CAMPAIGN_TRANSITION_NOTES,
   deriveGenerationUi,
   GENERATION_UI_MESSAGES,
 } from "@/lib/campaign/generation-ui";
@@ -112,6 +113,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     continueGeneration,
     retryProcessingStatus,
     continuationInFlight,
+    campaignTransition,
     resetUnknownResult,
     invalidateTerminalIdentity,
     restorationNotice,
@@ -142,14 +144,18 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
   // F60.7 C2/C6 — a superfície de geração tem título próprio e resumo
   // não editável; preenchimento/revisão preservam o cabeçalho existente.
   const isGenerationSurface =
-    isSubmitting || processingResult != null || unknownResult != null;
+    isSubmitting ||
+    processingResult != null ||
+    unknownResult != null ||
+    campaignTransition != null;
   const showFormatSelector =
     eligible &&
     !isSubmitting &&
     !reviewMode &&
     !preparing &&
     !unknownResult &&
-    !processingResult;
+    !processingResult &&
+    !campaignTransition;
   const showFormatSummary = eligible && isGenerationSurface && !reviewMode;
 
   const pageHeader = (
@@ -232,6 +238,27 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             disabled: continuationInFlight,
           }
         : undefined;
+
+  if (campaignTransition) {
+    return (
+      <div>
+        {pageHeader}
+        <div className="pb-8" data-testid="campaign-transition-panel">
+          <GenerationStatusPanel message={GENERATION_UI_MESSAGES.opening}>
+            <p className="mt-1 text-xs font-body text-text-secondary">
+              {CAMPAIGN_TRANSITION_NOTES[campaignTransition.outcome]}
+            </p>
+            <a
+              href={campaignTransition.campaignUrl}
+              className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-lg border border-border px-3 py-2 text-sm font-semibold text-accent-blue transition-colors hover:bg-bg-elevated"
+            >
+              Abrir campanha
+            </a>
+          </GenerationStatusPanel>
+        </div>
+      </div>
+    );
+  }
 
   if (processingResult) {
     return (

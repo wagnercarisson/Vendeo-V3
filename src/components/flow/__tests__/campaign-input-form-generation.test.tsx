@@ -406,4 +406,112 @@ describe("F60.7 C2/C6 — tela de geração montada", () => {
       expect(mockPush).toHaveBeenCalledWith(`/campanhas/${CAMPAIGN_ID}`),
     );
   });
+
+  it("conclusão mantém 'Abrindo sua campanha...' com navegação pendente e sem formulário", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/campaign/generate-image") {
+        return immediateStream(resultBody());
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <CampaignInputForm
+        storeId="store-1"
+        balance={2}
+        eligible
+        verticalEnabled
+      />,
+    );
+    await openReviewAndConfirm();
+
+    await waitFor(() =>
+      expect(screen.getByText("Abrindo sua campanha...")).toBeInTheDocument(),
+    );
+    expectGenerationSummary();
+    expect(screen.getByText("Sua campanha está pronta.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Abrir campanha" }),
+    ).toHaveAttribute("href", `/campanhas/${CAMPAIGN_ID}`);
+    expect(
+      screen.queryByRole("button", { name: "Revisar e gerar" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Confirmar e gerar campanha" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Dados da Campanha" }),
+    ).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.map(([url]) => String(url)),
+    ).toEqual(["/api/campaign/generate-image"]);
+  });
+
+  it("parcial terminal mantém a classificação na transição", async () => {
+    const partial = `${JSON.stringify({
+      type: "result",
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      campaignUrl: `/campanhas/${CAMPAIGN_ID}`,
+      operationTerminal: true,
+      formats: formats("delivered", "absent"),
+    })}\n`;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/campaign/generate-image") return immediateStream(partial);
+      throw new Error(`unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <CampaignInputForm
+        storeId="store-1"
+        balance={2}
+        eligible
+        verticalEnabled
+      />,
+    );
+    await openReviewAndConfirm();
+
+    await waitFor(() =>
+      expect(screen.getByText("Abrindo sua campanha...")).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByText("Um formato foi concluído; o outro será mostrado no detalhe."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Sua campanha está pronta.")).not.toBeInTheDocument();
+  });
+
+  it("estorno mantém a classificação na transição", async () => {
+    const refunded = `${JSON.stringify({
+      type: "error",
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      refunded: true,
+      formats: formats("absent", "absent"),
+    })}\n`;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/campaign/generate-image") return immediateStream(refunded);
+      throw new Error(`unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <CampaignInputForm
+        storeId="store-1"
+        balance={2}
+        eligible
+        verticalEnabled
+      />,
+    );
+    await openReviewAndConfirm();
+
+    await waitFor(() =>
+      expect(screen.getByText("Abrindo sua campanha...")).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByText("A geração foi encerrada e o crédito devolvido."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Sua campanha está pronta.")).not.toBeInTheDocument();
+  });
 });

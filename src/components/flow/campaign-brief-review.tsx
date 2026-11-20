@@ -175,18 +175,10 @@ export function CampaignBriefReview({
               <dt className="text-text-muted text-sm font-body w-32 shrink-0">Formato</dt>
               <dd className="min-w-0 break-words text-text-primary text-sm font-body">
                 {campaignFormat === "1:1+9:16"
-                  ? "Quadrado 1:1 + Vertical 9:16"
+                  ? "Quadrado 1:1 (Feed) + Vertical 9:16 (Stories/Reels)"
                   : campaignFormat === "9:16"
-                    ? "Vertical 9:16"
-                    : "Quadrado 1:1"}
-                {campaignFormat === "9:16" && (
-                  <span className="ml-1 text-text-muted">1080 × 1920 px</span>
-                )}
-                {campaignFormat === "1:1+9:16" && (
-                  <span className="ml-1 text-text-muted">
-                    1024 × 1024 px + 1080 × 1920 px
-                  </span>
-                )}
+                    ? "Vertical 9:16 (Stories/Reels)"
+                    : "Quadrado 1:1 (Feed)"}
               </dd>
             </div>
           )}

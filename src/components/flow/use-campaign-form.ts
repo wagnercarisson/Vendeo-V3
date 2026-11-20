@@ -166,6 +166,18 @@ type ProcessingState = {
   nextStep?: string | null;
 };
 
+export type CampaignTransitionOutcome =
+  | "delivered"
+  | "partial_terminal"
+  | "refunded";
+
+export type CampaignTransitionState = {
+  campaignId: string;
+  campaignUrl: string;
+  operationId: string | null;
+  outcome: CampaignTransitionOutcome;
+} | null;
+
 type StatusOutcome =
   | "delivered"
   | "partial_terminal"
@@ -173,6 +185,7 @@ type StatusOutcome =
   | "refunded"
   | "unknown"
   | "processing"
+  | "transitioning"
   | "unavailable"
   | "error";
 
@@ -366,6 +379,8 @@ export interface UseCampaignFormReturn {
   } | null;
   /** C2/C6 — requisição manual de continuação em andamento. */
   continuationInFlight: boolean;
+  /** C2/C6 — transição para a campanha já existente após terminal com navegação. */
+  campaignTransition: CampaignTransitionState;
   /** F60.5/F60.7 — fluxo efetivo da submissao/restauracao (decide UI e status). */
   flowKind: CampaignFlowKind;
   /** Pausa efetiva (servidor OU draft local joint/vertical com flag OFF). */
@@ -981,6 +996,9 @@ export function useCampaignForm(
   // F60.5 — processamento (distinto de unknown/sucesso), com retomada manual.
   const [processingResult, setProcessingResult] = useState<ProcessingState | null>(null);
   const [continuationInFlight, setContinuationInFlight] = useState(false);
+  const [campaignTransition, setCampaignTransition] =
+    useState<CampaignTransitionState>(null);
+  const campaignTransitionRef = useRef<CampaignTransitionState>(null);
   const continueInFlightRef = useRef(false);
   const autoContinueRef = useRef(0);
   const pendingContinuationRef = useRef<ProcessingState | null>(null);
@@ -1101,6 +1119,53 @@ export function useCampaignForm(
   );
 
   /**
+   * C2/C6 — transição explícita para a campanha já existente.
+   *
+   * A tela permanece em “Abrindo sua campanha...” até a navegação assumir. O
+   * formulário/revisão não voltam a renderizar e a navegação acontece no máximo
+   * uma vez. Não há nova geração/continuação/reserva/cobrança.
+   */
+  const beginCampaignTransition = useCallback(
+    (input: {
+      campaignId: string | null;
+      campaignUrl?: string | null;
+      operationId: string | null;
+      outcome: CampaignTransitionOutcome;
+    }): boolean => {
+      if (!input.campaignId) return false;
+      if (campaignTransitionRef.current) return false;
+      const campaignUrl =
+        typeof input.campaignUrl === "string" && input.campaignUrl.length > 0
+          ? input.campaignUrl
+          : `/campanhas/${input.campaignId}`;
+      const next: NonNullable<CampaignTransitionState> = {
+        campaignId: input.campaignId,
+        campaignUrl,
+        operationId: input.operationId,
+        outcome: input.outcome,
+      };
+      campaignTransitionRef.current = next;
+      setCampaignTransition(next);
+      setProcessingResult(null);
+      setUnknownResult(null);
+      setSubmitError(null);
+      setIsSubmitting(false);
+      jointRequestIdRef.current = null;
+      if (input.outcome === "refunded") {
+        confirmedBodyRef.current = null;
+      }
+      clearActiveOperation(input.campaignId);
+      try {
+        router.push(campaignUrl);
+      } catch {
+        // A tela de transição mantém o link “Abrir campanha” como recuperação.
+      }
+      return true;
+    },
+    [clearActiveOperation, router],
+  );
+
+  /**
    * C2 — aplica o resultado normalizado do fluxo conjunto. Só `complete` e
    * `partial_terminal` encerram/navegam; `partial_indeterminate`,
    * `finalization_pending`, `processing` e `unknown` preservam a operação ativa.
@@ -1111,33 +1176,41 @@ export function useCampaignForm(
       target: { campaignId: string | null; operationId: string | null },
       options: { recovery?: "auto" | "manual" } = {},
     ): StatusOutcome => {
+      if (campaignTransitionRef.current) return "transitioning";
       switch (outcome.kind) {
         case "complete":
-          setProcessingResult(null);
-          jointRequestIdRef.current = null;
-          clearActiveOperation(target.campaignId);
-          if (target.campaignId) {
-            router.push(`/campanhas/${target.campaignId}`);
+          if (
+            !beginCampaignTransition({
+              campaignId: target.campaignId,
+              operationId: target.operationId,
+              outcome: "delivered",
+            })
+          ) {
+            setProcessingResult(null);
           }
           return "delivered";
         case "partial_terminal":
           // Terminal parcial: o formato entregue permanece acessível; não é
           // sucesso pleno e a operação ativa pode ser encerrada.
-          setProcessingResult(null);
-          jointRequestIdRef.current = null;
-          clearActiveOperation(target.campaignId);
-          if (target.campaignId) {
-            router.push(`/campanhas/${target.campaignId}`);
+          if (
+            !beginCampaignTransition({
+              campaignId: target.campaignId,
+              operationId: target.operationId,
+              outcome: "partial_terminal",
+            })
+          ) {
+            setProcessingResult(null);
           }
           return "partial_terminal";
         case "refunded":
-          setProcessingResult(null);
-          jointRequestIdRef.current = null;
-          clearActiveOperation(target.campaignId);
-          confirmedBodyRef.current = null;
-          setSubmitError("A geração foi encerrada e o crédito devolvido.");
-          if (target.campaignId) {
-            router.push(`/campanhas/${target.campaignId}`);
+          if (
+            !beginCampaignTransition({
+              campaignId: target.campaignId,
+              operationId: target.operationId,
+              outcome: "refunded",
+            })
+          ) {
+            setProcessingResult(null);
           }
           return "refunded";
         case "unknown":
@@ -1195,7 +1268,7 @@ export function useCampaignForm(
           return "error";
       }
     },
-    [clearActiveOperation, router],
+    [beginCampaignTransition],
   );
   const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);  // F56.2b2b (B2B-D9): aviso HONESTO de que a imagem do produto/referências
   // (client-only) pode precisar ser re-adicionada quando o texto foi restaurado
@@ -1747,9 +1820,15 @@ export function useCampaignForm(
           return true;
         }
 
-        // Navigate to campaign page — draft data preserved in sessionStorage
-        clearActiveOperation(result.campaignId);
-        router.push(result.campaignUrl);
+        // Navegação para a campanha existente — mantém a tela de transição.
+        beginCampaignTransition({
+          campaignId: result.campaignId,
+          campaignUrl: result.campaignUrl,
+          operationId:
+            lastOperationId ??
+            (typeof body.operationId === "string" ? body.operationId : null),
+          outcome: "delivered",
+        });
         return true;
       }
 
@@ -1793,9 +1872,14 @@ export function useCampaignForm(
           confirmedBodyRef.current = null;
           const refundedCampaignId =
             typeof event.campaignId === "string" ? event.campaignId : lastCampaignId;
-          setIsSubmitting(false);
           if (refundedCampaignId) {
-            router.push(`/campanhas/${refundedCampaignId}`);
+            beginCampaignTransition({
+              campaignId: refundedCampaignId,
+              operationId:
+                lastOperationId ??
+                (typeof body.operationId === "string" ? body.operationId : null),
+              outcome: "refunded",
+            });
             return true;
           }
         }
@@ -2540,9 +2624,15 @@ export function useCampaignForm(
 
         const state = operation?.state;
         if (state === "delivered") {
-          setProcessingResult(null);
-          clearActiveOperation(target.campaignId);
-          router.push(`/campanhas/${target.campaignId}`);
+          if (
+            !beginCampaignTransition({
+              campaignId: target.campaignId,
+              operationId: target.operationId,
+              outcome: "delivered",
+            })
+          ) {
+            setProcessingResult(null);
+          }
           return "delivered";
         }
         if (state === "refunded") {
@@ -2577,7 +2667,7 @@ export function useCampaignForm(
         return "unavailable";
       }
     },
-    [applyJointOutcome, clearActiveOperation, router],
+    [applyJointOutcome, beginCampaignTransition, clearActiveOperation, router],
   );
 
   /**
@@ -2743,13 +2833,15 @@ export function useCampaignForm(
                 });
                 return true;
               }
-              setProcessingResult(null);
-              clearActiveOperation(current.campaignId);
-              router.push(
-                typeof event.campaignUrl === "string"
-                  ? event.campaignUrl
-                  : `/campanhas/${current.campaignId}`,
-              );
+              beginCampaignTransition({
+                campaignId: current.campaignId,
+                campaignUrl:
+                  typeof event.campaignUrl === "string"
+                    ? event.campaignUrl
+                    : `/campanhas/${current.campaignId}`,
+                operationId: current.operationId,
+                outcome: "delivered",
+              });
               return true;
             }
             if (event.type === "unknown") {
@@ -2843,7 +2935,7 @@ export function useCampaignForm(
         }
       }
     },
-    [onPhaseChange, refreshStatus, router],
+    [beginCampaignTransition, onPhaseChange, refreshStatus, router],
   );
   continueOnceRef.current = continueOnce;
 
@@ -2999,6 +3091,7 @@ export function useCampaignForm(
     resetUnknownResult,
     processingResult,
     continuationInFlight,
+    campaignTransition,
     flowKind:
       flowKindResolvedRef.current
         ? flowKindRef.current

@@ -16,6 +16,14 @@ export const GENERATION_UI_MESSAGES = {
   partialPending:
     "Um formato ficou pronto, mas o outro ainda não foi confirmado.",
   finalizationPending: "A campanha ainda não foi finalizada.",
+  opening: "Abrindo sua campanha...",
+} as const;
+
+export const CAMPAIGN_TRANSITION_NOTES = {
+  delivered: "Sua campanha está pronta.",
+  partial_terminal:
+    "Um formato foi concluído; o outro será mostrado no detalhe.",
+  refunded: "A geração foi encerrada e o crédito devolvido.",
 } as const;
 
 export type GenerationUiAction = "none" | "verify" | "continue";

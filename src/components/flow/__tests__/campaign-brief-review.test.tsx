@@ -196,8 +196,8 @@ describe("CampaignBriefReview — Testes 11-16 (F43)", () => {
     renderReview({ eligible: true, campaignFormat: "9:16" });
 
     expect(screen.getByText("Formato")).toBeInTheDocument();
-    expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
-    expect(screen.getByText("1080 × 1920 px")).toBeInTheDocument();
+    expect(screen.getByText("Vertical 9:16 (Stories/Reels)")).toBeInTheDocument();
+    expect(screen.queryByText("1080 × 1920 px")).not.toBeInTheDocument();
   });
 
   it("F59: 1:1 elegível mostra Quadrado e o legado não mostra a linha", () => {
@@ -205,7 +205,7 @@ describe("CampaignBriefReview — Testes 11-16 (F43)", () => {
       eligible: true,
       campaignFormat: "1:1",
     });
-    expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(screen.getByText("Quadrado 1:1 (Feed)")).toBeInTheDocument();
     expect(screen.queryByText("1080 × 1920 px")).not.toBeInTheDocument();
 
     rerender(
