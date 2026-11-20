@@ -1,114 +1,116 @@
 {
-    "gate":  "C6",
-    "status":  "LOCAL_GATES_COMPLETE_AWAITING_REVIEW",
-    "head":  "f038ec353e3ddebbac87a494291bf4d37ef675ac",
-    "executedAtUtc":  "2026-11-20T13:59:59.7799721Z",
-    "target":  "local/offline only",
-    "environmentAccessed":  false,
-    "appStarted":  false,
-    "providerCalls":  0,
-    "codeChanges":  false,
-    "deployment":  false,
-    "activation":  false,
-    "gates":  {
-                  "typecheck":  "PASS",
-                  "typecheckExit":  0,
-                  "lint":  "PASS",
-                  "lintExit":  0,
-                  "build":  "PASS",
-                  "buildExit":  0,
-                  "diffCheck":  "PASS",
-                  "diffCheckExit":  0,
-                  "openspecStrict":  "PASS",
-                  "openspecExit":  0
-              },
-    "focused":  {
-                    "libs":  {
-                                 "filesPassed":  219,
-                                 "filesFailed":  2,
-                                 "testsPassed":  2946,
-                                 "testsFailed":  5,
-                                 "exit":  1
-                             },
-                    "app":  {
-                                "filesPassed":  21,
-                                "filesFailed":  1,
-                                "testsPassed":  298,
-                                "testsFailed":  4,
-                                "exit":  1
-                            }
-                },
-    "fullSuite":  {
-                      "filesPassed":  822,
-                      "filesFailed":  5,
-                      "filesSkipped":  2,
-                      "testsPassed":  10148,
-                      "testsFailed":  11,
-                      "testsSkipped":  10,
-                      "exit":  1
-                  },
-    "preexistingFailures":  [
-                                {
-                                    "file":  "src/components/landing/__tests__/landing-page.test.tsx",
-                                    "count":  1,
-                                    "classification":  "preexisting"
-                                },
-                                {
-                                    "file":  "src/lib/ai/__tests__/telemetry-coverage.test.ts",
-                                    "count":  1,
-                                    "classification":  "preexisting"
-                                },
-                                {
-                                    "file":  "src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts",
-                                    "count":  4,
-                                    "classification":  "preexisting"
-                                },
-                                {
-                                    "file":  "src/lib/product-1-1/__tests__/non-activation.contract.test.ts",
-                                    "count":  1,
-                                    "classification":  "preexisting"
-                                },
-                                {
-                                    "file":  "src/app/api/admin/product-1-1-pending/__tests__/route-format.test.ts",
-                                    "count":  4,
-                                    "classification":  "preexisting"
-                                }
-                            ],
-    "cSpecificSuites":  "PASS",
-    "matrix":  {
-                   "C1":  "ACEITO",
-                   "C2":  "ACEITO",
-                   "C3":  "ACEITO",
-                   "C4":  "ACEITO COM RESSALVAS",
-                   "C5":  "ACEITO COM RESSALVAS",
-                   "C6":  "NÃO APROVADO"
-               },
-    "availability":  {
-                         "localHomologExpected":  "flag vertical ON; not publication",
-                         "productionPublication":  "not performed; not runtime-verified",
-                         "deployAsActivation":  true
-                     },
-    "limitations":  [
-                        "auth/brand/legal/campaign_events outside C5a baseline",
-                        "storage bytes not proven",
-                        "historical pre-C5a not proven",
-                        "Git history not rewritten",
-                        "provider/real merchant art not exercised",
-                        "production migration status not verified",
-                        "11 preexisting global test failures"
-                    ],
-    "gateApproved":  false,
-    "next":  "human review",
-    "report":  "../../60.7-C6-REPORT.md",
-    "evidenceFiles":  [
-                          "typecheck.log",
-                          "lint.log",
-                          "build.log",
-                          "diff-check.log",
-                          "openspec.log",
-                          "focused-libs.log",
-                          "focused-app.log",
-                          "full-suite.log",
-                          "c6-summary.json"
-                      ]
+  "gate": "C6",
+  "status": "LOCAL_GATES_COMPLETE_AWAITING_REVIEW",
+  "head": "f038ec353e3ddebbac87a494291bf4d37ef675ac",
+  "executedAtUtc": "2026-11-20T13:59:59.7799721Z",
+  "target": "local/offline only",
+  "environmentAccessed": false,
+  "appStarted": false,
+  "providerCalls": 0,
+  "codeChanges": false,
+  "deployment": false,
+  "activation": false,
+  "gates": {
+    "typecheck": "PASS",
+    "typecheckExit": 0,
+    "lint": "PASS",
+    "lintExit": 0,
+    "build": "PASS",
+    "buildExit": 0,
+    "diffCheck": "PASS",
+    "diffCheckExit": 0,
+    "openspecStrict": "PASS",
+    "openspecExit": 0
+  },
+  "focused": {
+    "libs": {
+      "filesPassed": 219,
+      "filesFailed": 2,
+      "testsPassed": 2946,
+      "testsFailed": 5,
+      "exit": 1
+    },
+    "app": {
+      "filesPassed": 21,
+      "filesFailed": 1,
+      "testsPassed": 298,
+      "testsFailed": 4,
+      "exit": 1
+    }
+  },
+  "fullSuite": {
+    "filesPassed": 822,
+    "filesFailed": 5,
+    "filesSkipped": 2,
+    "testsPassed": 10148,
+    "testsFailed": 11,
+    "testsSkipped": 10,
+    "exit": 1
+  },
+  "preexistingFailures": [
+    {
+      "file": "src/components/landing/__tests__/landing-page.test.tsx",
+      "count": 1,
+      "classification": "preexisting"
+    },
+    {
+      "file": "src/lib/ai/__tests__/telemetry-coverage.test.ts",
+      "count": 1,
+      "classification": "preexisting"
+    },
+    {
+      "file": "src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts",
+      "count": 4,
+      "classification": "preexisting"
+    },
+    {
+      "file": "src/lib/product-1-1/__tests__/non-activation.contract.test.ts",
+      "count": 1,
+      "classification": "preexisting"
+    },
+    {
+      "file": "src/app/api/admin/product-1-1-pending/__tests__/route-format.test.ts",
+      "count": 4,
+      "classification": "preexisting"
+    }
+  ],
+  "cSpecificSuites": "PASS",
+  "matrix": {
+    "C1": "ACEITO",
+    "C2": "ACEITO",
+    "C3": "ACEITO",
+    "C4": "ACEITO COM RESSALVAS",
+    "C5": "ACEITO COM RESSALVAS",
+    "C6": "NÃO APROVADO"
+  },
+  "availability": {
+    "localHomologExpected": "flag vertical ON; not publication",
+    "productionPublication": "not performed; not runtime-verified",
+    "deployAsActivation": true
+  },
+  "limitations": [
+    "auth/brand/legal/campaign_events outside C5a baseline",
+    "storage bytes not proven",
+    "historical pre-C5a not proven",
+    "Git history not rewritten",
+    "provider/real merchant art not exercised",
+    "production migration status not verified",
+    "11 preexisting global test failures"
+  ],
+  "gateApproved": false,
+  "next": "human review",
+  "report": "../../60.7-C6-REPORT.md",
+  "evidenceFiles": [
+    "typecheck.log",
+    "lint.log",
+    "build.log",
+    "diff-check.log",
+    "openspec.log",
+    "focused-libs.log",
+    "focused-app.log",
+    "full-suite.log",
+    "c6-summary.json"
+  ],
+  "localAppHeadProbe": true,
+  "localAppHeadProbeNote": "Preexisting Next server on 127.0.0.1:3000 answered one HEAD / with 200; not started by executor; no further requests, generation, provider or data operation."
 }
