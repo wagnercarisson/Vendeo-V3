@@ -74,6 +74,8 @@ Testes: `telemetry.contract`, `policy.contract`, `types.contract`, `base-step.co
 
 Total: **19 arquivos** (18 do escopo original + `expand.core.contract.test.ts` autorizado).
 
+**Fechamento documental:** `91767bab` (correção autorizada do guard) e `4e058969` (verificação, sync das specs principais e archive).
+
 Sem migration, sem alteração em pricing/cobrança/reserva/crédito/provider/entrega, sem `npm install`.
 
 ---
