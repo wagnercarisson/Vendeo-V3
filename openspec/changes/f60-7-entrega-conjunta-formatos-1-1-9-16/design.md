@@ -248,7 +248,7 @@ Novo módulo server-only `TwoFormatDeliveryView` (nome de trabalho) resolve, por
 
 ### D15. Interface: um card, indicadores e acesso individual
 
-- **Formulário:** terceira opção `Quadrado 1:1 + Vertical 9:16`, habilitada apenas com a geração vertical habilitada; texto de custo explícito “2 créditos”. 1:1 continua default.
+- **Formulário:** dois checkboxes nativos — **Quadrado 1:1** e **Vertical 9:16** — mapeando 1:1 / 9:16 / 1:1+9:16; pelo menos um formato marcado; flag vertical OFF desabilita o vertical sem conversão silenciosa e oferece a ação explícita “Usar somente Quadrado” para draft pausado. Texto de custo explícito “2 créditos” no conjunto; 1:1 continua default.
 - **Processamento:** reutiliza a tela/fases existentes; adapta apenas o texto para indicar os dois formatos e continua o acompanhamento enquanto qualquer formato estiver em processamento.
 - **Listagem/dashboard:** um card por campanha. Campanha conjunta mostra chips 1:1 e 9:16 com estado. Entregue é clicável e abre `/campanhas/[id]?format=...`; processando indica o estado sem ação; ausente informa a ausência sem ação. Rótulo de campanha parcial quando um formato está entregue e o outro não.
 - **Detalhe:** seletor/tabs 1:1 e 9:16, pré-selecionado por `?format=`. Formato entregue mostra preview e download próprios; processando mostra estado; ausente mostra aviso e, quando confirmado, “crédito devolvido”. Copy compartilhada aparece uma única vez, fora dos tabs.
