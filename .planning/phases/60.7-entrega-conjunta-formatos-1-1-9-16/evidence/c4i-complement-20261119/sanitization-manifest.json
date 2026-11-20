@@ -1,0 +1,39 @@
+{
+  "sanitizedAtUtc": "2026-11-20T00:32:54.307Z",
+  "scope": "publishable complement evidence",
+  "files": {
+    "sessions-created.json": {
+      "beforeSha256": "5F8CEB8C5F87943346F176AF4EBB162D80A720FC9453E3C4A27CFC7D8460D24E",
+      "afterSha256": "14723c0d496e1372670ca803d2adc0b03b6623f374e1e0792637b1ab14b64217"
+    },
+    "http-responses.json": {
+      "beforeSha256": "59DB6B3213D0231E610B5348536779E551FCD3CD2C1EBF6F6735EF6EC4E274CB",
+      "afterSha256": "ccd7c2857e7099085b5899986d90b3c175c879db1ba115f0ad7e9335787dad16"
+    },
+    "execution-summary.json": {
+      "beforeSha256": "BB4E1C87D42FA96604544E12EB439D27BA37A51293D181FB03820A859C8B066E",
+      "afterSha256": "69a771e10298a5d79ae8fb86681f75bba905688edfb847572de8cb47c2b58504"
+    },
+    "auth-inventory-pre.json": {
+      "beforeSha256": "61B10982DE8BCBDCF5B3F128928BAB5DBA42CECEAB2008446351372E252FE789",
+      "afterSha256": "f083b2ba049978a7f7e48b0a9999de4aa45d8d6d4a37bf0e9beef12b5421b319"
+    }
+  },
+  "summaryDoc": {
+    "file": "60.7-C4-I-COMPLEMENT-SUMMARY.md",
+    "afterSha256": "8630820cda74681b886ea68c67b1c3c3899d3b066ce65ca68abec7ba371ced3f"
+  },
+  "occurrences": {
+    "sessions_created_email_fields_removed": 2,
+    "http_responses_email_fields_removed": 2,
+    "execution_summary_email_fields_removed": 2,
+    "auth_inventory_pre_email_addresses_found": 0,
+    "auth_inventory_pre_provider_labels_removed": 3
+  },
+  "verification": {
+    "emailAddressesRemainingInComplementEvidence": 0,
+    "gitHistoryRewritten": false,
+    "note": "Prior commits still contain the original values; no filter/rebase/amend was used."
+  },
+  "reconciledAtUtc": "2026-11-20T00:33:26.555Z"
+}

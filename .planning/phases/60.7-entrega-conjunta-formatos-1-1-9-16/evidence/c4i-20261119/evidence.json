@@ -134,6 +134,9 @@
       "head": "3d7aa8d7",
       "file": "../../60.7-C4-I-COMPLEMENT-SUMMARY.md",
       "evidence": "../../evidence/c4i-complement-20261119/",
+      "sanitizedLocally": true,
+      "deviations": ["resume_after_error", "email_export"],
+      "authPreservationScope": "only compared session/refresh-token id sets",
       "cases": [
         "A: successful administrative refund with proven absence, epoch 7, finality, square handoff, replay and zero-effect divergent deliver",
         "B: normal vertical delivery creating the real thumbnail in the same HTTP pass"

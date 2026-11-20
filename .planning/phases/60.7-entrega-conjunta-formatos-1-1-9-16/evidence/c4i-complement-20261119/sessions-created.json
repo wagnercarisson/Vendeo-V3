@@ -1,13 +1,13 @@
 {
   "createdAtUtc": "2026-11-20T00:23:54.916Z",
   "owner": {
-    "email": "f607c4-owner@f607.test",
     "userId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
-    "sessionId": "baf09891-eacd-4f8c-9181-a7b15857f1c3"
+    "sessionId": "baf09891-eacd-4f8c-9181-a7b15857f1c3",
+    "emailRedacted": true
   },
   "admin": {
-    "email": "wagnercarisson@gmail.com",
     "userId": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
-    "sessionId": "0deb6cc3-3a6e-4197-8044-98c736a0147d"
+    "sessionId": "0deb6cc3-3a6e-4197-8044-98c736a0147d",
+    "emailRedacted": true
   }
 }

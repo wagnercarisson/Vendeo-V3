@@ -24,14 +24,14 @@
     "preCapturedAt": "2026-11-20T00:21:13.876433+00:00",
     "created": {
       "owner": {
-        "email": "f607c4-owner@f607.test",
         "userId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
-        "sessionId": "baf09891-eacd-4f8c-9181-a7b15857f1c3"
+        "sessionId": "baf09891-eacd-4f8c-9181-a7b15857f1c3",
+        "emailRedacted": true
       },
       "admin": {
-        "email": "wagnercarisson@gmail.com",
         "userId": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
-        "sessionId": "0deb6cc3-3a6e-4197-8044-98c736a0147d"
+        "sessionId": "0deb6cc3-3a6e-4197-8044-98c736a0147d",
+        "emailRedacted": true
       }
     },
     "revokedSessionIds": [
@@ -48,7 +48,6 @@
       "b9a64749-73b2-4a93-95f6-64cacae8ecaf",
       "5b50843b-fd32-4180-9912-cfca6b4e937b"
     ],
-    "sBeforePreserved": true,
     "duringRefreshTokens": [
       {
         "id": 1189,
@@ -69,7 +68,27 @@
     ],
     "authAuditLogDelta": 4,
     "historicalPreservationProven": false,
-    "limitation": "no pre-execution baseline for auth tables; only effect attribution and targeted revocation"
+    "limitation": "no pre-execution baseline for auth tables; only effect attribution and targeted revocation",
+    "metadataComparison": {
+      "scope": "auth.sessions.id and auth.refresh_tokens.id sets for the two users",
+      "columnsCompared": {
+        "sessions": [
+          "id",
+          "user_id",
+          "created_at"
+        ],
+        "refresh_tokens": [
+          "id",
+          "user_id",
+          "session_id",
+          "revoked"
+        ]
+      },
+      "sessionIdSetsPreserved": true,
+      "refreshTokenIdSetsPreserved": true,
+      "fullHistoricalPreservationProven": false,
+      "note": "Only the compared identifier sets are preserved; this does not prove full historical preservation of auth tables."
+    }
   },
   "caseA": {
     "campaignId": "f607c400-0000-4000-8000-000000000032",
@@ -292,5 +311,31 @@
     "Pre-write artifact precheck failed once due to a local script validation bug; no writes occurred and the corrected check passed.",
     "Auth tables have no historical baseline; preservation of pre-existing auth rows is not proven, only targeted revocation is proven.",
     "Per-request RPC call counts are not instrumented; the single continue request and absence of repair/activation evidence are recorded."
+  ],
+  "sanitizedAtUtc": "2026-11-20T00:32:06.870Z",
+  "deviations": [
+    {
+      "id": "resume_after_error",
+      "severity": "authorization",
+      "status": "DECLARED_NOT_RETROACTIVELY_APPROVED",
+      "description": "The authorization required stopping on any error, including a local script error. The first artifact-preparation attempt failed before any write; the executor corrected the local validation and resumed without a new authorization.",
+      "failedAttemptWrites": 0,
+      "resumed": true,
+      "evidence": "case-b-artifact-precheck-attempt.json"
+    },
+    {
+      "id": "email_export",
+      "severity": "data_handling",
+      "status": "SANITIZED_LOCALLY",
+      "description": "Email fields were present in sessions-created.json, http-responses.json and execution-summary.json. auth-inventory-pre.json contained provider labels (email/google), not addresses; the labels were removed as a precaution.",
+      "files": [
+        "sessions-created.json",
+        "http-responses.json",
+        "execution-summary.json",
+        "auth-inventory-pre.json"
+      ],
+      "gitHistoryRewritten": false,
+      "note": "Prior commits still contain the original values; no history rewrite was performed."
+    }
   ]
 }
