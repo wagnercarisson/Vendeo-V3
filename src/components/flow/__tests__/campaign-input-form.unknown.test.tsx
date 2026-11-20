@@ -146,7 +146,7 @@ describe("CampaignInputForm — consumidor da resolução do resultado desconhec
 
     // Superfície 3 exibida (estado desconhecido).
     expect(
-      screen.getByText("Não foi possível confirmar a conclusão desta geração"),
+      screen.getByText("Resultado ainda não confirmado"),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Verificar novamente"));

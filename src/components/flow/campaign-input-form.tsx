@@ -8,7 +8,8 @@ import { GenerationProgress } from "./generation-progress";
 import { UnknownResultPanel } from "./unknown-result-panel";
 import { CampaignBriefReview } from "./campaign-brief-review";
 import { BackgroundDirectionSelector } from "./background-direction-selector";
-import { CampaignFormatSelector } from "./campaign-format-selector";
+import { CampaignFormatSelector, CampaignFormatSummary } from "./campaign-format-selector";
+import { GenerationStatusPanel } from "./generation-status-panel";
 import styles from "./campaign-header.module.css";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
@@ -47,6 +48,10 @@ import {
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
 import { resolvePresentedCredits } from "@/lib/campaign/two-format-credits";
+import {
+  deriveGenerationUi,
+  GENERATION_UI_MESSAGES,
+} from "@/lib/campaign/generation-ui";
 
 interface CampaignInputFormProps {
   storeId?: string;
@@ -106,6 +111,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     formatPaused,
     continueGeneration,
     retryProcessingStatus,
+    continuationInFlight,
     resetUnknownResult,
     invalidateTerminalIdentity,
     restorationNotice,
@@ -133,22 +139,36 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     onReviewModeChange?.(reviewMode);
   }, [reviewMode, onReviewModeChange]);
 
-  // Quick 261106-qxn — o título/subtítulo é o mesmo em todos os estados.
-  // O seletor interativo só é montado na edição normal; revisão, geração e
-  // resultado desconhecido mantêm o cabeçalho sem oferecer troca de formato.
+  // F60.7 C2/C6 — a superfície de geração tem título próprio e resumo
+  // não editável; preenchimento/revisão preservam o cabeçalho existente.
+  const isGenerationSurface =
+    isSubmitting || processingResult != null || unknownResult != null;
   const showFormatSelector =
-    eligible && !isSubmitting && !reviewMode && !preparing && !unknownResult;
+    eligible &&
+    !isSubmitting &&
+    !reviewMode &&
+    !preparing &&
+    !unknownResult &&
+    !processingResult;
+  const showFormatSummary = eligible && isGenerationSurface && !reviewMode;
 
   const pageHeader = (
     <div className={`mb-8 ${styles.header}`}>
       <div className={styles.column}>
         <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">
-          Dados da Campanha
+          {isGenerationSurface ? "Geração da campanha" : "Dados da Campanha"}
         </h1>
-        <p className="text-text-secondary text-sm font-body">
-          Informe os dados do produto e da oferta
-        </p>
+        {!isGenerationSurface && (
+          <p className="text-text-secondary text-sm font-body">
+            Informe os dados do produto e da oferta
+          </p>
+        )}
       </div>
+      {showFormatSummary && (
+        <div className={styles.column}>
+          <CampaignFormatSummary value={fields.campaignFormat ?? "1:1"} />
+        </div>
+      )}
       {showFormatSelector && (
         <div className={`${styles.column} space-y-3`}>
           {isFormatPaused && (
@@ -195,6 +215,24 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     </div>
   );
 
+  const generationUi = deriveGenerationUi({
+    isSubmitting,
+    processing: processingResult,
+  });
+  const generationStatusAction =
+    generationUi.action === "verify"
+      ? {
+          label: "Verificar novamente",
+          onClick: () => void retryProcessingStatus(),
+        }
+      : generationUi.action === "continue"
+        ? {
+            label: "Continuar geração",
+            onClick: () => void continueGeneration(),
+            disabled: continuationInFlight,
+          }
+        : undefined;
+
   if (processingResult) {
     return (
       <div>
@@ -203,52 +241,15 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
           phases={phases}
           variant="processing"
           flowKind={flowKind}
+          showStatusMessage={false}
         />
-        {processingResult.partial === "indeterminate" && (
-          <div
-            role="alert"
-            className="mx-auto mb-4 max-w-md rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
-          >
-            Um formato foi entregue e o outro ainda não pôde ser confirmado. A
-            operação foi preservada para consulta; verifique novamente.
-          </div>
-        )}
-        {processingResult.partial === "finalization_pending" && (
-          <div
-            role="status"
-            className="mx-auto mb-4 max-w-md rounded-lg border border-border-light bg-bg-surface p-3 text-sm text-text-secondary"
-          >
-            A entrega de um formato já foi encerrada; a finalização do outro está
-            pendente. Você pode verificar novamente ou retomar quando autorizado.
-          </div>
-        )}
-        {processingResult.partial === "unavailable" && (
-          <div
-            role="alert"
-            className="mx-auto mb-4 max-w-md rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
-          >
-            Não foi possível confirmar o status agora. A operação foi preservada;
-            use “Verificar novamente”.
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2 justify-center pb-8">
-          <button
-            type="button"
-            className="text-xs text-text-secondary underline"
-            onClick={() => void retryProcessingStatus()}
-          >
-            Verificar novamente
-          </button>
-          <button
-            type="button"
-            className="text-xs text-accent-blue underline disabled:opacity-50"
-            onClick={() => void continueGeneration()}
-            disabled={
-              !processingResult.canContinue || processingResult.stepInProgress
-            }
-          >
-            Retomar quando autorizado
-          </button>
+        <div className="pb-8">
+          <GenerationStatusPanel
+            message={generationUi.message}
+            action={generationStatusAction}
+            tone={generationUi.tone}
+            busy={generationUi.busy || continuationInFlight}
+          />
         </div>
       </div>
     );
@@ -262,7 +263,15 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
           phases={phases}
           error={submitError}
           onRetry={submitError ? retrySubmit : undefined}
+          showStatusMessage={false}
         />
+        <div className="pb-8">
+          <GenerationStatusPanel
+            message={generationUi.message}
+            tone={generationUi.tone}
+            busy={generationUi.busy}
+          />
+        </div>
       </div>
     );
   }
@@ -303,6 +312,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             campaignId={unknownResult.campaignId}
             operationId={unknownResult.operationId}
             imageRecoveryAvailable={flowKind === "one_to_one"}
+            heading="Resultado ainda não confirmado"
+            description={GENERATION_UI_MESSAGES.unknown}
             onResolved={handleUnknownResolved}
           />
         </div>

@@ -52,6 +52,9 @@ interface UnknownResultPanelProps {
    * Default `true` preserva 1:1/historico.
    */
   imageRecoveryAvailable?: boolean;
+  /** F60.7 C2/C6 — copy curta opcional na tela de geração; default preserva o detalhe. */
+  heading?: string;
+  description?: string;
 }
 
 export function UnknownResultPanel({
@@ -61,6 +64,8 @@ export function UnknownResultPanel({
   operationId,
   onResolved,
   imageRecoveryAvailable = true,
+  heading = "Não foi possível confirmar a conclusão desta geração",
+  description = "Você pode verificar novamente ou falar com o suporte. Verificar novamente não inicia outra geração nem cobra outro crédito.",
 }: UnknownResultPanelProps) {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
@@ -204,10 +209,10 @@ export function UnknownResultPanel({
         <div className="flex-1 space-y-3">
           <div className="space-y-1">
             <p className="font-heading text-sm font-semibold text-accent-amber">
-              Não foi possível confirmar a conclusão desta geração
+              {heading}
             </p>
             <p className="text-xs text-accent-amber/90 font-body">
-              Você pode verificar novamente ou falar com o suporte. Verificar novamente não inicia outra geração nem cobra outro crédito.
+              {description}
             </p>
           </div>
 

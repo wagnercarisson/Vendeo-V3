@@ -187,3 +187,70 @@ export function CampaignFormatSelector({
     </section>
   );
 }
+
+/**
+ * F60.7 C2/C6 — resumo NÃO editável dos formatos escolhidos durante a geração.
+ * Mantém os mesmos labels e a semântica de checkbox, mas não oferece ação,
+ * foco de edição nem os helpers/avisos exclusivos da seleção.
+ */
+export function CampaignFormatSummary({
+  value,
+}: {
+  value: CampaignFormatValue;
+}) {
+  const squareChecked = value === "1:1" || value === "1:1+9:16";
+  const verticalChecked = value === "9:16" || value === "1:1+9:16";
+
+  const rowClass = (checked: boolean) =>
+    `flex min-h-[44px] cursor-default items-start gap-3 rounded-lg border p-3 ${
+      checked
+        ? "border-accent-green bg-accent-green/5"
+        : "border-border-light"
+    }`;
+
+  return (
+    <section
+      data-testid="flow-campaign-format-summary"
+      aria-labelledby="campaignFormat-summary-heading"
+      className="space-y-2"
+    >
+      <h2
+        id="campaignFormat-summary-heading"
+        className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
+      >
+        Formato da campanha
+      </h2>
+      <fieldset className="space-y-2">
+        <legend className="sr-only">Formatos escolhidos para a campanha</legend>
+        <label className={rowClass(squareChecked)}>
+          <input
+            type="checkbox"
+            name="campaignFormatSummarySquare"
+            value="1:1"
+            checked={squareChecked}
+            disabled
+            aria-readonly="true"
+            className="mt-0.5 h-4 w-4 accent-accent-green disabled:opacity-100"
+          />
+          <span className="min-w-0 flex-1 break-words text-sm font-body text-text-primary">
+            {SQUARE_LABEL}
+          </span>
+        </label>
+        <label className={rowClass(verticalChecked)}>
+          <input
+            type="checkbox"
+            name="campaignFormatSummaryVertical"
+            value="9:16"
+            checked={verticalChecked}
+            disabled
+            aria-readonly="true"
+            className="mt-0.5 h-4 w-4 accent-accent-green disabled:opacity-100"
+          />
+          <span className="min-w-0 flex-1 break-words text-sm font-body text-text-primary">
+            {VERTICAL_LABEL}
+          </span>
+        </label>
+      </fieldset>
+    </section>
+  );
+}

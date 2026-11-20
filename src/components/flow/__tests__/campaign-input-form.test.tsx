@@ -251,16 +251,21 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
     expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
   });
 
-  it("geração: mantém título/subtítulo, remove o seletor interativo", () => {
+  it("geração: usa o título de geração, sem subtítulo, e resume os formatos", () => {
     hookState.isSubmitting = true;
     render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Dados da Campanha" })).toBeInTheDocument();
-    expect(screen.getByText("Informe os dados do produto e da oferta")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Geração da campanha" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Informe os dados do produto e da oferta"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
+    expect(screen.getByTestId("flow-campaign-format-summary")).toBeInTheDocument();
   });
 
-  it("resultado desconhecido: mantém título/subtítulo, remove o seletor interativo", () => {
+  it("resultado desconhecido: mantém o título de geração e o resumo read-only", () => {
     hookState.unknownResult = {
       supportReference: null,
       operationId: "op-1",
@@ -268,9 +273,14 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
     };
     render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Dados da Campanha" })).toBeInTheDocument();
-    expect(screen.getByText("Informe os dados do produto e da oferta")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Geração da campanha" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Informe os dados do produto e da oferta"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Resultado desconhecido")).toBeInTheDocument();
     expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
+    expect(screen.getByTestId("flow-campaign-format-summary")).toBeInTheDocument();
   });
 });

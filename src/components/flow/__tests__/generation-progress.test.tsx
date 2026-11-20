@@ -21,11 +21,11 @@ describe("GenerationProgress — novo fluxo (B2.3)", () => {
         ]}
       />,
     );
-    expect(screen.getByText("Validação")).toBeTruthy();
-    expect(screen.getByText("Preparação")).toBeTruthy();
-    expect(screen.getByText("Arte")).toBeTruthy();
+    expect(screen.getByText("Dados")).toBeTruthy();
+    expect(screen.getByText("Informações")).toBeTruthy();
+    expect(screen.getByText("Campanha")).toBeTruthy();
     expect(screen.getByText("Texto")).toBeTruthy();
-    expect(screen.getByText("Entrega")).toBeTruthy();
+    expect(screen.getByText("Finalização")).toBeTruthy();
     // não há etapa de revisão de qualidade no novo fluxo
     expect(screen.queryByText("Revisão")).toBeNull();
     // imagem e copy concorrentes ⇒ dois spinners simultâneos
@@ -65,7 +65,7 @@ describe("GenerationProgress — novo fluxo (B2.3)", () => {
     expect(screen.getByText("Não foi possível confirmar a conclusão desta geração")).toBeTruthy();
   });
 
-  it("legado: mantém as 4 etapas (Validação/Briefing/Arte/Revisão)", () => {
+  it("legado: mantém as 4 etapas em linguagem de usuário", () => {
     render(
       <GenerationProgress
         phases={[
@@ -76,9 +76,9 @@ describe("GenerationProgress — novo fluxo (B2.3)", () => {
         ]}
       />,
     );
-    expect(screen.getByText("Validação")).toBeTruthy();
-    expect(screen.getByText("Briefing")).toBeTruthy();
-    expect(screen.getByText("Arte")).toBeTruthy();
-    expect(screen.getByText("Revisão")).toBeTruthy();
+    expect(screen.getByText("Dados")).toBeTruthy();
+    expect(screen.getByText("Informações")).toBeTruthy();
+    expect(screen.getByText("Imagem")).toBeTruthy();
+    expect(screen.getByText("Conferência")).toBeTruthy();
   });
 });

@@ -19,7 +19,7 @@ describe("GenerationProgress two-stage", () => {
     expect(screen.getByText("Base")).toBeTruthy();
     expect(screen.getByText("Vertical")).toBeTruthy();
     expect(
-      screen.getByText(/A geração continua em processamento/i),
+      screen.getByText("A geração está em processamento. Aguarde."),
     ).toBeTruthy();
   });
 

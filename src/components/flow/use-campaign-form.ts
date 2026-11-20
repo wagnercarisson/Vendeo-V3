@@ -9,6 +9,7 @@ import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
+import { readNdjsonLines } from "@/lib/campaign/ndjson-lines";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import {
   countProductImages,
@@ -160,6 +161,8 @@ type ProcessingState = {
   continuationsExhausted?: boolean;
   /** C2 — resultado parcial preservado sem apagar a operação ativa. */
   partial?: "indeterminate" | "finalization_pending" | "unavailable" | null;
+  /** C2/C6 — existe acompanhamento automático (`auto`) ou ação manual necessária (`manual`). */
+  recovery?: "auto" | "manual";
   nextStep?: string | null;
 };
 
@@ -358,8 +361,11 @@ export interface UseCampaignFormReturn {
     stepInProgress: boolean;
     continuationsExhausted?: boolean;
     partial?: "indeterminate" | "finalization_pending" | "unavailable" | null;
+    recovery?: "auto" | "manual";
     nextStep?: string | null;
   } | null;
+  /** C2/C6 — requisição manual de continuação em andamento. */
+  continuationInFlight: boolean;
   /** F60.5/F60.7 — fluxo efetivo da submissao/restauracao (decide UI e status). */
   flowKind: CampaignFlowKind;
   /** Pausa efetiva (servidor OU draft local joint/vertical com flag OFF). */
@@ -974,6 +980,7 @@ export function useCampaignForm(
   const [unknownResult, setUnknownResult] = useState<UnknownResultState | null>(null);
   // F60.5 — processamento (distinto de unknown/sucesso), com retomada manual.
   const [processingResult, setProcessingResult] = useState<ProcessingState | null>(null);
+  const [continuationInFlight, setContinuationInFlight] = useState(false);
   const continueInFlightRef = useRef(false);
   const autoContinueRef = useRef(0);
   const pendingContinuationRef = useRef<ProcessingState | null>(null);
@@ -983,6 +990,9 @@ export function useCampaignForm(
   /** C2 — requestId da continuação lógica corrente (mesmo ID no retry ambíguo). */
   const jointRequestIdRef = useRef<string | null>(null);
   const rehydratedRef = useRef(false);
+  const rehydrationAttemptedRef = useRef(false);
+  const statusRequestSeqRef = useRef(0);
+  const streamEpochRef = useRef(0);
   const continueOnceRef = useRef<
     (current: ProcessingState, options?: { manual?: boolean }) => Promise<boolean>
   >(async () => false);
@@ -1099,6 +1109,7 @@ export function useCampaignForm(
     (
       outcome: NormalizedTwoFormatOutcome,
       target: { campaignId: string | null; operationId: string | null },
+      options: { recovery?: "auto" | "manual" } = {},
     ): StatusOutcome => {
       switch (outcome.kind) {
         case "complete":
@@ -1146,6 +1157,7 @@ export function useCampaignForm(
             canContinue: false,
             stepInProgress: false,
             partial: "indeterminate",
+            recovery: "manual",
             nextStep: null,
           });
           return "partial_indeterminate";
@@ -1156,6 +1168,10 @@ export function useCampaignForm(
             canContinue: outcome.canContinue,
             stepInProgress: false,
             partial: "finalization_pending",
+            recovery:
+              outcome.canContinue && options.recovery !== "manual"
+                ? "auto"
+                : "manual",
             nextStep: outcome.nextStep,
           });
           return "processing";
@@ -1166,6 +1182,10 @@ export function useCampaignForm(
             canContinue: outcome.canContinue,
             stepInProgress: false,
             partial: null,
+            recovery:
+              outcome.canContinue && options.recovery !== "manual"
+                ? "auto"
+                : "manual",
             nextStep: outcome.nextStep,
           });
           return "processing";
@@ -1488,6 +1508,7 @@ export function useCampaignForm(
     body: Record<string, unknown>,
     abortController: AbortController
   ): Promise<void> {
+    streamEpochRef.current += 1;
     const response = await fetch("/api/campaign/generate-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1540,9 +1561,9 @@ export function useCampaignForm(
     }
 
     // In-stream NDJSON consumption
-    const reader = response.body!.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
+    if (!response.body) {
+      throw new Error("invalid_ndjson");
+    }
     let lastOperationId: string | null = null;
     let lastCampaignId: string | null = null;
 
@@ -1558,7 +1579,7 @@ export function useCampaignForm(
       try {
         event = JSON.parse(line);
       } catch {
-        return false;
+        throw new Error("invalid_ndjson");
       }
 
       if (typeof event.operationId === "string") lastOperationId = event.operationId;
@@ -1650,6 +1671,7 @@ export function useCampaignForm(
           ...jointTarget,
           canContinue: processing.canContinue === true,
           stepInProgress: processing.state === "step_in_progress",
+          recovery: "auto" as const,
         };
         setProcessingResult(nextProcessing);
         setIsSubmitting(false);
@@ -1821,21 +1843,9 @@ export function useCampaignForm(
     };
 
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (consumeLine(line)) return;
-        }
+      for await (const line of readNdjsonLines(response.body)) {
+        if (consumeLine(line)) return;
       }
-
-      // O chunk final pode chegar sem `\n` — processa a linha remanescente.
-      if (consumeLine(buffer)) return;
 
       // F60.5 (#9): fechamento ANORMAL do stream two-stage ⇒ NO MAXIMO UMA
       // consulta read-only de status. `processing` mantem a tela; terminal e
@@ -2427,7 +2437,14 @@ export function useCampaignForm(
   const refreshStatus = useCallback(
     async (target: ProcessingState | null): Promise<StatusOutcome> => {
       if (!target?.campaignId || !target.operationId) return "unavailable";
+      const requestSeq = ++statusRequestSeqRef.current;
+      const epochAtStart = streamEpochRef.current;
+      const stale = () =>
+        requestSeq !== statusRequestSeqRef.current ||
+        epochAtStart !== streamEpochRef.current;
       const markUnavailable = () => {
+        // Resultado antigo não pode sobrescrever um stream/estado mais novo.
+        if (stale()) return;
         // Falha de leitura NÃO remove a recuperação: preserva uma superfície
         // consultável com continuação bloqueada (exceto o 9:16 legado, que
         // mantém o fallback de unknown já existente).
@@ -2437,6 +2454,7 @@ export function useCampaignForm(
           canContinue: false,
           stepInProgress: false,
           partial: "unavailable",
+          recovery: "manual",
           nextStep: null,
         });
       };
@@ -2470,6 +2488,7 @@ export function useCampaignForm(
           };
         };
         const operation = data.operation;
+        if (stale()) return "unavailable";
 
         // C2 — a AUTORIDADE do tipo de fluxo é `operation.origin`, não o
         // `flowKind` persistido. Nunca montar continuação 9:16 por padrão.
@@ -2502,7 +2521,9 @@ export function useCampaignForm(
           ) {
             jointRequestIdRef.current = null;
           }
-          return applyJointOutcome(normalized, target);
+          return applyJointOutcome(normalized, target, {
+            recovery: "manual",
+          });
         }
         if (operation?.origin === "9_16_two_stage") {
           flowKindRef.current = "two_stage_9_16";
@@ -2545,6 +2566,7 @@ export function useCampaignForm(
           canContinue: operation?.canContinue === true,
           stepInProgress: operation?.processingPhase === "step_in_progress",
           partial: null,
+          recovery: "manual",
           continuationsExhausted:
             autoContinueRef.current >=
             maxContinuationsFor(flowKindRef.current),
@@ -2588,6 +2610,8 @@ export function useCampaignForm(
         return false;
       }
       continueInFlightRef.current = true;
+      setContinuationInFlight(true);
+      streamEpochRef.current += 1;
       if (!options.manual) autoContinueRef.current += 1;
       let terminalSeen = false;
       try {
@@ -2616,22 +2640,12 @@ export function useCampaignForm(
           await refreshStatus(current);
           return true;
         }
-        const reader = response.body?.getReader();
-        if (!reader) {
+        if (!response.body) {
           await refreshStatus(current);
           return true;
         }
-        const decoder = new TextDecoder();
-        let buffer = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            const event = JSON.parse(line) as Record<string, unknown>;
+        for await (const line of readNdjsonLines(response.body)) {
+          const event = JSON.parse(line) as Record<string, unknown>;
             if (event.type === "phase") {
               onPhaseChange({
                 phase: event.phase as GenerationPhaseEvent["phase"],
@@ -2689,12 +2703,13 @@ export function useCampaignForm(
                 };
                 pendingContinuationRef.current =
                   canContinue ? next : null;
-                continue;
+                return true;
               }
               const next: ProcessingState = {
                 ...target,
                 canContinue: event.canContinue === true,
                 stepInProgress: event.state === "step_in_progress",
+                recovery: "auto",
               };
               setProcessingResult(next);
               if (next.canContinue && !next.stepInProgress) {
@@ -2704,10 +2719,11 @@ export function useCampaignForm(
               } else {
                 pendingContinuationRef.current = null;
               }
-              continue;
+              return true;
             }
             if (event.type === "result") {
               terminalSeen = true;
+              pendingContinuationRef.current = null;
               if (flowKind === "two_format_two_stage") {
                 const formats = eventFormats(event) ?? {
                   "1:1": { state: "unknown" as const },
@@ -2738,6 +2754,7 @@ export function useCampaignForm(
             }
             if (event.type === "unknown") {
               terminalSeen = true;
+              pendingContinuationRef.current = null;
               if (flowKind === "two_format_two_stage") {
                 applyJointOutcome(
                   {
@@ -2765,6 +2782,7 @@ export function useCampaignForm(
             }
             if (event.type === "error") {
               terminalSeen = true;
+              pendingContinuationRef.current = null;
               if (flowKind === "two_format_two_stage") {
                 applyJointOutcome(
                   {
@@ -2799,7 +2817,6 @@ export function useCampaignForm(
               );
               return true;
             }
-          }
         }
         // Fechamento ANORMAL sem terminal ⇒ UMA consulta read-only.
         if (!terminalSeen) {
@@ -2811,6 +2828,7 @@ export function useCampaignForm(
         return true;
       } finally {
         continueInFlightRef.current = false;
+        setContinuationInFlight(false);
         const pending = pendingContinuationRef.current;
         pendingContinuationRef.current = null;
         if (pending) {
@@ -2844,7 +2862,16 @@ export function useCampaignForm(
    * terminal. Status NUNCA inicia geracao; a retomada continua sendo manual.
    */
   useEffect(() => {
-    if (rehydratedRef.current || processingResult || unknownResult) return;
+    if (rehydratedRef.current || rehydrationAttemptedRef.current) return;
+    if (processingResult || unknownResult) return;
+    // Uma submissão/stream já ativo não pode ser acompanhado por uma consulta
+    // paralela de reidratação; a tentativa também não deve ser reacionada pela
+    // atualização posterior de `draftScope`.
+    if (isSubmitting || continueInFlightRef.current || confirmedBodyRef.current) {
+      rehydrationAttemptedRef.current = true;
+      return;
+    }
+    rehydrationAttemptedRef.current = true;
     const scope = restoredForm?.campaignId ?? draftScope;
     let identity: PendingOperationIdentity | null = null;
     const readScoped = (campaignId: string) => {
@@ -2920,6 +2947,7 @@ export function useCampaignForm(
     restoredForm?.campaignId,
     processingResult,
     unknownResult,
+    isSubmitting,
     refreshStatus,
     storeId,
   ]);
@@ -2970,6 +2998,7 @@ export function useCampaignForm(
     unknownResult,
     resetUnknownResult,
     processingResult,
+    continuationInFlight,
     flowKind:
       flowKindResolvedRef.current
         ? flowKindRef.current

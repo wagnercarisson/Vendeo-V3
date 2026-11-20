@@ -29,14 +29,20 @@ interface GenerationProgressProps {
   variant?: "running" | "unknown" | "processing";
   /** F60.5 — detector explícito do fluxo de duas etapas. */
   flowKind?: "one_to_one" | "two_stage_9_16" | "two_format_two_stage";
+  /**
+   * F60.7 C2/C6 — quando `false`, a tela de geração usa um painel único
+   * (GenerationStatusPanel) e os indicadores não repetem a mesma mensagem.
+   * Default `true` preserva o comportamento das demais superfícies.
+   */
+  showStatusMessage?: boolean;
 }
 
 const PHASE_LABELS: Record<string, { label: string; running: string }> = {
-  input_validation: { label: "Validação", running: "Validando dados..." },
-  prompt_assembly: { label: "Briefing", running: "Montando briefing criativo..." },
-  copy_generation: { label: "Texto", running: "Gerando texto da campanha..." },
-  image_generation: { label: "Arte", running: "Gerando imagem..." },
-  quality_review: { label: "Revisão", running: "Revisando qualidade..." },
+  input_validation: { label: "Dados", running: "Conferindo os dados..." },
+  prompt_assembly: { label: "Informações", running: "Preparando as informações da campanha..." },
+  copy_generation: { label: "Texto", running: "Escrevendo o texto da campanha..." },
+  image_generation: { label: "Imagem", running: "Criando a imagem..." },
+  quality_review: { label: "Conferência", running: "Conferindo a imagem..." },
   done: { label: "Concluído", running: "Campanha gerada!" },
 };
 
@@ -58,28 +64,28 @@ const ERROR_LABELS: Record<string, string> = {
 };
 
 const PHASE_FRIENDLY_LABELS: Record<string, string> = {
-  input_validation: "Validação dos dados da campanha",
-  prompt_assembly: "Montagem do briefing criativo",
-  copy_generation: "Geração do texto da campanha",
-  copy_retry: "Tentativa com provedor alternativo",
-  image_generation: "Geração da imagem com IA",
-  quality_review: "Revisão de qualidade da imagem",
+  input_validation: "Conferindo os dados da campanha",
+  prompt_assembly: "Preparando as informações da campanha",
+  copy_generation: "Escrevendo o texto da campanha",
+  copy_retry: "Tentando novamente com outro serviço",
+  image_generation: "Criando a imagem",
+  quality_review: "Conferindo a imagem",
   done: "Concluído",
   // F56.2b2c (B2.3) — fases do novo fluxo (trabalho REAL; sem “revisão” inexistente).
-  campaign_validation: "Validação dos dados da campanha",
-  campaign_base: "Geração da base quadrada",
-  campaign_preparation: "Preparação do briefing e do snapshot",
-  campaign_expansion: "Expansão para o vertical 9:16",
-  campaign_image: "Geração da imagem com IA",
-  campaign_copy: "Geração do texto da campanha",
-  campaign_delivery: "Entrega da campanha",
+  campaign_validation: "Conferindo os dados da campanha",
+  campaign_base: "Gerando a base da campanha",
+  campaign_preparation: "Preparando as informações da campanha",
+  campaign_expansion: "Criando o formato vertical",
+  campaign_image: "Criando a imagem",
+  campaign_copy: "Escrevendo o texto da campanha",
+  campaign_delivery: "Preparando a campanha",
   // F60.7 C2 — fases conjuntas.
-  square_base: "Geração da base quadrada",
-  square_delivery: "Entrega do quadrado",
-  vertical_preparation: "Preparação do vertical",
-  vertical_expansion: "Expansão para o vertical 9:16",
-  vertical_delivery: "Entrega do vertical",
-  projection: "Projeção da campanha",
+  square_base: "Gerando a base da campanha",
+  square_delivery: "Preparando os formatos",
+  vertical_preparation: "Preparando os formatos",
+  vertical_expansion: "Criando o formato vertical",
+  vertical_delivery: "Preparando os formatos",
+  projection: "Finalizando a campanha",
 };
 
 /** F56.2b2c — ordem e rótulos das fases do NOVO fluxo (separada do legado). */
@@ -92,11 +98,11 @@ const NEW_FLOW_PHASE_ORDER = [
 ] as const;
 
 const NEW_FLOW_PHASE_LABELS: Record<string, { label: string; running: string }> = {
-  campaign_validation: { label: "Validação", running: "Validando dados..." },
-  campaign_preparation: { label: "Preparação", running: "Preparando briefing..." },
-  campaign_image: { label: "Arte", running: "Gerando imagem..." },
-  campaign_copy: { label: "Texto", running: "Gerando texto da campanha..." },
-  campaign_delivery: { label: "Entrega", running: "Entregando a campanha..." },
+  campaign_validation: { label: "Dados", running: "Conferindo os dados..." },
+  campaign_preparation: { label: "Informações", running: "Preparando as informações..." },
+  campaign_image: { label: "Campanha", running: "Criando a imagem..." },
+  campaign_copy: { label: "Texto", running: "Escrevendo o texto..." },
+  campaign_delivery: { label: "Finalização", running: "Preparando a campanha..." },
 };
 
 /** F60.5 — ordem e rótulos do fluxo 9:16 por expansão. */
@@ -113,12 +119,12 @@ export const TWO_STAGE_PHASE_LABELS: Record<
   string,
   { label: string; running: string }
 > = {
-  campaign_validation: { label: "Validação", running: "Validando dados..." },
-  campaign_base: { label: "Base", running: "Gerando a base quadrada..." },
-  campaign_preparation: { label: "Preparação", running: "Preparando o 1152..." },
-  campaign_expansion: { label: "Vertical", running: "Expandindo para 9:16..." },
-  campaign_copy: { label: "Texto", running: "Gerando texto da campanha..." },
-  campaign_delivery: { label: "Entrega", running: "Entregando a campanha..." },
+  campaign_validation: { label: "Dados", running: "Conferindo os dados..." },
+  campaign_base: { label: "Base", running: "Gerando a base da campanha..." },
+  campaign_preparation: { label: "Informações", running: "Preparando a imagem..." },
+  campaign_expansion: { label: "Vertical", running: "Criando o formato vertical..." },
+  campaign_copy: { label: "Texto", running: "Escrevendo o texto da campanha..." },
+  campaign_delivery: { label: "Finalização", running: "Preparando a campanha..." },
 };
 
 /** F60.7 C2 — ordem e rótulos das fases conjuntas (1:1 + 9:16). */
@@ -134,11 +140,11 @@ export const TWO_FORMAT_PHASE_LABELS: Record<
   string,
   { label: string; running: string }
 > = {
-  square_base: { label: "Quadrado", running: "Gerando a base quadrada..." },
-  square_delivery: { label: "1:1", running: "Entregando o quadrado..." },
-  vertical_expansion: { label: "Expansão", running: "Expandindo para 9:16..." },
-  vertical_delivery: { label: "9:16", running: "Entregando o vertical..." },
-  projection: { label: "Projeção", running: "Projetando a campanha..." },
+  square_base: { label: "Base", running: "Gerando a base da campanha..." },
+  square_delivery: { label: "1:1", running: "Preparando os formatos..." },
+  vertical_expansion: { label: "Vertical", running: "Criando o formato vertical..." },
+  vertical_delivery: { label: "9:16", running: "Preparando os formatos..." },
+  projection: { label: "Finalização", running: "Finalizando a campanha..." },
 };
 
 function isTwoFormatPhases(phases: GenerationPhaseEvent[]): boolean {
@@ -171,7 +177,7 @@ function buildPhaseStatus(phases: GenerationPhaseEvent[]): { phase: string; stat
     }));
 }
 
-export function GenerationProgress({ phases, error, onRetry, variant = "running", flowKind }: GenerationProgressProps) {
+export function GenerationProgress({ phases, error, onRetry, variant = "running", flowKind, showStatusMessage = true }: GenerationProgressProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const latestPhase = phases.length > 0 ? phases[phases.length - 1] : null;
   const currentMessage = latestPhase?.message || GENERATION_STATE_MESSAGES.running;
@@ -265,9 +271,11 @@ export function GenerationProgress({ phases, error, onRetry, variant = "running"
         </div>
 
         {/* Current message */}
-        <p className="text-center text-text-primary text-sm font-body mt-4">
-          {currentMessage}
-        </p>
+        {showStatusMessage && (
+          <p className="text-center text-text-primary text-sm font-body mt-4">
+            {currentMessage}
+          </p>
+        )}
 
         {/* Unknown result — âmbar (atenção/incerteza), NUNCA vermelho */}
         {variant === "unknown" && (
@@ -288,7 +296,7 @@ export function GenerationProgress({ phases, error, onRetry, variant = "running"
         )}
 
         {/* F60.5 — processing: neutro (não é erro nem sucesso). */}
-        {variant === "processing" && (
+        {showStatusMessage && variant === "processing" && (
           <div
             role="status"
             className="mt-4 rounded-lg border border-border-light bg-bg-surface px-4 py-3"
@@ -296,7 +304,7 @@ export function GenerationProgress({ phases, error, onRetry, variant = "running"
             <div className="flex items-start gap-2">
               <Loader2 className="w-4 h-4 text-text-muted shrink-0 mt-0.5 animate-spin" aria-hidden="true" />
               <p className="text-text-secondary text-sm font-body">
-                A geração continua em processamento. Você pode verificar novamente ou retomar quando autorizado.
+                A geração está em processamento. Aguarde.
               </p>
             </div>
           </div>
