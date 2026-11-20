@@ -261,4 +261,64 @@ describe("CampaignBriefReview — Testes 11-16 (F43)", () => {
     expect(screen.queryByText("Direção de fundo")).not.toBeInTheDocument();
     expect(screen.queryByText("Original")).not.toBeInTheDocument();
   });
+
+  it("F60.7 C2: individual mantém o custo atual e saldo 1 permite", () => {
+    renderReview({ campaignFormat: "9:16", balance: 1 });
+
+    expect(screen.getByText("Vai consumir 1 crédito(s)")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirmar e gerar campanha" }),
+    ).toBeEnabled();
+  });
+
+  it("F60.7 C2: carregando continua bloqueando a confirmação", () => {
+    mockUseOperationCosts.mockReturnValue({
+      costs: null,
+      status: "loading",
+      refetch: vi.fn(),
+    });
+    renderReview({ campaignFormat: "1:1+9:16", balance: 5 });
+
+    expect(screen.getByText("Verificando custo...")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirmar e gerar campanha" }),
+    ).toBeDisabled();
+  });
+
+  it("F60.7 C2: indisponível continua bloqueando a confirmação", () => {
+    mockUseOperationCosts.mockReturnValue({
+      costs: null,
+      status: "unavailable",
+      refetch: vi.fn(),
+    });
+    renderReview({ campaignFormat: "1:1+9:16", balance: 5 });
+
+    expect(screen.getByText("Serviço indisponível no momento")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirmar e gerar campanha" }),
+    ).toBeDisabled();
+  });
+
+  it("F60.7 C2: operação desabilitada continua bloqueando a confirmação", () => {
+    mockUseOperationCosts.mockReturnValue({
+      costs: { campaign_generation: { costCredits: 1, enabled: false } },
+      status: "loaded",
+      refetch: vi.fn(),
+    });
+    renderReview({ campaignFormat: "1:1+9:16", balance: 5 });
+
+    expect(screen.getByText("Operação desativada")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirmar e gerar campanha" }),
+    ).toBeDisabled();
+  });
+
+  it("F60.7 C2: saldo desconhecido continua bloqueando a confirmação", () => {
+    renderReview({ campaignFormat: "1:1+9:16", balance: null });
+
+    expect(screen.getByText("Saldo: indisponível")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirmar e gerar campanha" }),
+    ).toBeDisabled();
+  });
 });

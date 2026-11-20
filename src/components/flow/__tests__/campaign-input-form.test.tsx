@@ -162,10 +162,10 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
       screen.getByTestId("flow-campaign-format-selector"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("radio", { name: "Quadrado 1:1 - feed" }),
+      screen.getByRole("checkbox", { name: "Quadrado 1:1 - feed" }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("radio", {
+      screen.getByRole("checkbox", {
         name: "Vertical 9:16 - Stories e Reels (imagem estática)",
       }),
     ).toBeDisabled();
@@ -190,9 +190,12 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
       "Não foi possível confirmar o formato desta campanha. Nada foi cobrado.",
     );
     expect(screen.queryByText("Novo envio vertical pausado")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Usar somente Quadrado" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("F59/D-03: pausa via prop mantém vertical selecionado, radios desabilitados e subtítulo exato", () => {
+  it("F59/D-03: pausa via prop mantém vertical selecionado, bloqueia vertical e oferece saída explícita", () => {
     render(
       <CampaignInputForm
         storeId="store-1"
@@ -206,13 +209,16 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada.",
     );
-    const vertical = screen.getByRole("radio", {
+    const vertical = screen.getByRole("checkbox", {
       name: "Vertical 9:16 - Stories e Reels (imagem estática)",
     });
-    const square = screen.getByRole("radio", { name: "Quadrado 1:1 - feed" });
+    const square = screen.getByRole("checkbox", { name: "Quadrado 1:1 - feed" });
     expect(vertical).toBeChecked();
     expect(vertical).toBeDisabled();
-    expect(square).toBeDisabled();
+    expect(square).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Usar somente Quadrado" }),
+    ).toBeInTheDocument();
 
     const submit = screen.getByRole("button", { name: /revisar|gerar/i });
     expect(submit).toBeDisabled();

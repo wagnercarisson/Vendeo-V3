@@ -910,10 +910,16 @@ export function useCampaignForm(
     campaignFormatPaused?: boolean;
     /** C2 — flag vertical; pausa também draft LOCAL joint/vertical com OFF. */
     verticalEnabled?: boolean;
+    /**
+     * F59/59-08 — formato restaurado não pôde ser confirmado: a pausa vale
+     * independentemente do formato exibido (não há conversão silenciosa).
+     */
+    campaignFormatUnavailable?: boolean;
   },
 ): UseCampaignFormReturn {
   const eligible = options?.eligible === true;
   const serverCampaignFormatPaused = options?.campaignFormatPaused === true;
+  const campaignFormatUnavailable = options?.campaignFormatUnavailable === true;
   // F56.2b2b (C4 / B2B-D9): snapshot server-side + escopo do rascunho pela
   // campanha-ORIGEM. `restoredForm` NUNCA carrega a operação estornada (sem
   // `operationId`): a nova submissão gera NOVOS ids.
@@ -925,11 +931,18 @@ export function useCampaignForm(
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
   // C2 — draft restaurado SOMENTE do sessionStorage não passa pelo servidor:
   // deriva a pausa do formato efetivamente hidratado + flag vertical.
+  //
+  // A pausa por flag OFF vale enquanto o formato efetivo for vertical/conjunto.
+  // A ação explícita "Usar somente Quadrado" muda o formato para `1:1` e libera
+  // o envio — sem conversão silenciosa. Já o formato INDISPONÍVEL pausa sempre,
+  // pois não há formato confirmado para liberar.
+  const currentFormatRequiresVertical =
+    fields.campaignFormat === "9:16" ||
+    fields.campaignFormat === "1:1+9:16";
   const campaignFormatPaused =
-    serverCampaignFormatPaused ||
-    (options?.verticalEnabled === false &&
-      (fields.campaignFormat === "9:16" ||
-        fields.campaignFormat === "1:1+9:16"));
+    campaignFormatUnavailable ||
+    ((serverCampaignFormatPaused || options?.verticalEnabled === false) &&
+      currentFormatRequiresVertical);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<keyof CampaignFormFields, boolean>>({
     productName: false,

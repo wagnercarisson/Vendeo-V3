@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { CampaignFormFields, CampaignFormatValue, PreparedCampaignImage } from "./use-campaign-form";
 import { buildValidityDisplayText, inferIntent } from "./use-campaign-form";
-import { TWO_FORMAT_CAMPAIGN_CREDITS } from "@/lib/campaign/two-format-credits";
+import { resolvePresentedCredits } from "@/lib/campaign/two-format-credits";
 import { formatCurrencyBRL } from "@/lib/formatters";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 import { MANDATORY_ARTWORK_LABEL } from "@/lib/campaign/field-guidance";
@@ -60,9 +60,11 @@ export function CampaignBriefReview({
   const { costs, status: costStatus } = useOperationCosts();
   const campaignCost = costs?.campaign_generation;
   const isJoint = campaignFormat === "1:1+9:16";
-  const requiredCredits = isJoint
-    ? TWO_FORMAT_CAMPAIGN_CREDITS
-    : campaignCost?.costCredits;
+  const presentedCredits = resolvePresentedCredits(
+    campaignFormat,
+    campaignCost?.costCredits,
+  );
+  const requiredCredits = presentedCredits;
   const costUnavailable = costStatus !== "loaded";
   const costDisabled = costStatus === "loaded" && campaignCost !== undefined && !campaignCost.enabled;
   const insufficientBalance =
@@ -97,10 +99,12 @@ export function CampaignBriefReview({
     if (costStatus === "loading") return "Verificando custo...";
     if (costStatus === "unavailable") return "Serviço indisponível no momento";
     if (campaignCost && !campaignCost.enabled) return "Operação desativada";
-    if (isJoint) return `Vai consumir ${TWO_FORMAT_CAMPAIGN_CREDITS} créditos`;
-    if (campaignCost) return `Vai consumir ${campaignCost.costCredits} crédito(s)`;
+    if (isJoint) return `Vai consumir ${presentedCredits} créditos`;
+    if (campaignCost && presentedCredits !== undefined) {
+      return `Vai consumir ${presentedCredits} crédito(s)`;
+    }
     return "Custo: …";
-  }, [costStatus, campaignCost, isJoint]);
+  }, [costStatus, campaignCost, isJoint, presentedCredits]);
 
   if (preparing) {
     return (

@@ -36,29 +36,54 @@ const fields: CampaignFormFields = {
 };
 
 describe("F60.7 C2 — seletor conjunto", () => {
-  it("opção visível, habilitada com flag ON e desabilitada com OFF", () => {
-    const { rerender } = render(
+  it("conjunto deriva os dois checkboxes marcados e o helper de dois créditos", () => {
+    render(
       <CampaignFormatSelector
         value="1:1+9:16"
         onChange={vi.fn()}
-        jointEnabled
         verticalEnabled
       />,
     );
-    const radio = screen.getByRole("radio", { name: /Dois formatos/ });
-    expect(radio).toBeEnabled();
-    expect(screen.getByTestId("flow-campaign-format-joint-helper")).toBeInTheDocument();
 
-    rerender(
+    expect(
+      screen.getByRole("checkbox", { name: "Quadrado 1:1 - feed" }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Vertical 9:16 - Stories e Reels (imagem estática)",
+      }),
+    ).toBeChecked();
+    expect(screen.getByTestId("flow-campaign-format-joint-helper")).toBeInTheDocument();
+  });
+
+  it("flag OFF preserva o conjunto visível, desabilita só o vertical e não converte", () => {
+    render(
       <CampaignFormatSelector
         value="1:1+9:16"
         onChange={vi.fn()}
-        jointEnabled={false}
         verticalEnabled={false}
       />,
     );
-    expect(radio).toBeDisabled();
-    expect(screen.getByTestId("flow-campaign-format-joint-disabled")).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("checkbox", { name: "Quadrado 1:1 - feed" }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Quadrado 1:1 - feed" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Vertical 9:16 - Stories e Reels (imagem estática)",
+      }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Vertical 9:16 - Stories e Reels (imagem estática)",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByTestId("flow-campaign-format-vertical-disabled"),
+    ).toBeInTheDocument();
   });
 });
 

@@ -46,6 +46,7 @@ import {
 } from "@/lib/product-1-1/selection-validation";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
+import { resolvePresentedCredits } from "@/lib/campaign/two-format-credits";
 
 interface CampaignInputFormProps {
   storeId?: string;
@@ -110,7 +111,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     restorationNotice,
     backgroundDirectionNotice,
     backgroundDirectionRequired,
-  } = useCampaignForm(storeId, { eligible, restoredForm, campaignFormatPaused, verticalEnabled });
+  } = useCampaignForm(storeId, { eligible, restoredForm, campaignFormatPaused, verticalEnabled, campaignFormatUnavailable });
   const isFormatPaused = formatPaused ?? campaignFormatPaused;
 
   // Recorte 2 (Plano 09): o resultado TERMINAL `refunded` é apresentado pelo
@@ -169,14 +170,25 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
                     ? "Este rascunho usa dois formatos. O envio conjunto está temporariamente indisponível. Sua escolha de formato foi preservada."
                     : "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada."}
               </p>
+              {!campaignFormatUnavailable &&
+                (fields.campaignFormat === "9:16" ||
+                  fields.campaignFormat === "1:1+9:16") && (
+                  <button
+                    type="button"
+                    data-testid="flow-campaign-format-exit-paused"
+                    onClick={() => setField("campaignFormat", "1:1")}
+                    className="mt-2 min-h-[44px] rounded-lg border border-amber-700/40 bg-bg-surface px-3 py-2 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-500/10"
+                  >
+                    Usar somente Quadrado
+                  </button>
+                )}
             </div>
           )}
           <CampaignFormatSelector
             value={fields.campaignFormat ?? "1:1"}
             onChange={(format) => setField("campaignFormat", format)}
-            disabled={isSubmitting || isFormatPaused}
+            disabled={isSubmitting}
             verticalEnabled={verticalEnabled && !isFormatPaused}
-            jointEnabled={verticalEnabled && !isFormatPaused}
           />
         </div>
       )}
@@ -611,13 +623,17 @@ function FormContent({
     fields.originalPriceCents > 0 && !((fields.discountedPriceCents ?? 0) > 0);
 
   const campaignCost = costs?.campaign_generation;
+  const presentedCredits = resolvePresentedCredits(
+    fields.campaignFormat,
+    campaignCost?.costCredits,
+  );
   const costUnavailable = costStatus !== "loaded";
   const costDisabled = costStatus === "loaded" && campaignCost !== undefined && !campaignCost.enabled;
   const insufficientBalance =
     balance !== undefined &&
     balance !== null &&
-    campaignCost !== undefined &&
-    balance < campaignCost.costCredits;
+    presentedCredits !== undefined &&
+    balance < presentedCredits;
   const submitDisabled =
     isSubmitting ||
     costUnavailable ||
@@ -996,7 +1012,7 @@ function FormContent({
                 <span>
                   {costStatus === "loaded" && campaignCost
                     ? (campaignCost.enabled
-                        ? `Custo: ${campaignCost.costCredits}`
+                        ? `Custo: ${presentedCredits ?? campaignCost.costCredits}`
                         : "Operação desativada")
                     : costStatus === "unavailable"
                       ? "Serviço indisponível no momento"

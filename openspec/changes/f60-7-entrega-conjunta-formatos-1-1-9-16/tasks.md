@@ -83,10 +83,10 @@
 - [x] 6.2 Implementar a rota/continuação da operação conjunta, reutilizando o schema e os limites existentes, sem aceitar conteúdo novo do navegador.
 - [x] 6.3 Estender o `NewFlowGenerateImageRequestSchema` para aceitar o valor conjunto exato, mantendo a recusa de listas/formatos desconhecidos e sem permitir que o dispatch individual trate o pedido conjunto como 1:1/9:16.
 - [x] 6.4 Atualizar os tipos e o transporte de restauração/formulário/review para o formato conjunto, sem alterar a representação de `1:1` e `9:16` individuais.
-- [ ] 6.5 Substituir as opções de radio por dois checkboxes: Quadrado 1:1 e Vertical 9:16, com mapeamento 1:1 / 9:16 / 1:1+9:16, pelo menos um formato marcado, flag OFF sem conversão silenciosa e saída explícita “Usar somente Quadrado” para draft pausado.
+- [x] 6.5 Substituir as opções de radio por dois checkboxes: Quadrado 1:1 e Vertical 9:16, com mapeamento 1:1 / 9:16 / 1:1+9:16, pelo menos um formato marcado, flag OFF sem conversão silenciosa e saída explícita “Usar somente Quadrado” para draft pausado.
 - [x] 6.6 Persistir o formato conjunto no draft, body, fingerprint e restauração, sem alterar o body de `1:1` nem o de `9:16` individual.
 - [x] 6.7 Atualizar a revisão para exibir os dois formatos e o custo total de 2 créditos quando o formato conjunto estiver selecionado.
-- [ ] 6.8 **[REABERTA 2026-11-20]** Unificar a checagem de saldo do formulário e da revisão: conjunto = 2 créditos; individuais mantêm `campaign_generation`; saldo 1 bloqueia o conjunto; estados carregando/indisponível/operação desabilitada/saldo desconhecido continuam bloqueando. Sem alterar reservas, pricing ou custo individual.
+- [x] 6.8 **[REABERTA 2026-11-20; corrigida no offline]** Unificar a checagem de saldo do formulário e da revisão: conjunto = 2 créditos; individuais mantêm `campaign_generation`; saldo 1 bloqueia o conjunto; estados carregando/indisponível/operação desabilitada/saldo desconhecido continuam bloqueando. Sem alterar reservas, pricing ou custo individual.
 - [x] 6.9 Bloquear submissão conjunta quando a flag vertical aplicável estiver OFF, preservando o formato restaurado e sem trocar silenciosamente para 1:1/9:16.
 - [x] 6.10 Adaptar `listCampaigns` para carregar os indicadores conjuntos em lote, mantendo 1:1/9:16/histórico no caminho atual e sem expor `input_snapshot`.
 - [x] 6.11 Implementar o card conjunto com um único card, chips/indicadores, estado parcial, link do formato entregue para `?format=` e ausência/processamento sem ação.
