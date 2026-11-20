@@ -59,6 +59,12 @@ describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)
     expect(counters.baseProviderCalls).toBe(1);
     expect(counters.expansionProviderCalls).toBe(1);
     expect(counters.copyCalls).toBe(1);
+    // Quick 261120-qvp (5b): a expansão recebeu o snapshot econômico CONGELADO
+    // lido do `campaigns.input_snapshot` semeado (5,1 / 1) pelo leitor default.
+    expect(counters.expansionTelemetry).toEqual({
+      usdBrlRateAtGeneration: 5.1,
+      creditValueBrlAtGeneration: 1,
+    });
     expect(world.credit()?.status).toBe("delivered");
     expect(world.step("base")?.status).toBe("done");
     expect(world.step("expansion")?.status).toBe("done");

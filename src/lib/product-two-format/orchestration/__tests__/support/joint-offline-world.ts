@@ -19,7 +19,7 @@ import {
 import { VERTICAL_COMPOSITION_FIXTURES } from "@/lib/product-vertical-9-16/__tests__/fixtures/vertical-briefings";
 import type { ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
 import type { AiModelCatalogRow } from "@/lib/ai/ai-model-catalog-service";
-import type { AiInvocationResult } from "@/lib/ai/types";
+import type { AiInvocationResult, AiTelemetryContext } from "@/lib/ai/types";
 import { AiInvocationError } from "@/lib/ai/types";
 import type { SquareBaseDeps } from "@/lib/campaign/square-base/run-square-base";
 import type { SquareBaseInput } from "@/lib/campaign/square-base/types";
@@ -2350,6 +2350,12 @@ export async function createOfflineDeps(
     copyInputs: [] as unknown[],
     telemetryEmits: 0,
     frozenPreflightCalls: 0,
+    // Quick 261120-qvp (5a): registro ADITIVO do contexto econômico recebido
+    // pela expansão. Não altera contagens, ordem, envelopes nem provider.
+    expansionTelemetry: null as null | {
+      usdBrlRateAtGeneration: number | null | undefined;
+      creditValueBrlAtGeneration: number | null | undefined;
+    },
   };
   let expansionAttempt = 0;
   let now = world.clock();
@@ -2475,7 +2481,15 @@ export async function createOfflineDeps(
     clock: () => now,
     callIdFactory: () => `exp-call-${counters.expansionProviderCalls + 1}`,
     invoker: {
-      invokePrepared: async () => {
+      invokePrepared: async (
+        _prepared: unknown,
+        _request: unknown,
+        telemetry: AiTelemetryContext,
+      ) => {
+        counters.expansionTelemetry = {
+          usdBrlRateAtGeneration: telemetry.usdBrlRateAtGeneration,
+          creditValueBrlAtGeneration: telemetry.creditValueBrlAtGeneration,
+        };
         counters.expansionProviderCalls += 1;
         counters.order.push("expansionProvider");
         expansionAttempt += 1;

@@ -115,6 +115,12 @@ describe("F60.7-10 — jornadas conjuntas offline", () => {
     expect(deps.counters.baseProviderCalls).toBe(1);
     expect(deps.counters.expansionProviderCalls).toBe(1);
     expect(deps.counters.copyCalls).toBe(1);
+    // Quick 261120-qvp (5b): o fluxo conjunto 1:1+9:16 usa o MESMO snapshot
+    // econômico congelado pelo mesmo `runExpansionStep` (5,1 / 1).
+    expect(deps.counters.expansionTelemetry).toEqual({
+      usdBrlRateAtGeneration: 5.1,
+      creditValueBrlAtGeneration: 1,
+    });
   });
 
   it("Teste 2: quadrado entregue antes da preparação/expansão", async () => {
