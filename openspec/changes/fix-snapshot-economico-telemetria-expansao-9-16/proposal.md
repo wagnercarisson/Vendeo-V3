@@ -28,6 +28,7 @@ Nenhuma.
 ## Impact
 
 - Código: `src/lib/campaign/vertical-expansion/{telemetry,types,policy,expand}.ts`; `src/lib/product-9-16-two-stage/orchestration/expansion-step.ts`; possivelmente o orquestrador/rotas apenas para injeção testável — a fonte preferencial é o snapshot já persistido.
+- Guard de fronteira: `src/lib/campaign/vertical-expansion/__tests__/expand.core.contract.test.ts` é reconciliado para aceitar apenas o identificador completo `creditValueBrlAtGeneration` na cópia analisada, sem enfraquecer a proibição de operações financeiras; o workaround `frozenCreditValueField` é removido.
 - Testes: `telemetry.contract`, `policy.contract`, `expand`/`expansion-step`, orquestração individual e conjunto, continuação/retry, e `telemetry-coverage` (deve voltar a 4/4).
 - Dados: nenhuma migration, nenhuma alteração em `generation_events` históricos e nenhum backfill.
 - Operação: gerações continuam normalmente; a correção é de apuração econômica, não de entrega ou débito.

@@ -72,6 +72,19 @@ O restante do sink permanece intocado.
 
 Eventos já gravados com `null` permanecem como estão. A correção vale para eventos novos; qualquer reprocessamento histórico exigiria change separada e autorização própria.
 
+### D6 — Reconciliar o guard de fronteira, sem contorná-lo
+
+O guard preexistente `expand.core.contract.test.ts` proíbe a substring `"credit"` em `expand.ts` para impedir operações financeiras no módulo. O identificador legítimo `creditValueBrlAtGeneration` colide com essa busca textual.
+
+A correção autorizada é **reconciliar o guard**, não contorná-lo:
+
+- o identificador completo `creditValueBrlAtGeneration`, com limites de palavra, é removido **apenas da cópia da fonte analisada** pelo teste (string), nunca do arquivo de produção;
+- a busca financeira passa a ser case-insensitive (`/credit/i`) e continua cobrindo `reserveCredit`, `refundCredit`, `credit_operation`, `campaign_credit_operations`, `CreditOperation`, identificadores maiores que contenham o nome autorizado e `rpc(`;
+- todas as demais proibições existentes permanecem;
+- `expand.ts` encaminha `creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration` diretamente, sem helper, alias, concatenação ou mudança de caixa.
+
+O workaround anterior (`frozenCreditValueField`) foi registrado como desvio, não como autorização retroativa, e é removido nesta correção.
+
 ## Risks / Trade-offs
 
 - **Leitura extra por expansão:** uma consulta a `campaigns` antes da chamada paga. Mitigação: limite de 2.000 ms, best-effort, sem bloquear; caminho já usado pela recuperação de copy.

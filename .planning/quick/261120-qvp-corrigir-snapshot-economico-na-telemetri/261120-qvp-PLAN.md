@@ -10,6 +10,7 @@ files_modified:
   - src/lib/campaign/vertical-expansion/policy.ts
   - src/lib/campaign/vertical-expansion/telemetry.ts
   - src/lib/campaign/vertical-expansion/expand.ts
+  - src/lib/campaign/vertical-expansion/__tests__/expand.core.contract.test.ts
   - src/lib/campaign/vertical-expansion/__tests__/telemetry.contract.test.ts
   - src/lib/campaign/vertical-expansion/__tests__/policy.contract.test.ts
   - src/lib/campaign/vertical-expansion/__tests__/types.contract.test.ts
@@ -95,6 +96,28 @@ Output: contrato do módulo estendido, telemetria com dois contextos preenchidos
 
 Escopo proibido nesta change (não negociável): cobrança, reservas, créditos, pricing, provider, entrega, migrations, backfill de eventos históricos, alteração de `runBaseStep`/`runSquareBase`, e qualquer consulta a câmbio/valor do crédito vigentes. Sem novos pacotes (nenhum `npm install`/`pip`/`cargo`).
 </objective>
+
+<authorized_deviation_correction>
+**Desvio registrado (histórico preservado, sem reescrita):** na primeira execução, o guard
+`expand.core.contract.test.ts` proibia a substring `"credit"` em `expand.ts`. Para não alterar um
+arquivo fora do `files_modified`, o executor criou `frozenCreditValueField` em `telemetry.ts` e o
+espalhou em `expand.ts`. O helper **contornou a busca textual** (usou “Credit” com maiúscula) e
+**não foi uma correção da regra**. Não houve autorização retroativa; o workaround foi identificado
+na revisão e agora é removido.
+
+**Correção autorizada pelo usuário (escopo adicional):**
+- `src/lib/campaign/vertical-expansion/__tests__/expand.core.contract.test.ts` entra no escopo.
+- Remover `frozenCreditValueField` de `telemetry.ts` e seu import/uso em `expand.ts`.
+- `expand.ts` encaminha diretamente `creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration`.
+- O guard deve permitir **exclusivamente** o identificador completo `creditValueBrlAtGeneration`,
+  com limites de palavra, aplicando a exceção **somente à cópia do código analisada** (string),
+  sem alterar o código de produção para satisfazer o scanner.
+- Manter a busca por operações financeiras com variações de caixa (ex.: `reserveCredit`,
+  `refundCredit`, `credit_operation`, `campaign_credit_operations`, `CreditOperation`), inclusive
+  `rpc(`, e todas as demais proibições existentes. Não remover genericamente a proteção de
+  `"credit"` nem substituí-la por uma lista curta de funções conhecidas.
+- Nenhum outro helper, alias, concatenação ou mudança de caixa pode contornar o guard.
+</authorized_deviation_correction>
 
 <execution_context>
 @C:/Users/wagne/.config/opencode/get-shit-done/workflows/execute-plan.md
@@ -237,7 +260,8 @@ Regressões de rota que consomem o caminho (`run-two-format-deps.ts:348` chama `
     src/lib/campaign/vertical-expansion/types.ts,
     src/lib/campaign/vertical-expansion/policy.ts,
     src/lib/campaign/vertical-expansion/telemetry.ts,
-    src/lib/campaign/vertical-expansion/expand.ts
+    src/lib/campaign/vertical-expansion/expand.ts,
+    src/lib/campaign/vertical-expansion/__tests__/expand.core.contract.test.ts
   </files>
   <action>
     Em `types.ts` (D-06), adicionar a `ExpandVerticalInput` dois campos opcionais documentados: `usdBrlRateAtGeneration?: number | null` e `creditValueBrlAtGeneration?: number | null`, com comentário explicando que são snapshot CONGELADO do run, usados apenas para apuração/telemetria, nunca para decidir gasto, e que `null` é ausência explícita. Exportar também o tipo estreito de sucesso `ExpandVerticalParsedInput = ExpandVerticalInput & { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null }` — é o contrato que o parser devolve (campos SEMPRE presentes, nunca opcionais). Não alterar `ExpansionInvalidReason` nem `ExpansionCallEvidence`.
@@ -246,15 +270,17 @@ Regressões de rota que consomem o caminho (`run-two-format-deps.ts:348` chama `
 
     Em `telemetry.ts` (D-05/D-07), tornar `usdBrlRateAtGeneration: number | null` e `creditValueBrlAtGeneration: number | null` obrigatórios em `ExpansionTelemetryInput` (espelhando `square-base/telemetry.ts`), e passar `usdBrlRateAtGeneration` e `creditValueBrlAtGeneration` aos DOIS `createDefaultTelemetryContext`: o do callback do `BufferingAiTelemetrySink` (contexto por envelope, junto de `internalCost`/`onCostResolved`) e o do handle `telemetry` (junto de `sink: buffering`). Não alterar a allowlist `EXPANSION_TELEMETRY_FIELDS`, o `decorateEnvelope`, o cálculo de custo, nem o comportamento de `flush()`.
 
-    Em `expand.ts`, tipar `const valid: ExpandVerticalParsedInput = parsed.input` e encaminhar `valid.usdBrlRateAtGeneration` e `valid.creditValueBrlAtGeneration` diretamente ao `createExpansionTelemetry` (D-07) — já são `number | null`, sem `?? null`, sem cast, sem `any`. Não mexer em seleção, catálogo, pricing, transporte, persistência ou evidência da chamada.
+    Em `expand.ts`, tipar `const valid: ExpandVerticalParsedInput = parsed.input` e encaminhar `valid.usdBrlRateAtGeneration` e `valid.creditValueBrlAtGeneration` DIRETAMENTE ao `createExpansionTelemetry` (D-07), na forma literal `creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration` — já são `number | null`, sem `?? null`, sem cast, sem `any`, sem helper/alias/concatenação. Remover o import e o uso de `frozenCreditValueField`; remover o helper exportado de `telemetry.ts`. Não mexer em seleção, catálogo, pricing, transporte, persistência ou evidência da chamada.
 
-    Rodar os contratos da Task 1 e a suíte inteira de `vertical-expansion` para garantir GREEN sem enfraquecer asserções; atualizar helpers de teste de `expand.*.contract.test.ts` apenas se a exigência nova quebrar a construção de input (nunca relaxar expectativas).
+    Em `__tests__/expand.core.contract.test.ts` (correção autorizada do guard), reconciliar a fronteira sem enfraquecer a proteção financeira: manter TODAS as proibições existentes; remover apenas `"credit"` da lista de `toContain` e criar uma verificação case-insensitive (`/credit/i`, além de `rpc(`) sobre uma CÓPIA da fonte obtida por `withoutAuthorizedEconomicIdentifier(source)`. Essa cópia remove SOMENTE ocorrências do identificador completo `creditValueBrlAtGeneration` com limites de palavra (`\b`), então o encaminhamento direto é aceito; `reserveCredit`, `refundCredit`, `credit_operation`, `campaign_credit_operations`, `CreditOperation`, identificadores maiores contendo o nome autorizado e `rpc(` continuam recusados. A exceção não pode alterar o arquivo-fonte nem o código de produção. Adicionar testes do próprio guard cobrindo aceite do identificador exato, recusa das variações/maiores e manutenção de `rpc(` e demais proibições — sem reduzir asserções existentes.
+
+    Rodar os contratos da Task 1, `expand.core.contract.test.ts` e a suíte inteira de `vertical-expansion` para garantir GREEN sem enfraquecer asserções; atualizar helpers de teste de `expand.*.contract.test.ts` apenas se a exigência nova quebrar a construção de input (nunca relaxar expectativas).
   </action>
   <verify>
-    <automated>npx vitest run src/lib/campaign/vertical-expansion/__tests__/telemetry.contract.test.ts src/lib/campaign/vertical-expansion/__tests__/policy.contract.test.ts src/lib/campaign/vertical-expansion/__tests__/types.contract.test.ts src/lib/campaign/vertical-expansion</automated>
+    <automated>npx vitest run src/lib/campaign/vertical-expansion/__tests__/telemetry.contract.test.ts src/lib/campaign/vertical-expansion/__tests__/policy.contract.test.ts src/lib/campaign/vertical-expansion/__tests__/types.contract.test.ts src/lib/campaign/vertical-expansion/__tests__/expand.core.contract.test.ts src/lib/campaign/vertical-expansion</automated>
   </verify>
   <done>
-    `telemetry.contract`, `policy.contract` e `types.contract` verdes com os novos casos; toda a suíte `src/lib/campaign/vertical-expansion` verde; `ExpandVerticalParsedInput` exportado e devolvido pelo parser com as duas chaves sempre presentes (`number | null`, não opcionais) e `expand.ts` consumindo sem `?? null` nem cast; os dois `createDefaultTelemetryContext` recebem os valores; nenhuma alteração em pricing/custo/transporte/persistência; `ExpandVerticalInput` inalterado nos campos existentes.
+    `telemetry.contract`, `policy.contract`, `types.contract` e `expand.core.contract` verdes; toda a suíte `src/lib/campaign/vertical-expansion` verde; `ExpandVerticalParsedInput` exportado e devolvido pelo parser com as duas chaves sempre presentes (`number | null`, não opcionais) e `expand.ts` consumindo `creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration` DIRETAMENTE, sem `?? null`, cast, `any`, helper, alias ou concatenação; `frozenCreditValueField` ausente de `telemetry.ts`; o guard aceita apenas o identificador exato e continua recusando operações financeiras (qualquer caixa), `rpc(` e as demais proibições; os dois `createDefaultTelemetryContext` recebem os valores; nenhuma alteração em pricing/custo/transporte/persistência; `ExpandVerticalInput` inalterado nos campos existentes.
   </done>
 </task>
 
@@ -325,7 +351,7 @@ Regressões de rota que consomem o caminho (`run-two-format-deps.ts:348` chama `
   <action>
     Rodar os gates em sequência e registrar cada saída (comando + resultado) no SUMMARY: (1) `npx vitest run src/lib/ai/__tests__/telemetry-coverage.test.ts` — exigir 4/4 passes, sem tolerância para a falha antiga; (2) suítes dirigidas completas: `npx vitest run src/lib/campaign/vertical-expansion`, `npx vitest run src/lib/product-9-16-two-stage`, `npx vitest run src/lib/product-two-format`; (2.1) regressões de rota afetadas (superfície que consome `runTwoFormatGeneration` → `runExpansionStep`): `npx vitest run src/app/api/campaign` — inclui obrigatoriamente `src/app/api/campaign/generation-status/__tests__/route.two-stage.test.ts` e `src/app/api/campaign/[id]/continue/__tests__/route.test.ts`, que devem passar SEM alteração (regressão pura). Se alguma dessas duas falhar, PARAR e registrar a evidência; só é permitido tocar nelas com justificativa explícita, e nesse caso elas entram em `files_modified` e a alteração fica limitada a elas (nunca ao `route.ts`); (3) `npm.cmd run typecheck` (exit 0); (4) `npm.cmd run lint` (exit 0; registrar que o lint não cobre TS se continuar verdadeiro no ambiente); (5) `git diff --check` E inspeção de arquivos não rastreados com `git status --porcelain --untracked-files=all` (equivalente a complementar com `git ls-files --others --exclude-standard`); (6) conferência de escopo por delta contra o baseline capturado na Task 1: comparar a saída atual de `git status --porcelain --untracked-files=all` e de `git diff --name-only` com o baseline e reprovar apenas caminhos NOVOS. O allowlist explícito inclui: arquivos listados em `files_modified`; o SUMMARY desta quick (`.planning/quick/261120-qvp-.../261120-qvp-SUMMARY.md`); a árvore `openspec/changes/fix-snapshot-economico-telemetria-expansao-9-16/`; e os dois `.codex/skills/ui-ux-pro-max/scripts/__pycache__/*.pyc` preexistentes (nunca stagear nem editar). Nenhum arquivo novo em `supabase/migrations`, `src/lib/ai-cost`, `src/lib/product-1-1/credit-operation`, pricing, provider, entrega; em `src/app`, nada pode aparecer, exceto (e somente se justificado no passo 2.1) os dois arquivos de teste de rota citados — nenhum `route.ts` ou código de rota; nenhum evento histórico reescrito e nenhum backfill. Migration acidental/não autorizada deve ser visível e barrada mesmo que `??`.
 
-    Confirmar por inspeção dirigida: `runBaseStep`/`runSquareBase`/`reconstruction.ts` sem diff; ausência de `EconomicParameterService`/`@/lib/economic` nos arquivos novos; `EXPANSION_TELEMETRY_FIELDS` inalterado; nenhuma migration criada; `src/lib/ai/types.ts` declara `usdBrlRateAtGeneration?` e `creditValueBrlAtGeneration?` em `AiTelemetryContext` (só tipo, sem mudança de runtime); `ExpandVerticalParseResult` (`ok: true`) tipa `input` como `ExpandVerticalParsedInput`, com os dois campos NÃO opcionais (`number | null`) e o parser emitindo-os sempre como chaves explícitas; nenhum `any`, `@ts-ignore` ou cast que esconda campo nos arquivos modificados.
+    Confirmar por inspeção dirigida: `runBaseStep`/`runSquareBase`/`reconstruction.ts` sem diff; ausência de `EconomicParameterService`/`@/lib/economic` nos arquivos novos; `EXPANSION_TELEMETRY_FIELDS` inalterado; nenhuma migration criada; `src/lib/ai/types.ts` declara `usdBrlRateAtGeneration?` e `creditValueBrlAtGeneration?` em `AiTelemetryContext` (só tipo, sem mudança de runtime); `ExpandVerticalParseResult` (`ok: true`) tipa `input` como `ExpandVerticalParsedInput`, com os dois campos NÃO opcionais (`number | null`) e o parser emitindo-os sempre como chaves explícitas; nenhum `any`, `@ts-ignore` ou cast que esconda campo nos arquivos modificados; `rg -n "frozenCreditValueField" src` sem ocorrências; `expand.ts` contém exatamente `creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration` (encaminhamento direto) e nenhum outro helper/alias/concatenação; o guard em `expand.core.contract.test.ts` mantém todas as proibições e aplica a exceção só à cópia analisada com limites de palavra.
 
     No SUMMARY, declarar explicitamente: o que está provado localmente (testes offline, sem banco/Storage/provider), o que NÃO foi provado (suíte global completa não reexecutada; nenhum ambiente real) e que NÃO se declara a suíte global verde. Registrar o baseline da Task 1 e a decisão de escopo da base (D-09: intocada porque o teste de confirmação passou). Registrar pendências de publicação/ativação como gates separados, fora desta change.
   </action>
@@ -389,6 +415,7 @@ Não provado por esta change: suíte global completa (não reexecutada), qualque
 - Ausência, malformação, exceção, rejeição da dependência injetada e timeout ⇒ `null`, expansão prossegue, exatamente um `acquire`/`finish` no sucesso e zero `acquire` quando o recheck suspende.
 - Fluxo individual e conjunto provam os mesmos valores congelados; continuação/retry preserva os originais com parâmetros vigentes alterados.
 - `runBaseStep`/`runSquareBase`/`reconstruction.ts` sem alteração, com teste de confirmação verde.
+- `frozenCreditValueField` ausente; `expand.ts` encaminha `creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration` diretamente; guard aceita só o identificador exato e continua recusando operações financeiras (qualquer caixa), `rpc(` e as demais proibições.
 - Typecheck 0, lint 0, `git diff --check` limpo, `git status --porcelain --untracked-files=all` comparado ao baseline da Task 1 sem caminho NOVO fora do allowlist (inclusive não rastreados), diff restrito ao escopo, nenhuma migration/backfill/cobrança/pricing/provider/entrega.
 - SUMMARY registra baseline, evidências, decisão de escopo da base e limites explícitos (nenhuma alegação de suíte global verde).
 </success_criteria>

@@ -9,6 +9,7 @@
 - [ ] 2.1 Estender `ExpandVerticalInput` (`types.ts`) com `usdBrlRateAtGeneration?: number | null` e `creditValueBrlAtGeneration?: number | null`.
 - [ ] 2.2 Atualizar `parseExpandVerticalInput` (`policy.ts`) para ler os dois campos, aceitar número finito ou `null` e normalizar inválido/ausente para `null`, preservando o objeto congelado e sem novo motivo de recusa.
 - [ ] 2.3 Em `expand.ts`, encaminhar os valores validados a `createExpansionTelemetry` e manter o restante do contrato de entrada/saída inalterado.
+- [ ] 2.4 Reconciliar `expand.core.contract.test.ts`: permitir somente o identificador completo `creditValueBrlAtGeneration` na cópia analisada (limites de palavra), manter busca financeira case-insensitive e todas as proibições; remover qualquer helper/alias usado para contornar o scanner e cobrir o guard com testes positivos/negativos.
 
 ## 3. Telemetria: dois contextos
 
@@ -42,3 +43,4 @@
 - [ ] 7.3 Rodar `npm.cmd run typecheck`, `npm.cmd run lint` e `git diff --check`.
 - [ ] 7.4 Confirmar diff restrito ao escopo (expansão/orquestração/testes/documentação), sem migration, pricing, cobrança, reservas, provider, entrega ou backfill de eventos históricos.
 - [ ] 7.5 Registrar a evidência no SUMMARY/verificação da change; não declarar a suíte global verde sem reexecutá-la por completo.
+- [ ] 7.6 Confirmar ausência de `frozenCreditValueField` e de qualquer alias/helper de contorno; confirmar o encaminhamento direto de `creditValueBrlAtGeneration` e que o único arquivo de código adicional ao escopo anterior é `expand.core.contract.test.ts`.
