@@ -1,0 +1,115 @@
+{
+  "generatedAtUtc": "2026-11-20T13:40:20.802Z",
+  "comparison": {
+    "table": "storage.objects",
+    "baseline": {
+      "count": 345,
+      "fingerprint": "836ed10b7f0ba95781417d139b39660c"
+    },
+    "currentTotal": {
+      "count": 356,
+      "fingerprint": "b9d28d175f49e6121cd3533241ffd53d"
+    },
+    "excludedCount": 11,
+    "remaining": {
+      "count": 345,
+      "fingerprint": "836ed10b7f0ba95781417d139b39660c"
+    },
+    "residualEqual": true,
+    "fullSetEqual": false,
+    "verdict": "mapped",
+    "protected": false
+  },
+  "excludedObjects": [
+    {
+      "key": {
+        "id": "5821bb5c-fb41-4cea-9f38-78f4c6c8270b"
+      },
+      "bucketId": "campaign-internal-artifacts",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000002/f607c400-0000-4000-8000-000000000003/square_original.jpg",
+      "source": "c4i"
+    },
+    {
+      "key": {
+        "id": "414e9ab4-c7d0-49e8-b08a-5207b31e2ee3"
+      },
+      "bucketId": "campaign-images",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000002/f607c400-0000-4000-8000-000000000003/square_original.thumb-v1.webp",
+      "source": "c4i"
+    },
+    {
+      "key": {
+        "id": "52325b9e-ac66-48e3-8b5b-8ff9a27980ff"
+      },
+      "bucketId": "campaign-internal-artifacts",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000002/f607c400-0000-4000-8000-000000000003/square_prepared.jpg",
+      "source": "c4i"
+    },
+    {
+      "key": {
+        "id": "35bfab66-dca3-4c0d-b4ae-fc01c967b93e"
+      },
+      "bucketId": "campaign-internal-artifacts",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000002/f607c400-0000-4000-8000-000000000003/vertical.jpg",
+      "source": "c4i"
+    },
+    {
+      "key": {
+        "id": "b38f542f-fc52-4b0c-b41e-facb9abe2e95"
+      },
+      "bucketId": "campaign-images",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000002/inputs/a007a0273a223aeba7885edfc908943804f7e37cc4ed8eb423aaf43d0eec98c8.jpg",
+      "source": "c4i"
+    },
+    {
+      "key": {
+        "id": "f369dab9-a6d1-41ee-969a-a993e5f8e4ad"
+      },
+      "bucketId": "campaign-internal-artifacts",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000012/f607c400-0000-4000-8000-000000000013/square_original.jpg",
+      "source": "c4i"
+    },
+    {
+      "key": {
+        "id": "3b95973e-987f-4806-8c4e-038c41469c48"
+      },
+      "bucketId": "campaign-images",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000012/inputs/a007a0273a223aeba7885edfc908943804f7e37cc4ed8eb423aaf43d0eec98c8.jpg",
+      "source": "c4i"
+    },
+    {
+      "key": {
+        "id": "7096d6e3-653f-4040-911f-38e22c405836"
+      },
+      "bucketId": "campaign-internal-artifacts",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_original.jpg",
+      "source": "complement"
+    },
+    {
+      "key": {
+        "id": "9438965e-3f80-4871-a280-a4aaa1eeda9b"
+      },
+      "bucketId": "campaign-internal-artifacts",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/square_prepared.jpg",
+      "source": "complement"
+    },
+    {
+      "key": {
+        "id": "9b0589a1-e723-4226-aaf5-36370ab62e2a"
+      },
+      "bucketId": "campaign-internal-artifacts",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.jpg",
+      "source": "complement"
+    },
+    {
+      "key": {
+        "id": "9127c1f5-2114-45c1-af78-27d59cccb244"
+      },
+      "bucketId": "campaign-images",
+      "path": "f607c400-0000-4000-8000-000000000001/f607c400-0000-4000-8000-000000000042/f607c400-0000-4000-8000-000000000043/vertical.thumb-v1.webp",
+      "source": "complement"
+    }
+  ],
+  "bytePreservationProven": false,
+  "note": "Only storage.objects rows and metadata are compared; no bytes were downloaded or hashed."
+}

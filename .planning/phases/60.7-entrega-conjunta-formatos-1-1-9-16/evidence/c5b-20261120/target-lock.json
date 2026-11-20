@@ -1,0 +1,20 @@
+﻿{
+    "capturedAtUtc":  "2026-11-20T13:38:47.1885822Z",
+    "head":  "74f8b486f92ab534fe5e6bdb3e5a7067b3d457fa",
+    "worktreeClean":  true,
+    "target":  {
+                   "environment":  "vendeo-homolog",
+                   "container":  "supabase_db_vendeo-homolog",
+                   "postgres":  "127.0.0.1:57782/postgres",
+                   "production":  false,
+                   "appStarted":  false
+               },
+    "ledger":  "157|20261118002139",
+    "baseline":  {
+                     "file":  "../c4i-20261119/c5a-baseline.json",
+                     "sha256":  "C37643C1C391E3406B9589EE41262C1A7E5D33A7DF247941EDF7BC2A8D7196ED",
+                     "tableCount":  31
+                 },
+    "readProtection":  "REPEATABLE READ READ ONLY",
+    "writesPerformed":  false
+}

@@ -1,0 +1,17 @@
+{
+  "tables": [
+    "auth.users",
+    "auth.identities",
+    "auth.sessions",
+    "auth.refresh_tokens",
+    "auth.audit_log_entries",
+    "store_brand_profiles",
+    "legal_acceptances",
+    "campaign_events"
+  ],
+  "reason": "not present in the C5a baseline",
+  "covered": false,
+  "historicalPreservationProven": false,
+  "storageBytesProven": false,
+  "storageCoverage": "storage.objects rows and metadata only; no byte fingerprints"
+}

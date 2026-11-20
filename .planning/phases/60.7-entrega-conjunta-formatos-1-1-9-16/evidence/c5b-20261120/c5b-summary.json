@@ -1,0 +1,55 @@
+{
+  "gate": "C5b",
+  "status": "PASS_AWAITING_REVIEW",
+  "head": "74f8b486f92ab534fe5e6bdb3e5a7067b3d457fa",
+  "executedAtUtc": "2026-11-20T13:40:20.796Z",
+  "target": "vendeo-homolog",
+  "baseline": {
+    "sha256": "C37643C1C391E3406B9589EE41262C1A7E5D33A7DF247941EDF7BC2A8D7196ED",
+    "tables": 31
+  },
+  "readProtection": "REPEATABLE READ READ ONLY",
+  "tablesCovered": 31,
+  "identical": 13,
+  "mapped": 18,
+  "unexplained": 0,
+  "protectedTables": 10,
+  "storage": {
+    "verdict": "mapped",
+    "residualEqual": true,
+    "excludedObjects": 11,
+    "bytePreservationProven": false
+  },
+  "omitted": {
+    "tables": [
+      "auth.users",
+      "auth.identities",
+      "auth.sessions",
+      "auth.refresh_tokens",
+      "auth.audit_log_entries",
+      "store_brand_profiles",
+      "legal_acceptances",
+      "campaign_events"
+    ],
+    "reason": "not present in the C5a baseline",
+    "covered": false,
+    "historicalPreservationProven": false,
+    "storageBytesProven": false,
+    "storageCoverage": "storage.objects rows and metadata only; no byte fingerprints"
+  },
+  "writesPerformed": false,
+  "report": "../../../60.7-C5B-REPORT.md",
+  "gateApproved": false,
+  "next": "human review",
+  "evidenceFiles": [
+    "target-lock.json",
+    "c5b-transaction.json",
+    "c5b-exclusions.json",
+    "c5b-current.json",
+    "c5b-comparison.json",
+    "c5b-storage.json",
+    "c5b-protected.json",
+    "c5b-omitted.json",
+    "c5b-summary.json"
+  ]
+}

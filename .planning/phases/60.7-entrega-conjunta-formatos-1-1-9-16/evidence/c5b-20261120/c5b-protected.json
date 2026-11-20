@@ -1,0 +1,205 @@
+{
+  "generatedAtUtc": "2026-11-20T13:40:20.802Z",
+  "comparisons": [
+    {
+      "table": "feature_flags",
+      "baseline": {
+        "count": 10,
+        "fingerprint": "df7ed1ae7a976f26dc66673d6c548a76"
+      },
+      "currentTotal": {
+        "count": 10,
+        "fingerprint": "df7ed1ae7a976f26dc66673d6c548a76"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 10,
+        "fingerprint": "df7ed1ae7a976f26dc66673d6c548a76"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "ai_model_pricing",
+      "baseline": {
+        "count": 26,
+        "fingerprint": "18f605bb5a696e99c6d6a47fa042327b"
+      },
+      "currentTotal": {
+        "count": 26,
+        "fingerprint": "18f605bb5a696e99c6d6a47fa042327b"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 26,
+        "fingerprint": "18f605bb5a696e99c6d6a47fa042327b"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "ai_model_catalog",
+      "baseline": {
+        "count": 19,
+        "fingerprint": "a0d49147d8ba406478b031908bbd6b91"
+      },
+      "currentTotal": {
+        "count": 19,
+        "fingerprint": "a0d49147d8ba406478b031908bbd6b91"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 19,
+        "fingerprint": "a0d49147d8ba406478b031908bbd6b91"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "ai_model_selection",
+      "baseline": {
+        "count": 3,
+        "fingerprint": "d2d137a1120c57b41a808793feb929ff"
+      },
+      "currentTotal": {
+        "count": 3,
+        "fingerprint": "d2d137a1120c57b41a808793feb929ff"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 3,
+        "fingerprint": "d2d137a1120c57b41a808793feb929ff"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "image_model_pair_config",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "6ec80630142fac36e0e395ab51609769"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "6ec80630142fac36e0e395ab51609769"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "6ec80630142fac36e0e395ab51609769"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "nine_sixteen_expansion_model_config",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "72b6ec4bd923903e3553d20235b5a656"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "72b6ec4bd923903e3553d20235b5a656"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "72b6ec4bd923903e3553d20235b5a656"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "pricing_sync_attempts",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "639861f0cce5c24fb54ad5ead444813b"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "639861f0cce5c24fb54ad5ead444813b"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "639861f0cce5c24fb54ad5ead444813b"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "visual_signature_model_config",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "visual_signature_model_config_pilot_stores",
+      "baseline": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "currentTotal": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "visual_signature_model_config_release",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "a237fca8b9c22bc1db102070a3d0a0a3"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "a237fca8b9c22bc1db102070a3d0a0a3"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "a237fca8b9c22bc1db102070a3d0a0a3"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    }
+  ]
+}

@@ -1,0 +1,625 @@
+{
+  "generatedAtUtc": "2026-11-20T13:40:20.801Z",
+  "comparisons": [
+    {
+      "table": "stores",
+      "baseline": {
+        "count": 38,
+        "fingerprint": "0391b57e4d33ab61bfdd847d43f18d74"
+      },
+      "currentTotal": {
+        "count": 39,
+        "fingerprint": "0b6cc2815e209eeafa87e0c6af7c2785"
+      },
+      "excludedCount": 1,
+      "remaining": {
+        "count": 38,
+        "fingerprint": "0391b57e4d33ab61bfdd847d43f18d74"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "campaigns",
+      "baseline": {
+        "count": 132,
+        "fingerprint": "744450de79a48b318d200ab6a2cdc505"
+      },
+      "currentTotal": {
+        "count": 137,
+        "fingerprint": "49b6c40cda99272223977a7d9d2b2928"
+      },
+      "excludedCount": 5,
+      "remaining": {
+        "count": 132,
+        "fingerprint": "744450de79a48b318d200ab6a2cdc505"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "credit_balances",
+      "baseline": {
+        "count": 35,
+        "fingerprint": "18aaa0a23de26ffbb9d046b664aa7bab"
+      },
+      "currentTotal": {
+        "count": 36,
+        "fingerprint": "68e1fe1277d62d4e67b15d6c2b36a35d"
+      },
+      "excludedCount": 1,
+      "remaining": {
+        "count": 35,
+        "fingerprint": "18aaa0a23de26ffbb9d046b664aa7bab"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "credit_transactions",
+      "baseline": {
+        "count": 223,
+        "fingerprint": "29336e8bd2d9d4545da2dd2f426cd99f"
+      },
+      "currentTotal": {
+        "count": 233,
+        "fingerprint": "ac98ccfa5e3038d2a45248a5d4791241"
+      },
+      "excludedCount": 10,
+      "remaining": {
+        "count": 223,
+        "fingerprint": "29336e8bd2d9d4545da2dd2f426cd99f"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_1_1_campaign_credit_operations",
+      "baseline": {
+        "count": 84,
+        "fingerprint": "4eaea98f9075e2c4be9db85aba367e01"
+      },
+      "currentTotal": {
+        "count": 94,
+        "fingerprint": "d62476292f694350674dccd0b19cb510"
+      },
+      "excludedCount": 10,
+      "remaining": {
+        "count": 84,
+        "fingerprint": "4eaea98f9075e2c4be9db85aba367e01"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_1_1_generation_outcomes",
+      "baseline": {
+        "count": 7,
+        "fingerprint": "01ad1a00f05c6543b778097bc81206ce"
+      },
+      "currentTotal": {
+        "count": 8,
+        "fingerprint": "d2c2be8580019d19e84ad5af232dcddd"
+      },
+      "excludedCount": 1,
+      "remaining": {
+        "count": 7,
+        "fingerprint": "01ad1a00f05c6543b778097bc81206ce"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_9_16_two_stage_outcomes",
+      "baseline": {
+        "count": 12,
+        "fingerprint": "c5a7811ae2d1bb9b1b3816672614ec77"
+      },
+      "currentTotal": {
+        "count": 13,
+        "fingerprint": "1a3261097cef0e5adb16588a9f421396"
+      },
+      "excludedCount": 1,
+      "remaining": {
+        "count": 12,
+        "fingerprint": "c5a7811ae2d1bb9b1b3816672614ec77"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "campaign_composition_artifacts",
+      "baseline": {
+        "count": 27,
+        "fingerprint": "eb3a7eb7f76c0871905fa8a0c2b8edec"
+      },
+      "currentTotal": {
+        "count": 35,
+        "fingerprint": "42759264815de5a36cdb5460f86429d6"
+      },
+      "excludedCount": 8,
+      "remaining": {
+        "count": 27,
+        "fingerprint": "eb3a7eb7f76c0871905fa8a0c2b8edec"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "admin_audit_log",
+      "baseline": {
+        "count": 107,
+        "fingerprint": "6abdb68f75a427556ea5fd44a3370df7"
+      },
+      "currentTotal": {
+        "count": 109,
+        "fingerprint": "59d830d1a15b914eb24b27143d537aec"
+      },
+      "excludedCount": 2,
+      "remaining": {
+        "count": 107,
+        "fingerprint": "6abdb68f75a427556ea5fd44a3370df7"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "storage.objects",
+      "baseline": {
+        "count": 345,
+        "fingerprint": "836ed10b7f0ba95781417d139b39660c"
+      },
+      "currentTotal": {
+        "count": 356,
+        "fingerprint": "b9d28d175f49e6121cd3533241ffd53d"
+      },
+      "excludedCount": 11,
+      "remaining": {
+        "count": 345,
+        "fingerprint": "836ed10b7f0ba95781417d139b39660c"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "feature_flags",
+      "baseline": {
+        "count": 10,
+        "fingerprint": "df7ed1ae7a976f26dc66673d6c548a76"
+      },
+      "currentTotal": {
+        "count": 10,
+        "fingerprint": "df7ed1ae7a976f26dc66673d6c548a76"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 10,
+        "fingerprint": "df7ed1ae7a976f26dc66673d6c548a76"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "ai_model_pricing",
+      "baseline": {
+        "count": 26,
+        "fingerprint": "18f605bb5a696e99c6d6a47fa042327b"
+      },
+      "currentTotal": {
+        "count": 26,
+        "fingerprint": "18f605bb5a696e99c6d6a47fa042327b"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 26,
+        "fingerprint": "18f605bb5a696e99c6d6a47fa042327b"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "ai_model_catalog",
+      "baseline": {
+        "count": 19,
+        "fingerprint": "a0d49147d8ba406478b031908bbd6b91"
+      },
+      "currentTotal": {
+        "count": 19,
+        "fingerprint": "a0d49147d8ba406478b031908bbd6b91"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 19,
+        "fingerprint": "a0d49147d8ba406478b031908bbd6b91"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "ai_model_selection",
+      "baseline": {
+        "count": 3,
+        "fingerprint": "d2d137a1120c57b41a808793feb929ff"
+      },
+      "currentTotal": {
+        "count": 3,
+        "fingerprint": "d2d137a1120c57b41a808793feb929ff"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 3,
+        "fingerprint": "d2d137a1120c57b41a808793feb929ff"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "image_generation_config_snapshots",
+      "baseline": {
+        "count": 34,
+        "fingerprint": "dff4867161fff87931bbc7d42c600177"
+      },
+      "currentTotal": {
+        "count": 36,
+        "fingerprint": "436264220440a559a3e9940bee144f15"
+      },
+      "excludedCount": 2,
+      "remaining": {
+        "count": 34,
+        "fingerprint": "dff4867161fff87931bbc7d42c600177"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "image_model_pair_config",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "6ec80630142fac36e0e395ab51609769"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "6ec80630142fac36e0e395ab51609769"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "6ec80630142fac36e0e395ab51609769"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "nine_sixteen_expansion_model_config",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "72b6ec4bd923903e3553d20235b5a656"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "72b6ec4bd923903e3553d20235b5a656"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "72b6ec4bd923903e3553d20235b5a656"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "pricing_sync_attempts",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "639861f0cce5c24fb54ad5ead444813b"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "639861f0cce5c24fb54ad5ead444813b"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "639861f0cce5c24fb54ad5ead444813b"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "visual_signature_model_config",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "34dbe80fa20e0d3d6f7e64bebd80f1e8"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "visual_signature_model_config_pilot_stores",
+      "baseline": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "currentTotal": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "visual_signature_model_config_release",
+      "baseline": {
+        "count": 1,
+        "fingerprint": "a237fca8b9c22bc1db102070a3d0a0a3"
+      },
+      "currentTotal": {
+        "count": 1,
+        "fingerprint": "a237fca8b9c22bc1db102070a3d0a0a3"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 1,
+        "fingerprint": "a237fca8b9c22bc1db102070a3d0a0a3"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": true
+    },
+    {
+      "table": "product_9_16_two_stage_operations",
+      "baseline": {
+        "count": 34,
+        "fingerprint": "712a55ac2d3759e68524785ca9b58e1d"
+      },
+      "currentTotal": {
+        "count": 39,
+        "fingerprint": "1483350ae7b281ef542b44292450417a"
+      },
+      "excludedCount": 5,
+      "remaining": {
+        "count": 34,
+        "fingerprint": "712a55ac2d3759e68524785ca9b58e1d"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_9_16_two_stage_steps",
+      "baseline": {
+        "count": 68,
+        "fingerprint": "25a6ebc5efc0c4af2095d15d0cb209ef"
+      },
+      "currentTotal": {
+        "count": 74,
+        "fingerprint": "ddd092d5b9e910de7b64e66afcd4e960"
+      },
+      "excludedCount": 6,
+      "remaining": {
+        "count": 68,
+        "fingerprint": "25a6ebc5efc0c4af2095d15d0cb209ef"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_9_16_two_stage_attempt_claims",
+      "baseline": {
+        "count": 35,
+        "fingerprint": "8c6a0377976be114172dab719edec876"
+      },
+      "currentTotal": {
+        "count": 38,
+        "fingerprint": "0e3dd4f946a9cf407c654033c2e31722"
+      },
+      "excludedCount": 3,
+      "remaining": {
+        "count": 35,
+        "fingerprint": "8c6a0377976be114172dab719edec876"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_two_format_deliveries",
+      "baseline": {
+        "count": 27,
+        "fingerprint": "017c230b0b824e18e1f4b8ad88cf6d95"
+      },
+      "currentTotal": {
+        "count": 37,
+        "fingerprint": "7976fb48fc365ad3a33680541b623bfd"
+      },
+      "excludedCount": 10,
+      "remaining": {
+        "count": 27,
+        "fingerprint": "017c230b0b824e18e1f4b8ad88cf6d95"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_1_1_copy_state",
+      "baseline": {
+        "count": 34,
+        "fingerprint": "e96aa140471bd372582dbdaf6a6f8ab9"
+      },
+      "currentTotal": {
+        "count": 36,
+        "fingerprint": "c8831f755eaed574125049692de2069b"
+      },
+      "excludedCount": 2,
+      "remaining": {
+        "count": 34,
+        "fingerprint": "e96aa140471bd372582dbdaf6a6f8ab9"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_1_1_copy_cancellations",
+      "baseline": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "currentTotal": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": false
+    },
+    {
+      "table": "product_1_1_snapshot_content_binding",
+      "baseline": {
+        "count": 34,
+        "fingerprint": "0e8d93169a59121991ba831aef11cbe5"
+      },
+      "currentTotal": {
+        "count": 36,
+        "fingerprint": "fd79aa67ba85f012658f764c89070a29"
+      },
+      "excludedCount": 2,
+      "remaining": {
+        "count": 34,
+        "fingerprint": "0e8d93169a59121991ba831aef11cbe5"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "product_1_1_snapshot_frozen_evidence",
+      "baseline": {
+        "count": 34,
+        "fingerprint": "82e80aeb5bdc8b6b961a2093cc0545e8"
+      },
+      "currentTotal": {
+        "count": 36,
+        "fingerprint": "d39c8b727673fad0dc21e8f1a754c457"
+      },
+      "excludedCount": 2,
+      "remaining": {
+        "count": 34,
+        "fingerprint": "82e80aeb5bdc8b6b961a2093cc0545e8"
+      },
+      "residualEqual": true,
+      "fullSetEqual": false,
+      "verdict": "mapped",
+      "protected": false
+    },
+    {
+      "table": "generation_events",
+      "baseline": {
+        "count": 385,
+        "fingerprint": "114405c1fb0f5901eebff235241865d0"
+      },
+      "currentTotal": {
+        "count": 385,
+        "fingerprint": "114405c1fb0f5901eebff235241865d0"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 385,
+        "fingerprint": "114405c1fb0f5901eebff235241865d0"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": false
+    },
+    {
+      "table": "campaign_art_versions",
+      "baseline": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "currentTotal": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "excludedCount": 0,
+      "remaining": {
+        "count": 0,
+        "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "residualEqual": true,
+      "fullSetEqual": true,
+      "verdict": "identical",
+      "protected": false
+    }
+  ]
+}

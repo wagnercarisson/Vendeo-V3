@@ -1,0 +1,12 @@
+﻿{
+    "began":  "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
+    "committed":  "COMMIT",
+    "singleClient":  true,
+    "tablesCovered":  31,
+    "onlyReviewedSelects":  true,
+    "ddlOrTempTables":  false,
+    "writesPerformed":  false,
+    "contentExported":  false,
+    "storageBytesDownloaded":  false,
+    "collectedAtUtc":  "2026-11-20T13:42:29.2706556Z"
+}
