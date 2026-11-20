@@ -77,7 +77,7 @@
 >
 > **Reabertura pontual 2026-11-20:** **6.5** (checkboxes) e **6.8** (custo/saldo unificado) foram reabertas para a correção documentada em `60.7-C2-REOPEN-PLAN.md`. As demais tasks permanecem concluídas; nenhum código foi alterado ainda.
 >
-> **Complemento documental 2026-11-20:** **6.22** (clareza da tela de acompanhamento) e **6.23** (robustez do NDJSON/reidratação) foram adicionadas conforme `60.7-C2-C6-COMPLEMENT-PLAN.md` e implementadas offline em `649ce913`, com evidência em `60.7-C2-C6-COMPLEMENT-REPORT.md`. **6.24** (linha “Formato” da revisão) e **6.25** (transição para a campanha pronta) foram implementadas offline conforme `60.7-C2-C6-TRANSITION-PLAN.md`. C2/C6 não foram reconfirmados; revisão humana pendente.
+> **Complemento documental 2026-11-20:** **6.22** (clareza da tela de acompanhamento) e **6.23** (robustez do NDJSON/reidratação) foram adicionadas conforme `60.7-C2-C6-COMPLEMENT-PLAN.md` e implementadas offline em `649ce913`, com evidência em `60.7-C2-C6-COMPLEMENT-REPORT.md`. **6.24** (linha “Formato” da revisão) e **6.25** (transição para a campanha pronta) foram implementadas offline em `3d65c7fb`, com evidência em `60.7-C2-C6-TRANSITION-REPORT.md`. C2/C6 não foram reconfirmados; revisão humana pendente.
 
 > Gate C concluído em 2026-11-20; disponibilidade local/homolog não é publicação. Plano macro em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop). Subfatia C concluída e aceita tecnicamente com ressalvas.
 
