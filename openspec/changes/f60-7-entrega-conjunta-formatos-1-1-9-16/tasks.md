@@ -69,47 +69,49 @@
 - [x] 5.4 Validar que as RPCs/consultas dos fluxos 1:1/9:16 individuais e históricos permanecem intactas.
 - [x] 5.5 Registrar evidência e limitações; se a autorização não existir, bloquear a liberação da Subfatia C e não declarar a migration validada.
 
-> **Execução do Gate de banco (2026-11-19):** `5.1–5.5` executados e **aceitos com limitações**. Primeiro: backup, aplicação transacional, ledger 156→157 e **17 cenários de banco PASS**; S13/S14 apenas regressão legada e S17 offline. Depois: **complemento base 10/10 PASS** com `resolveJointPending` real (J2 comprova o handoff do outcome próprio do quadrado) e PostgREST real, **sem Storage de arte**. **Pendências obrigatórias transferidas para C:** arte íntegra pela jornada conectada e preservação de conteúdo (janela C; histórico não comprovado). Ver `60.7-C-PLAN.md`. A Subfatia C **não foi iniciada**.
+> **Execução do Gate de banco (2026-11-19):** `5.1–5.5` executados e **aceitos com limitações**. Primeiro: backup, aplicação transacional, ledger 156→157 e **17 cenários de banco PASS**; S13/S14 apenas regressão legada e S17 offline. Depois: **complemento base 10/10 PASS** com `resolveJointPending` real (J2 comprova o handoff do outcome próprio do quadrado) e PostgREST real, **sem Storage de arte**. **Pendências obrigatórias transferidas para C:** arte íntegra pela jornada conectada e preservação de conteúdo (janela C; histórico não comprovado). Ver `60.7-C-PLAN.md`. A Subfatia C foi executada e aceita tecnicamente com ressalvas.
 
 ## 6. Subfatia C — Jornada e apresentação
 
-> Somente após o Gate C a opção conjunta fica disponível ao lojista. Plano macro em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop); **C1 executável em `60.7-C1-PLAN.md`**. C **não iniciada**.
+> **Reconciliação 2026-11-20:** Subfatia C concluída e aceita tecnicamente com ressalvas (C1–C6). Itens 6.1–8.6 marcados com base em `60.7-C1-VERIFICATION.md`…`60.7-C6-ACCEPTANCE.md` e `60.7-VERIFICATION.md`. Disponibilidade local/homolog não é publicação; produção, deploy e sync/archive permanecem separados.
 
-- [ ] 6.1 Implementar o dispatch dedicado no `generate-image` para o formato conjunto, com validação da flag vertical aplicável, fingerprint congelado, `inputFiles`/`resumeContext` e ausência de efeitos antes da validação.
-- [ ] 6.2 Implementar a rota/continuação da operação conjunta, reutilizando o schema e os limites existentes, sem aceitar conteúdo novo do navegador.
-- [ ] 6.3 Estender o `NewFlowGenerateImageRequestSchema` para aceitar o valor conjunto exato, mantendo a recusa de listas/formatos desconhecidos e sem permitir que o dispatch individual trate o pedido conjunto como 1:1/9:16.
-- [ ] 6.4 Atualizar os tipos e o transporte de restauração/formulário/review para o formato conjunto, sem alterar a representação de `1:1` e `9:16` individuais.
-- [ ] 6.5 Adicionar a terceira opção de formato no seletor, habilitada apenas com a geração vertical aplicável e com explicação de dois formatos.
-- [ ] 6.6 Persistir o formato conjunto no draft, body, fingerprint e restauração, sem alterar o body de `1:1` nem o de `9:16` individual.
-- [ ] 6.7 Atualizar a revisão para exibir os dois formatos e o custo total de 2 créditos quando o formato conjunto estiver selecionado.
-- [ ] 6.8 Atualizar a checagem de saldo do formulário/rota para 2 créditos no formato conjunto, sem alterar `campaign_generation`, pricing ou o custo dos fluxos individuais.
-- [ ] 6.9 Bloquear submissão conjunta quando a flag vertical aplicável estiver OFF, preservando o formato restaurado e sem trocar silenciosamente para 1:1/9:16.
-- [ ] 6.10 Adaptar `listCampaigns` para carregar os indicadores conjuntos em lote, mantendo 1:1/9:16/histórico no caminho atual e sem expor `input_snapshot`.
-- [ ] 6.11 Implementar o card conjunto com um único card, chips/indicadores, estado parcial, link do formato entregue para `?format=` e ausência/processamento sem ação.
-- [ ] 6.12 Adaptar as miniaturas da listagem para usar o caminho derivado do formato preferido, nunca o original como fallback.
-- [ ] 6.13 Adaptar o dashboard para exibir a campanha conjunta uma única vez, contar uma vez, indicar os dois formatos e usar a miniatura derivada preferida.
-- [ ] 6.14 Adaptar a página de detalhe para reconhecer a origem conjunta antes dos ramos individuais e carregar o modelo por formato.
-- [ ] 6.15 Implementar a seleção/tabs 1:1 e 9:16 com `?format=` e pré-seleção validada no servidor.
-- [ ] 6.16 Implementar preview individual por formato somente após `delivered` e artefato compatível, com URL assinada curta e sem assinar formato ausente/indeterminado.
-- [ ] 6.17 Implementar download individual por formato na rota existente, com `?format=`, fallback preferido e falha fechada, preservando 1:1/9:16 individual e histórico.
-- [ ] 6.18 Implementar as miniaturas derivadas do quadrado e do vertical, estendendo a elegibilidade apenas para o caminho canônico do `square_original`.
-- [ ] 6.19 Adaptar a tela de processamento e o polling para indicar os dois formatos e continuar acompanhando enquanto qualquer formato estiver em processamento.
-- [ ] 6.20 Exibir a copy compartilhada uma única vez no detalhe, inclusive em entrega parcial, sem duplicar o painel por formato.
-- [ ] 6.21 Cobrir com testes de UI/read model: card único, indicador abre o formato correto, processamento não gera, ausência sem ação, miniatura quadrada preferida, placeholder sem original, preview/download por formato, formato não entregue sem arte, copy única e reload.
+> Gate C concluído em 2026-11-20; disponibilidade local/homolog não é publicação. Plano macro em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop). Subfatia C concluída e aceita tecnicamente com ressalvas.
+
+- [x] 6.1 Implementar o dispatch dedicado no `generate-image` para o formato conjunto, com validação da flag vertical aplicável, fingerprint congelado, `inputFiles`/`resumeContext` e ausência de efeitos antes da validação.
+- [x] 6.2 Implementar a rota/continuação da operação conjunta, reutilizando o schema e os limites existentes, sem aceitar conteúdo novo do navegador.
+- [x] 6.3 Estender o `NewFlowGenerateImageRequestSchema` para aceitar o valor conjunto exato, mantendo a recusa de listas/formatos desconhecidos e sem permitir que o dispatch individual trate o pedido conjunto como 1:1/9:16.
+- [x] 6.4 Atualizar os tipos e o transporte de restauração/formulário/review para o formato conjunto, sem alterar a representação de `1:1` e `9:16` individuais.
+- [x] 6.5 Adicionar a terceira opção de formato no seletor, habilitada apenas com a geração vertical aplicável e com explicação de dois formatos.
+- [x] 6.6 Persistir o formato conjunto no draft, body, fingerprint e restauração, sem alterar o body de `1:1` nem o de `9:16` individual.
+- [x] 6.7 Atualizar a revisão para exibir os dois formatos e o custo total de 2 créditos quando o formato conjunto estiver selecionado.
+- [x] 6.8 Atualizar a checagem de saldo do formulário/rota para 2 créditos no formato conjunto, sem alterar `campaign_generation`, pricing ou o custo dos fluxos individuais.
+- [x] 6.9 Bloquear submissão conjunta quando a flag vertical aplicável estiver OFF, preservando o formato restaurado e sem trocar silenciosamente para 1:1/9:16.
+- [x] 6.10 Adaptar `listCampaigns` para carregar os indicadores conjuntos em lote, mantendo 1:1/9:16/histórico no caminho atual e sem expor `input_snapshot`.
+- [x] 6.11 Implementar o card conjunto com um único card, chips/indicadores, estado parcial, link do formato entregue para `?format=` e ausência/processamento sem ação.
+- [x] 6.12 Adaptar as miniaturas da listagem para usar o caminho derivado do formato preferido, nunca o original como fallback.
+- [x] 6.13 Adaptar o dashboard para exibir a campanha conjunta uma única vez, contar uma vez, indicar os dois formatos e usar a miniatura derivada preferida.
+- [x] 6.14 Adaptar a página de detalhe para reconhecer a origem conjunta antes dos ramos individuais e carregar o modelo por formato.
+- [x] 6.15 Implementar a seleção/tabs 1:1 e 9:16 com `?format=` e pré-seleção validada no servidor.
+- [x] 6.16 Implementar preview individual por formato somente após `delivered` e artefato compatível, com URL assinada curta e sem assinar formato ausente/indeterminado.
+- [x] 6.17 Implementar download individual por formato na rota existente, com `?format=`, fallback preferido e falha fechada, preservando 1:1/9:16 individual e histórico.
+- [x] 6.18 Implementar as miniaturas derivadas do quadrado e do vertical, estendendo a elegibilidade apenas para o caminho canônico do `square_original`.
+- [x] 6.19 Adaptar a tela de processamento e o polling para indicar os dois formatos e continuar acompanhando enquanto qualquer formato estiver em processamento.
+- [x] 6.20 Exibir a copy compartilhada uma única vez no detalhe, inclusive em entrega parcial, sem duplicar o painel por formato.
+- [x] 6.21 Cobrir com testes de UI/read model: card único, indicador abre o formato correto, processamento não gera, ausência sem ação, miniatura quadrada preferida, placeholder sem original, preview/download por formato, formato não entregue sem arte, copy única e reload.
 
 ## 7. Gate C — Revisão, aceite e liberação da jornada
 
-- [ ] 7.1 Executar typecheck/lint/build/diff e as suítes focadas da Subfatia C; validar OpenSpec strict.
-- [ ] 7.2 Revisar a jornada completa e confirmar que a opção conjunta só fica disponível após o aceite desta subfatia.
-- [ ] 7.3 Registrar aceite ou correções; nenhuma ativação de produção, deploy, flag ou pricing é executada neste gate.
-- [ ] 7.4 **Pendência obrigatória do Gate de banco — arte íntegra pela jornada conectada:** validar a entrega 1:1/9:16 com artefato canônico integral (bytes + evidência) pela rota/jornada efetivamente conectada, incluindo a entrega administrativa quando o wiring estiver disponível; nenhum fake de DB/RPC/Storage; arte de lojista real nunca. Critérios C4-A1..A6 em `60.7-C-PLAN.md`.
-- [ ] 7.5 **Pendência obrigatória do Gate de banco — preservação de conteúdo:** **C5a** deve capturar a baseline **antes da primeira escrita de C no homolog**, com autorização específica, e **C5b** comparar fingerprints de conteúdo das linhas não sintéticas no fechamento; qualquer diferença inexplicada bloqueia C. A janela C é verificável; o passado permanece não comprovado e restore exige autorização separada. Critérios C5-A1..A5 em `60.7-C-PLAN.md`.
+- [x] 7.1 Executar typecheck/lint/build/diff e as suítes focadas da Subfatia C; validar OpenSpec strict.
+- [x] 7.2 Revisar a jornada completa e confirmar ausência de publicação/ativação produtiva; disponibilidade local/homolog com a flag vertical ON é esperada e não conta como publicação.
+- [x] 7.3 Registrar aceite ou correções; nenhuma ativação de produção, deploy, flag ou pricing é executada neste gate.
+- [x] 7.4 **Pendência obrigatória do Gate de banco — arte íntegra pela jornada conectada:** validar a entrega 1:1/9:16 com artefato canônico integral (bytes + evidência) pela rota/jornada efetivamente conectada, incluindo a entrega administrativa quando o wiring estiver disponível; nenhum fake de DB/RPC/Storage; arte de lojista real nunca. Critérios C4-A1..A6 em `60.7-C-PLAN.md`.
+- [x] 7.5 **Pendência obrigatória do Gate de banco — preservação de conteúdo:** **C5a** deve capturar a baseline **antes da primeira escrita de C no homolog**, com autorização específica, e **C5b** comparar fingerprints de conteúdo das linhas não sintéticas no fechamento; qualquer diferença inexplicada bloqueia C. A janela C é verificável; o passado permanece não comprovado e restore exige autorização separada. Critérios C5-A1..A5 em `60.7-C-PLAN.md`.
 
 ## 8. Gates finais e limites
 
-- [ ] 8.1 Executar as suítes de preservação de 1:1, 9:16 individual, histórico, copy, artefatos, download, miniaturas, listagem e pendências.
-- [ ] 8.2 Executar as suítes focadas da entrega conjunta, incluindo percurso completo, entrega parcial, confirmação/estorno por formato, replay, concorrência, indeterminação, reload e recuperação somente do faltante.
-- [ ] 8.3 Executar `npm run typecheck`, lint, build, `git diff --check` e `openspec validate --changes --strict`.
-- [ ] 8.4 Documentar o mapa técnico final, as decisões implementadas, as limitações e as evidências offline no summary da fase.
-- [ ] 8.5 Preparar o roteiro objetivo de validação manual futura no homolog existente, sem gerar imagem, chamar provider, aplicar migration ou acessar produção nesta rodada.
-- [ ] 8.6 Confirmar que nenhuma flag/pricing foi alterada, nenhum provider foi chamado e nenhum merge/push/deploy foi executado; a aplicação da migration permanece restrita ao Gate de banco autorizado.
+- [x] 8.1 Executar as suítes de preservação de 1:1, 9:16 individual, histórico, copy, artefatos, download, miniaturas, listagem e pendências.
+- [x] 8.2 Executar as suítes focadas da entrega conjunta, incluindo percurso completo, entrega parcial, confirmação/estorno por formato, replay, concorrência, indeterminação, reload e recuperação somente do faltante.
+- [x] 8.3 Executar `npm run typecheck`, lint, build, `git diff --check` e `openspec validate --changes --strict`.
+- [x] 8.4 Documentar o mapa técnico final, as decisões implementadas, as limitações e as evidências offline no summary da fase.
+- [x] 8.5 Preparar o roteiro objetivo de validação manual futura no homolog existente, sem gerar imagem, chamar provider, aplicar migration ou acessar produção nesta rodada.
+- [x] 8.6 Confirmar que nenhuma flag/pricing foi alterada, nenhum provider foi chamado e nenhum merge/push/deploy foi executado; a aplicação da migration permanece restrita ao Gate de banco autorizado.
