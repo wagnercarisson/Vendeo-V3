@@ -108,9 +108,37 @@
     "Successful administrative refund (absence+epoch+failed finality) was not exercised in this round; C4-A3 is partial.",
     "Additional synthetic writes beyond the package inventory were required: auth user/identity/session, store_brand_profiles and legal_acceptances (two documents). They are declared here and were not in C5a baseline table list."
   ],
+  "postExecution": {
+    "note": "Added during the later offline stage; does not rewrite the execution evidence above.",
+    "verticalThumbnail": {
+      "status": "FIXED_OFFLINE_PENDING_REVIEW",
+      "change": "deliver-joint-vertical.ts now generates the vertical thumbnail in the normal delivery pass, using the proven vertical artifact path; wiring updated in run-two-format-deps.ts.",
+      "tests": [
+        "deliver-joint-vertical.contract.test.ts Testes 11b/11c",
+        "joint-journeys.integration.test.ts Teste 13b",
+        "c4-http-journey.test.ts"
+      ],
+      "historicalCampaign0002": "still missing vertical.thumb-v1.webp until an authorized repair/replay"
+    },
+    "authorizationDeviation": {
+      "status": "DECLARED",
+      "file": "deviation-inventory.json",
+      "baselineCoversOmittedTables": false,
+      "retroactiveBaselineRebuild": false
+    },
+    "refundComplement": {
+      "status": "PREPARED_NOT_EXECUTED",
+      "file": "../../60.7-C4-I-COMPLEMENT-PLAN.md"
+    },
+    "auditConflict": {
+      "status": "RECONCILED_AS_MATRIX_BEHAVIOR",
+      "serviceChange": false
+    }
+  },
   "limitations": [
     "Provider was deterministic test-only; no external paid provider was exercised.",
-    "Vertical thumbnail finding remains open.",
+    "Vertical thumbnail was missing in the executed build; the code path is corrected offline and pending review.",
+    "Successful administrative refund remains pending the directed complement.",
     "C5b and C6 were not executed.",
     "No production, migration, RPC, flag or pricing change."
   ]

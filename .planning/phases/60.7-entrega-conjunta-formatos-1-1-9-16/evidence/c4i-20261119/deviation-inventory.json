@@ -1,0 +1,201 @@
+{
+  "phase": "60.7",
+  "gate": "C5a+C4-I",
+  "kind": "authorization_deviation_inventory",
+  "declaredAtUtc": "2026-11-19",
+  "executionHead": "f905441a",
+  "environment": "vendeo-homolog",
+  "production": false,
+  "status": "DECLARED_AFTER_EXECUTION_NOT_PRIOR_AUTHORIZATION",
+  "approvedInventory": {
+    "source": "60.7-C5A-C4I-AUTHORIZATION.md §4.2",
+    "covered": [
+      "synthetic store/campaign/input",
+      "credit_balances/credit_transactions/product_1_1_campaign_credit_operations",
+      "product_9_16_two_stage_operations/steps/attempt_claims/outcomes",
+      "product_1_1_generation_outcomes",
+      "product_two_format_deliveries",
+      "campaign_composition_artifacts/internal objects",
+      "snapshots/bindings/frozen evidence",
+      "product_1_1_copy_state/cancellations",
+      "generation events",
+      "campaign projection",
+      "thumbnails/campaign-images objects",
+      "admin_audit_log"
+    ]
+  },
+  "omittedFromC5aBaseline": [
+    "auth.users",
+    "auth.identities",
+    "auth.sessions",
+    "auth.refresh_tokens",
+    "auth.audit_log_entries",
+    "store_brand_profiles",
+    "legal_acceptances"
+  ],
+  "baselineLimitation": "C5a covered 31 tables and cannot prove preservation of the omitted tables. No retroactive rebuild will be attempted.",
+  "writes": [
+    {
+      "area": "auth",
+      "table": "auth.users",
+      "rows": [
+        {
+          "id": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
+          "email": "f607c4-owner@f607.test",
+          "emailConfirmed": true,
+          "userMetadata": { "synthetic": "f60.7-c4-i" }
+        }
+      ],
+      "method": "supabase.auth.admin.createUser via service role against homolog PostgREST",
+      "reason": "synthetic authenticated owner required by the real HTTP route"
+    },
+    {
+      "area": "auth",
+      "table": "auth.identities",
+      "rows": [
+        {
+          "id": "8cca371a-d67c-482b-81ae-f983d43ea4e3",
+          "provider": "email",
+          "userId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573"
+        }
+      ],
+      "method": "created automatically by GoTrue with auth.users",
+      "reason": "identity required for magic-link verification"
+    },
+    {
+      "area": "auth",
+      "table": "auth.sessions",
+      "rows": null,
+      "observed": {
+        "countForBothUsersAfterExecution": 3,
+        "note": "includes pre-existing admin sessions; no baseline exists"
+      },
+      "method": "magic link via admin.generateLink + verifyOtp using @supabase/ssr; cookies/tokens not persisted",
+      "reason": "one-time sessions for synthetic owner and existing admin route access",
+      "netDeltaVerifiable": false
+    },
+    {
+      "area": "auth",
+      "table": "auth.refresh_tokens",
+      "rows": null,
+      "method": "expected GoTrue side effect of session issuance; not queried",
+      "reason": "session issuance",
+      "netDeltaVerifiable": false,
+      "gap": "must be enumerated read-only by the complement"
+    },
+    {
+      "area": "auth",
+      "table": "auth.audit_log_entries",
+      "rows": null,
+      "method": "possible GoTrue side effect of admin user creation; not queried",
+      "reason": "auth administration",
+      "netDeltaVerifiable": false,
+      "gap": "must be enumerated read-only by the complement"
+    },
+    {
+      "area": "store",
+      "table": "public.stores",
+      "operation": "INSERT then UPDATE on the same new synthetic row",
+      "rows": [
+        {
+          "id": "f607c400-0000-4000-8000-000000000001",
+          "name": "[F60.7 C4-I] Loja sintética",
+          "segment": "variedades-utilidades",
+          "userId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
+          "isTestStore": true,
+          "onboardingCompletedAt": "now()",
+          "cnpjNormalized": "60700000000191",
+          "cnpjRootHash": "f607c400c4i0000000000000000000000000000000000000000000000000000",
+          "razaoSocial": "F60.7 C4 Sintetica LTDA",
+          "nomeFantasia": "F60.7 C4 Sintetica",
+          "verificationStatus": "approved"
+        }
+      ],
+      "method": "direct psql inside supabase_db_vendeo-homolog with ON_ERROR_STOP=1",
+      "reason": "route readiness requires cadastro_fiscal even for a test store",
+      "note": "the row itself is synthetic and new; the fiscal fields were not explicitly inventoried"
+    },
+    {
+      "area": "brand",
+      "table": "public.store_brand_profiles",
+      "rows": [
+        {
+          "id": "f607c400-0000-4000-8000-000000000008",
+          "storeId": "f607c400-0000-4000-8000-000000000001",
+          "source": "text_only",
+          "status": "synced",
+          "version": 1,
+          "visualStyle": "clean",
+          "visualTone": "direto",
+          "typographyDirection": "sans-serif",
+          "brandPersonality": "comercial",
+          "campaignGuidelines": "use fundo claro",
+          "campaignBrief": "oferta sintetica",
+          "confidenceScore": 0.9,
+          "metadata": { "synthetic": "f60.7-c4-i" },
+          "brandColorsChosen": [{ "hex": "#2E7D32", "name": "verde" }],
+          "safeColorTokens": { "textOnPrimary": "#FFFFFF" }
+        }
+      ],
+      "method": "direct psql insert; bypasses onboarding/UI",
+      "reason": "route readiness requires a synced brand profile"
+    },
+    {
+      "area": "legal",
+      "table": "public.legal_acceptances",
+      "rows": [
+        {
+          "id": "f607c400-0000-4000-8000-000000000006",
+          "storeId": "f607c400-0000-4000-8000-000000000001",
+          "acceptedByUserId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
+          "documentType": "terms_of_service",
+          "documentVersion": "v1.4",
+          "acceptanceSource": "onboarding",
+          "ipAddress": "127.0.0.1",
+          "userAgent": "f60.7-c4-i-synthetic"
+        },
+        {
+          "id": "f607c400-0000-4000-8000-000000000007",
+          "storeId": "f607c400-0000-4000-8000-000000000001",
+          "acceptedByUserId": "51ca2740-b6e2-41f3-bbf1-1560e7e15573",
+          "documentType": "acceptable_use",
+          "documentVersion": "v1.1",
+          "acceptanceSource": "onboarding",
+          "ipAddress": "127.0.0.1",
+          "userAgent": "f60.7-c4-i-synthetic"
+        }
+      ],
+      "method": "direct psql insert; bypasses the product legal flow",
+      "reason": "generation route returned 403 until both current documents were accepted"
+    },
+    {
+      "area": "credits",
+      "table": "public.credit_balances",
+      "rows": [
+        {
+          "storeId": "f607c400-0000-4000-8000-000000000001",
+          "bonusBalance": 4
+        }
+      ],
+      "method": "direct psql insert/update",
+      "reason": "initial synthetic balance for the two-format journey",
+      "note": "credit_balances was in the approved inventory"
+    }
+  ],
+  "notChanged": [
+    "no production access",
+    "no migration or RPC definition",
+    "no feature flag",
+    "no pricing or model configuration",
+    "no real store data"
+  ],
+  "complementRequiredReads": [
+    "auth.users count",
+    "auth.identities count",
+    "auth.sessions count",
+    "auth.refresh_tokens count",
+    "auth.audit_log_entries count",
+    "store_brand_profiles rows for store …0001",
+    "legal_acceptances rows for store …0001"
+  ]
+}
