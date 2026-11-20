@@ -12,7 +12,7 @@
     },
     "execution-summary.json": {
       "beforeSha256": "BB4E1C87D42FA96604544E12EB439D27BA37A51293D181FB03820A859C8B066E",
-      "afterSha256": "69a771e10298a5d79ae8fb86681f75bba905688edfb847572de8cb47c2b58504"
+      "afterSha256": "ba61f6509b44362cbdb14aedc6402551b87b2d04617107872cedd79e578c6263"
     },
     "auth-inventory-pre.json": {
       "beforeSha256": "61B10982DE8BCBDCF5B3F128928BAB5DBA42CECEAB2008446351372E252FE789",
@@ -21,7 +21,7 @@
   },
   "summaryDoc": {
     "file": "60.7-C4-I-COMPLEMENT-SUMMARY.md",
-    "afterSha256": "8630820cda74681b886ea68c67b1c3c3899d3b066ce65ca68abec7ba371ced3f"
+    "afterSha256": "dc9c443533e6609bbc7e54c111c8e41eb32a01ede117cc9a8949fd78381b1b59"
   },
   "occurrences": {
     "sessions_created_email_fields_removed": 2,
@@ -35,5 +35,5 @@
     "gitHistoryRewritten": false,
     "note": "Prior commits still contain the original values; no filter/rebase/amend was used."
   },
-  "reconciledAtUtc": "2026-11-20T00:33:26.555Z"
+  "reconciledAtUtc": "2026-11-20T13:20:38.273Z"
 }

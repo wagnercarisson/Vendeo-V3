@@ -337,5 +337,14 @@
       "gitHistoryRewritten": false,
       "note": "Prior commits still contain the original values; no history rewrite was performed."
     }
-  ]
+  ],
+  "c4iAcceptance": {
+    "status": "ACCEPTED_TECHNICALLY_WITH_RESERVATIONS",
+    "head": "6439fd0d",
+    "document": "../../../60.7-C4-I-ACCEPTANCE.md",
+    "c5bPlan": "../../../60.7-C5B-PLAN.md",
+    "c5bAuthorization": "../../../60.7-C5B-AUTHORIZATION.md",
+    "c5bStatus": "PENDING_NOT_AUTHORIZED",
+    "c6Status": "NOT_STARTED"
+  }
 }

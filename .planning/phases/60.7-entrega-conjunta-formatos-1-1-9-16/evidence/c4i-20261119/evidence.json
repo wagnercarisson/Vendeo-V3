@@ -145,6 +145,15 @@
     "auditConflict": {
       "status": "RECONCILED_AS_MATRIX_BEHAVIOR",
       "serviceChange": false
+    },
+    "c4iAcceptance": {
+      "status": "ACCEPTED_TECHNICALLY_WITH_RESERVATIONS",
+      "head": "6439fd0d",
+      "document": "../../60.7-C4-I-ACCEPTANCE.md",
+      "c5bStatus": "PENDING_NOT_AUTHORIZED",
+      "c6Status": "NOT_STARTED",
+      "contentPreservationProven": false,
+      "gitHistorySanitized": false
     }
   },
   "limitations": [
