@@ -872,6 +872,32 @@ describe("expand.ts — seleção congelada obrigatória", () => {
   });
 });
 
+const AUTHORIZED_ECONOMIC_IDENTIFIER = "creditValueBrlAtGeneration";
+
+/**
+ * Remove APENAS o identificador econômico autorizado da CÓPIA analisada pelo
+ * guard, com limites de palavra. Não altera o arquivo de produção; permite que
+ * o encaminhamento direto do campo legítimo não seja confundido com operação
+ * financeira. Identificadores maiores (prefixo/sufixo) NÃO são removidos.
+ */
+function withoutAuthorizedEconomicIdentifier(source: string): string {
+  return source.replace(
+    new RegExp(`\\b${AUTHORIZED_ECONOMIC_IDENTIFIER}\\b`, "g"),
+    "",
+  );
+}
+
+/**
+ * Fronteira financeira: procura operações/referências de crédito e `rpc(` de
+ * forma CASE-INSENSITIVE na cópia já livre do identificador autorizado.
+ */
+function financialBoundaryViolations(source: string): string[] {
+  const scanned = withoutAuthorizedEconomicIdentifier(source);
+  return ["credit", "rpc("].filter((token) =>
+    new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(scanned),
+  );
+}
+
 describe("expand.ts — fronteiras e saída única", () => {
   it("não aciona SDK/custo/campanha/URL/objeto e reconstrói o custo após o flush", () => {
     const source = readFileSync(
@@ -890,12 +916,11 @@ describe("expand.ts — fronteiras e saída única", () => {
       "createSignedUrl",
       "getPublicUrl",
       ".remove(",
-      "credit",
-      "rpc(",
     ];
     for (const token of forbidden) {
       expect(source).not.toContain(token);
     }
+    expect(financialBoundaryViolations(source)).toEqual([]);
 
     // Saída única: custo resolvido uma vez, finalize/flush únicos.
     expect(source.match(/resolvedCost\(\)/g)?.length).toBe(1);
@@ -910,5 +935,41 @@ describe("expand.ts — fronteiras e saída única", () => {
     expect(source.indexOf("} finally {")).toBeLessThan(
       source.lastIndexOf("resolvedCost()"),
     );
+  });
+});
+
+describe("expand.ts — guard financeiro reconciliado", () => {
+  it("aceita o encaminhamento direto do identificador econômico exato", () => {
+    expect(
+      financialBoundaryViolations(
+        "creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration",
+      ),
+    ).toEqual([]);
+  });
+
+  it.each([
+    "reserveCredit(",
+    "refundCredit(",
+    "credit_operation",
+    "campaign_credit_operations",
+    "CreditOperation",
+    "RESERVECREDIT",
+  ])("continua recusando operação/referência financeira: %s", (snippet) => {
+    expect(financialBoundaryViolations(snippet)).toContain("credit");
+  });
+
+  it.each([
+    "creditValueBrlAtGenerationExtra",
+    "prefixcreditValueBrlAtGeneration",
+    "creditValueBrlAtGeneration_extra",
+    "XcreditValueBrlAtGeneration",
+  ])("não trata identificador maior como exceção: %s", (snippet) => {
+    expect(financialBoundaryViolations(snippet)).toContain("credit");
+  });
+
+  it("continua recusando rpc( de qualquer caixa e demais operações", () => {
+    expect(financialBoundaryViolations("rpc(")).toContain("rpc(");
+    expect(financialBoundaryViolations("RPC(")).toContain("rpc(");
+    expect(financialBoundaryViolations("reserve_credit")).toContain("credit");
   });
 });

@@ -68,7 +68,6 @@ import { probeExpansionTarget } from "./probe";
 import {
   createExpansionTelemetry,
   expansionOutcomeFor,
-  frozenCreditValueField,
   type ExpansionTelemetryDetails,
 } from "./telemetry";
 import {
@@ -478,7 +477,7 @@ export async function expandVerticalToNineSixteen(
     tokenPricing: pricingResolution.pricing,
     imageUnitUsd: pricingResolution.imageUnitUsd,
     usdBrlRateAtGeneration: valid.usdBrlRateAtGeneration,
-    ...frozenCreditValueField(valid),
+    creditValueBrlAtGeneration: valid.creditValueBrlAtGeneration,
   });
 
   const abortHandle = createExpansionAbortSignal(valid.timeoutMs, valid.signal);

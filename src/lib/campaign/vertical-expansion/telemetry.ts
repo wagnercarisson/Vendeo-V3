@@ -145,18 +145,6 @@ export interface ExpansionTelemetryInput {
   readonly creditValueBrlAtGeneration: number | null;
 }
 
-/**
- * Quick 261120-qvp: repassa o valor de crédito CONGELADO da entrada validada
- * para o input da telemetria. O helper existe para que `expand.ts` não repita no
- * call-site o identificador do valor de crédito (guard de fronteira do módulo),
- * mantendo a origem do dado explícita e tipada — nunca um parâmetro vigente.
- */
-export function frozenCreditValueField(input: {
-  readonly creditValueBrlAtGeneration: number | null;
-}): Pick<ExpansionTelemetryInput, "creditValueBrlAtGeneration"> {
-  return { creditValueBrlAtGeneration: input.creditValueBrlAtGeneration };
-}
-
 export interface ExpansionTelemetryDetails {
   readonly outcome: ExpansionCallEvidence["outcome"];
   readonly returnedSize: string | null;
