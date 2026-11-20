@@ -77,7 +77,7 @@
 >
 > **Reabertura pontual 2026-11-20:** **6.5** (checkboxes) e **6.8** (custo/saldo unificado) foram reabertas para a correção documentada em `60.7-C2-REOPEN-PLAN.md`. As demais tasks permanecem concluídas; nenhum código foi alterado ainda.
 >
-> **Complemento documental 2026-11-20:** **6.22** (clareza da tela de acompanhamento) e **6.23** (robustez do NDJSON/reidratação) foram adicionadas conforme `60.7-C2-C6-COMPLEMENT-PLAN.md` e implementadas offline em `649ce913`, com evidência em `60.7-C2-C6-COMPLEMENT-REPORT.md`. C2/C6 não foram reconfirmados; revisão humana pendente.
+> **Complemento documental 2026-11-20:** **6.22** (clareza da tela de acompanhamento) e **6.23** (robustez do NDJSON/reidratação) foram adicionadas conforme `60.7-C2-C6-COMPLEMENT-PLAN.md` e implementadas offline em `649ce913`, com evidência em `60.7-C2-C6-COMPLEMENT-REPORT.md`. **6.24** (linha “Formato” da revisão) e **6.25** (transição para a campanha pronta) foram adicionadas como pendentes em `60.7-C2-C6-TRANSITION-PLAN.md`. C2/C6 não foram reconfirmados; revisão humana pendente.
 
 > Gate C concluído em 2026-11-20; disponibilidade local/homolog não é publicação. Plano macro em `60.7-C-PLAN.md` (blocos C1–C6, cada um com Review Stop). Subfatia C concluída e aceita tecnicamente com ressalvas.
 
@@ -104,6 +104,8 @@
 - [x] 6.21 Cobrir com testes de UI/read model: card único, indicador abre o formato correto, processamento não gera, ausência sem ação, miniatura quadrada preferida, placeholder sem original, preview/download por formato, formato não entregue sem arte, copy única e reload.
 - [x] 6.22 Revisar a tela de acompanhamento da geração em linguagem de lojista: cabeçalho “Geração da campanha” sem subtítulo de preenchimento; resumo read-only dos dois formatos sem helpers de seleção; uma única mensagem principal por estado (“A geração está em processamento. Aguarde.”, “Quase pronto!”, “Clique em ‘Continuar geração’ para concluir.”, “Não foi possível atualizar o andamento.”); ações somente quando necessárias; rótulos de etapa compreensíveis, sem “Projeção” na interface; sem “Retomar quando autorizado” e sem novo retry pago. **[IMPLEMENTADO OFFLINE 2026-11-20; AGUARDANDO REVISÃO]**
 - [x] 6.23 Corrigir a robustez do acompanhamento: leitor NDJSON inicial/continuação com flush do decoder e buffer final sem newline, chunks fragmentados, terminal de resposta único, limpeza de continuação pendente em `result`/`error`/`unknown`, reidratação sem concorrência com o stream inicial e resposta de status obsoleta sem sobrescrever estado mais novo. **[IMPLEMENTADO OFFLINE 2026-11-20; AGUARDANDO REVISÃO]**
+- [ ] 6.24 Apresentar a linha “Formato” da revisão conforme a seleção, sem dimensões em pixels: “Quadrado 1:1 (Feed)”, “Vertical 9:16 (Stories/Reels)” e “Quadrado 1:1 (Feed) + Vertical 9:16 (Stories/Reels)”. Não alterar dimensões reais, schemas, eventos, artefatos ou contratos técnicos.
+- [ ] 6.25 Implementar estado explícito de transição para a campanha pronta: “Abrindo sua campanha...” com cabeçalho de geração e resumo read-only; não reexibir formulário/revisão; navegar uma única vez; preservar delivered/partial/refunded; oferecer abertura manual da campanha existente sem nova geração, continuação, reserva ou cobrança.
 
 ## 7. Gate C — Revisão, aceite e liberação da jornada
 
