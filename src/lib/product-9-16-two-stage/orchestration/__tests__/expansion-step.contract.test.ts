@@ -1,7 +1,22 @@
 // @vitest-environment node
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+
+/**
+ * Quick 261120-qvp (T-261120-04): o step não consulta o parâmetro econômico
+ * VIGENTE. Espião zerado (comportamento) + conferência estática do fonte.
+ */
+const economicParameterSpy = vi.hoisted(() => ({ getParameter: vi.fn() }));
+vi.mock("@/lib/economic/economic-parameter-service", () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: economicParameterSpy.getParameter };
+  }),
+}));
+
 import { runExpansionStep } from "../expansion-step";
 
 const sourceArtifact = {
@@ -125,6 +140,10 @@ function deps(overrides: Record<string, unknown> = {}) {
     preflightFrozenExpansion: vi.fn(async (selection: unknown) => ({
       ok: true,
       selection,
+    })),
+    readEconomicSnapshot: vi.fn(async () => ({
+      usdBrlRateAtGeneration: 5.1,
+      creditValueBrlAtGeneration: 1,
     })),
     clock: () => 0,
     ...overrides,
@@ -480,5 +499,327 @@ describe("runExpansionStep — preflight da seleção congelada antes de acquire
       "utf8",
     );
     expect(text).not.toMatch(/nine_sixteen_expansion_model_config|readNineSixteenExpansionConfig/);
+  });
+});
+
+describe("runExpansionStep — snapshot econômico durável (D-01/D-02/D-08)", () => {
+  const SNAPSHOT = { usdBrlRateAtGeneration: 5.1, creditValueBrlAtGeneration: 1 } as const;
+
+  function sourcePath(relative: string): string {
+    return fileURLToPath(new URL(relative, import.meta.url));
+  }
+
+  it("leitura única quando chega ao acquire", async () => {
+    const read = vi.fn(async () => ({ ...SNAPSHOT }));
+    const d = deps({ readEconomicSnapshot: read });
+
+    await expect(runExpansionStep(expansionInput(), d)).resolves.toEqual({ kind: "completed" });
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(calls(d, "control.acquire")).toHaveLength(1);
+  });
+
+  it.each([
+    ["allowNewPaidStep falso", { input: { allowNewPaidStep: false }, deps: {} }],
+    ["expansionStatus done", { input: { expansionStatus: "done" }, deps: {} }],
+    ["expansionStatus in_progress", { input: { expansionStatus: "in_progress" }, deps: {} }],
+    ["gate inicial: sinal abortado", { input: { signal: "aborted" }, deps: {} }],
+    ["gate inicial: prazo esgotado", { input: {}, deps: { clock: () => 999_999 } }],
+    [
+      "falha de retrieve",
+      {
+        input: {},
+        deps: {
+          retrieve: vi.fn(async () => {
+            throw new Error("read_failed");
+          }),
+        },
+      },
+    ],
+    [
+      "fonte indeterminada",
+      { input: {}, deps: { retrieve: vi.fn(async () => ({ kind: "indeterminate" })) } },
+    ],
+    [
+      "fonte não-integral definitiva",
+      { input: {}, deps: { retrieve: vi.fn(async () => ({ kind: "absent" })) } },
+    ],
+    [
+      "falha de probe",
+      {
+        input: {},
+        deps: {
+          probe: vi.fn(async () => {
+            throw new Error("probe_failed");
+          }),
+        },
+      },
+    ],
+    ["probe bloqueado", { input: {}, deps: { probe: vi.fn(async () => ({ kind: "blocked" })) } }],
+    [
+      "probe em conflito",
+      {
+        input: {},
+        deps: { probe: vi.fn(async () => ({ kind: "conflict", reason: "identity_conflict" })) },
+      },
+    ],
+    [
+      "preflight inválido",
+      {
+        input: {},
+        deps: {
+          preflightFrozenExpansion: vi.fn(async () => ({
+            ok: false,
+            failure: "model_unavailable",
+            reason: "catalog_row_missing",
+            missing: [],
+          })),
+        },
+      },
+    ],
+  ])("não lê o snapshot em retorno antecipado (%s)", async (_label, scenario) => {
+    const read = vi.fn(async () => ({ ...SNAPSHOT }));
+    const controller = new AbortController();
+    const inputOverrides: Record<string, unknown> = { ...scenario.input };
+    if (inputOverrides.signal === "aborted") {
+      controller.abort();
+      inputOverrides.signal = controller.signal;
+    }
+
+    const d = deps({ readEconomicSnapshot: read, ...scenario.deps });
+
+    await runExpansionStep({ ...(expansionInput() as object), ...inputOverrides } as never, d);
+
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("gate pós-leituras (deadline após retrieve/probe) não lê o snapshot", async () => {
+    let now = 0;
+    const read = vi.fn(async () => ({ ...SNAPSHOT }));
+    const d = deps({
+      readEconomicSnapshot: read,
+      probe: vi.fn(async () => {
+        now = 95_000;
+        return { kind: "proceed" };
+      }),
+      clock: () => now,
+    });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toMatchObject({ kind: "processing", reason: "deadline_exceeded" });
+    expect(read).not.toHaveBeenCalled();
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+  });
+
+  it.each(["reused", "adopted"] as const)(
+    "caminho reusableArtifact (%s): lê 1x, preflight 0x, 1 acquire/expand/finish",
+    async (kind) => {
+      const read = vi.fn(async () => ({ ...SNAPSHOT }));
+      const d = deps({
+        probe: vi.fn(async () => ({
+          kind,
+          artifact: sourceArtifact,
+          bytes: Buffer.alloc(0),
+        })),
+        preflightFrozenExpansion: vi.fn(async () => {
+          throw new Error("pricing must not be called for a reusable artifact");
+        }),
+        expand: vi.fn(async () => ({
+          kind: "reused",
+          artifact: sourceArtifact,
+          bytes: Buffer.alloc(0),
+          adoption: kind === "adopted",
+          call: null,
+        })),
+        readEconomicSnapshot: read,
+      });
+
+      const result = await runExpansionStep(expansionInput(), d);
+
+      expect(result).toEqual({ kind: "completed" });
+      expect(read).toHaveBeenCalledTimes(1);
+      expect(calls(d, "preflightFrozenExpansion")).toHaveLength(0);
+      expect(calls(d, "control.acquire")).toHaveLength(1);
+      expect(calls(d, "expand")).toHaveLength(1);
+      expect(calls(d, "control.finish")).toHaveLength(1);
+    },
+  );
+
+  it("ordem contratual: acquire é a interação imediatamente seguinte à leitura", async () => {
+    const order: string[] = [];
+    const d = deps({
+      retrieve: vi.fn(async () => {
+        order.push("retrieve");
+        return { kind: "integral", artifact: sourceArtifact, bytes: Buffer.alloc(0) };
+      }),
+      probe: vi.fn(async () => {
+        order.push("probe");
+        return { kind: "proceed" };
+      }),
+      preflightFrozenExpansion: vi.fn(async (selection: unknown) => {
+        order.push("preflight");
+        return { ok: true, selection };
+      }),
+      readEconomicSnapshot: vi.fn(async () => {
+        order.push("economy-read");
+        return { ...SNAPSHOT };
+      }),
+      control: {
+        acquire: vi.fn(async () => {
+          order.push("acquire");
+          return {
+            acquired: true,
+            authorization: "execute",
+            reason: null,
+            attemptToken: "t",
+            attemptNumber: 1,
+            stage: "expansion",
+            target: "initial",
+          };
+        }),
+        finish: vi.fn(async () => {
+          order.push("finish");
+          return {
+            success: true,
+            idempotent: false,
+            status: "completed",
+            stage: "expansion",
+            attemptNumber: 1,
+          };
+        }),
+        getOperationView: vi.fn(),
+      },
+      expand: vi.fn(async () => {
+        order.push("expand");
+        return { kind: "expanded", artifact: {}, bytes: Buffer.alloc(0), persistence: "created", call: {} };
+      }),
+      clock: () => {
+        order.push("clock");
+        return 0;
+      },
+    });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toEqual({ kind: "completed" });
+    const interactions = order.filter((entry) => entry !== "clock");
+    expect(interactions).toEqual([
+      "retrieve",
+      "probe",
+      "preflight",
+      "economy-read",
+      "acquire",
+      "expand",
+      "finish",
+    ]);
+    // Índices estritamente crescentes e acquire imediatamente após a leitura.
+    for (let index = 1; index < interactions.length; index += 1) {
+      expect(order.indexOf(interactions[index])).toBeGreaterThan(
+        order.indexOf(interactions[index - 1]),
+      );
+    }
+    const economyIndex = interactions.indexOf("economy-read");
+    expect(interactions[economyIndex + 1]).toBe("acquire");
+  });
+
+  it("recheck final é a última verificação: leitura que esgota o prazo suspende sem acquire", async () => {
+    let now = 0;
+    const read = vi.fn(async () => {
+      now = 95_000;
+      return { ...SNAPSHOT };
+    });
+    const d = deps({ readEconomicSnapshot: read, clock: () => now });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toMatchObject({
+      kind: "processing",
+      state: "between_steps",
+      canContinue: true,
+      reason: "deadline_exceeded",
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "control.finish")).toHaveLength(0);
+  });
+
+  it("encaminha os valores lidos ao expansor", async () => {
+    const d = deps({ readEconomicSnapshot: vi.fn(async () => ({ ...SNAPSHOT })) });
+
+    await expect(runExpansionStep(expansionInput(), d)).resolves.toEqual({ kind: "completed" });
+
+    const expandCalls = calls(d, "expand") as Array<
+      [{ usdBrlRateAtGeneration: unknown; creditValueBrlAtGeneration: unknown }]
+    >;
+    expect(expandCalls).toHaveLength(1);
+    expect(expandCalls[0][0].usdBrlRateAtGeneration).toBe(5.1);
+    expect(expandCalls[0][0].creditValueBrlAtGeneration).toBe(1);
+  });
+
+  it.each([
+    ["ausência", vi.fn(async () => ({ usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null }))],
+    [
+      "malformação",
+      vi.fn(async () => ({ usdBrlRateAtGeneration: undefined, creditValueBrlAtGeneration: "x" })),
+    ],
+    [
+      "exceção",
+      vi.fn(async () => {
+        throw new Error("snapshot_down");
+      }),
+    ],
+    ["rejeição", vi.fn(() => Promise.reject(new Error("snapshot_down")))],
+    [
+      "resultado inválido",
+      vi.fn(async () => ({ usdBrlRateAtGeneration: Number.NaN, creditValueBrlAtGeneration: {} })),
+    ],
+  ])("degradação (%s): expand recebe null/null e o desfecho continua completed", async (_label, read) => {
+    const d = deps({ readEconomicSnapshot: read });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toEqual({ kind: "completed" });
+    const expandCalls = calls(d, "expand") as Array<
+      [{ usdBrlRateAtGeneration: unknown; creditValueBrlAtGeneration: unknown }]
+    >;
+    expect(expandCalls).toHaveLength(1);
+    expect(expandCalls[0][0].usdBrlRateAtGeneration).toBeNull();
+    expect(expandCalls[0][0].creditValueBrlAtGeneration).toBeNull();
+    expect(calls(d, "control.acquire")).toHaveLength(1);
+    expect(calls(d, "control.finish")).toHaveLength(1);
+    const finishCalls = calls(d, "control.finish") as Array<[{ request: { status: string } }]>;
+    expect(finishCalls[0][0].request.status).toBe("completed");
+  });
+
+  it("timeout da leitura: expand recebe null/null, sem consumir tentativa extra", async () => {
+    const read = vi.fn(() => new Promise<never>(() => {}));
+    const d = deps({ readEconomicSnapshot: read, economicSnapshotTimeoutMs: 15 });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(read).toHaveBeenCalledTimes(1);
+    const expandCalls = calls(d, "expand") as Array<
+      [{ usdBrlRateAtGeneration: unknown; creditValueBrlAtGeneration: unknown }]
+    >;
+    expect(expandCalls[0][0].usdBrlRateAtGeneration).toBeNull();
+    expect(expandCalls[0][0].creditValueBrlAtGeneration).toBeNull();
+    expect(calls(d, "control.acquire")).toHaveLength(1);
+    expect(calls(d, "control.finish")).toHaveLength(1);
+  });
+
+  it("não consulta o parâmetro econômico vigente (comportamental + estático)", async () => {
+    const d = deps();
+    await runExpansionStep(expansionInput(), d);
+
+    expect(economicParameterSpy.getParameter).not.toHaveBeenCalled();
+
+    const source = readFileSync(sourcePath("../expansion-step.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+    expect(source).not.toMatch(/@\/lib\/economic/);
+    expect(source).not.toMatch(/EconomicParameterService/);
   });
 });

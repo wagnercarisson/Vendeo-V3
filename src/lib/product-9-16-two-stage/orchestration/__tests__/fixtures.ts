@@ -66,13 +66,21 @@ export function durableRow() {
 }
 
 export function durableClient(row: unknown = durableRow()) {
+  // Aceita encadeamento ARBITRÁRIO de `.eq` (id + store_id) e mantém
+  // compatibilidade com chamadas de um único `.eq` (reconstrução e demais
+  // suítes). O filtro é registrado, mas o fixture devolve sempre a linha dada —
+  // as suítes de contrato observam os filtros pelo próprio espião.
+  const builder: Record<string, unknown> = {
+    eq() {
+      return builder;
+    },
+    async maybeSingle() {
+      return { data: row, error: null };
+    },
+  };
   return {
     from: () => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({ data: row, error: null }),
-        }),
-      }),
+      select: () => builder,
     }),
   } as never;
 }
