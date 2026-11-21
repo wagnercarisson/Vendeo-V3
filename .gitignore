@@ -11,6 +11,10 @@ out/
 next-env.d.ts
 logs/
 graphify-out/
+# Cache Python
+__pycache__/
+*.pyc
+
 
 
 # Generation metrics (Phase 4.3.3)
