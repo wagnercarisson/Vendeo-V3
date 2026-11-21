@@ -186,7 +186,11 @@ describe("Landing page — composição e copy (flag off)", () => {
     const { container } = render(await Home());
     const footer = container.querySelector("footer");
     expect(footer).not.toBeNull();
-    const nav = within(footer as HTMLElement).getByRole("navigation");
+    // O rodapé tem duas navegações legítimas ("Explore o Vendeo" e "Institucional").
+    // Os links legais e o Contato pertencem à navegação "Institucional".
+    const nav = within(footer as HTMLElement).getByRole("navigation", {
+      name: "Institucional",
+    });
     expect(within(nav).getByRole("link", { name: "Termos de Uso" })).toHaveAttribute(
       "href",
       "/termos",
