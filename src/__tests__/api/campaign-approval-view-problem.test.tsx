@@ -12,6 +12,7 @@ import {
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 import { ptBRCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
 
 const mockRefresh = vi.fn();
@@ -42,6 +43,10 @@ const pageProps = {
   isPublicationCopyEdited: false,
   messages: ptBRCampaignDetailMessages,
   locale: "pt-BR" as const,
+  formatPresentation: buildIndividualFormatPresentation({
+    resolution: { kind: "1:1", source: "absent" },
+    lifecycle: "delivered",
+  }),
 };
 
 function openModal(): HTMLElement {

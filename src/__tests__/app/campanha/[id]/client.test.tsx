@@ -8,6 +8,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 import {
   es419CampaignDetailMessages,
   ptBRCampaignDetailMessages,
@@ -27,6 +28,10 @@ const defaultProps = {
   isPublicationCopyEdited: false,
   messages: ptBRCampaignDetailMessages,
   locale: "pt-BR" as const,
+  formatPresentation: buildIndividualFormatPresentation(
+    { resolution: { kind: "1:1", source: "absent" }, lifecycle: "delivered" },
+    "1:1",
+  ),
 };
 
 beforeEach(() => {

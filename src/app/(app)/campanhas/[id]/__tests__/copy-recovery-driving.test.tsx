@@ -22,6 +22,7 @@ vi.mock("@/components/campaign/campaign-approval-view", () => ({
 
 import CampaignPageClient from "../client";
 import type { CampaignPageProps, NewFlowCopyRecoveryView } from "@/lib/campaign/display";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 import {
   es419CampaignDetailMessages,
   ptBRCampaignDetailMessages,
@@ -69,6 +70,10 @@ const BASE_PROPS: ClientProps = {
   isPublicationCopyEdited: false,
   messages: ptBRCampaignDetailMessages,
   locale: "pt-BR",
+  formatPresentation: buildIndividualFormatPresentation(
+    { resolution: { kind: "1:1", source: "absent" }, lifecycle: "delivered" },
+    "1:1",
+  ),
 };
 
 function recoveryView(

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 import {
   es419CampaignDetailMessages,
   ptBRCampaignDetailMessages,
@@ -14,6 +15,11 @@ const mockRefresh = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
 }));
+
+const SQUARE_DELIVERED = buildIndividualFormatPresentation(
+  { resolution: { kind: "1:1", source: "absent" }, lifecycle: "delivered" },
+  "1:1",
+);
 
 const defaultProps = {
   imageUrl: null,
@@ -29,6 +35,7 @@ const defaultProps = {
   isPublicationCopyEdited: false,
   messages: ptBRCampaignDetailMessages,
   locale: "pt-BR" as const,
+  formatPresentation: SQUARE_DELIVERED,
 };
 
 beforeEach(() => {
@@ -160,7 +167,14 @@ describe("CampaignPageClient — display states", () => {
 
       expect(screen.getByRole("button", { name: /aprovar arte/i })).toBeInTheDocument();
       expect(screen.queryByText("Kit de Publicación")).toBeNull();
-      expect(container.querySelector('[lang="es-419"]')).toBeNull();
+      // Restante do estado permanece em português; apenas a região dos chips é
+      // localizada (F61 — catálogo compartilhado).
+      expect(screen.getByText("Revise a arte antes de liberar: a IA pode cometer erros.")).toBeInTheDocument();
+      const chipsRegion = screen
+        .getByRole("list", { name: "Formatos de la campaña" })
+        .parentElement;
+      expect(chipsRegion).toHaveAttribute("lang", "es-419");
+      expect(container.querySelectorAll('[lang="es-419"]')).toHaveLength(1);
     });
 
     it("estado generating continua em pt-BR e sem marcação es-419", () => {
@@ -173,10 +187,16 @@ describe("CampaignPageClient — display states", () => {
         />,
       );
 
+      const generatingText = screen.getByText(
+        "Sua campanha está sendo gerada...",
+      );
+      expect(generatingText).toBeInTheDocument();
+      // O texto do estado NÃO herda es-419; só a região dos chips é localizada.
+      expect(generatingText.closest('[lang="es-419"]')).toBeNull();
+      expect(container.querySelectorAll('[lang="es-419"]')).toHaveLength(1);
       expect(
-        screen.getByText("Sua campanha está sendo gerada..."),
+        screen.getByRole("list", { name: "Formatos de la campaña" }),
       ).toBeInTheDocument();
-      expect(container.querySelector('[lang="es-419"]')).toBeNull();
     });
   });
 

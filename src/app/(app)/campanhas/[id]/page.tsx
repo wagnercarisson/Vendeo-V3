@@ -28,6 +28,16 @@ import type {
   NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
+import {
+  buildIndividualFormatPresentation,
+  buildJointFormatPresentation,
+  buildUnavailableFormatPresentation,
+  buildUnknownFormatPresentation,
+  individualLifecycleFromStatus,
+  type CampaignFormatKey,
+  type CampaignFormatPresentation,
+  type IndividualFormatLifecycle,
+} from "@/lib/campaign/format-presentation";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import {
   applyTwoFormatDurableOutcomes,
@@ -110,13 +120,23 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
   const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
   const jointClassification = classifyTwoFormatCampaign(campaign.input_snapshot);
 
-  const renderUnknownJoint = (operationId: string | null, isJoint = false) => {
-    props.jointFlow = isJoint;
-    props.newFlow = {
-      state: "unknown",
-      supportReference: null,
-      operationId,
-      supportEmail: process.env.SUPPORT_EMAIL,
+  const renderUnknownJoint = (
+    operationId: string | null,
+    isJoint = false,
+    formatPresentation: CampaignFormatPresentation = buildUnknownFormatPresentation(),
+  ) => {
+    props = {
+      ...props,
+      jointFlow: isJoint,
+      // F61 — apresentação fail-closed explícita por ramo (nunca herda o default
+      // `unknown` de `mapCampaignToProps` de forma implícita).
+      formatPresentation,
+      newFlow: {
+        state: "unknown",
+        supportReference: null,
+        operationId,
+        supportEmail: process.env.SUPPORT_EMAIL,
+      },
     };
     return (
       <CampaignPageClient {...props} messages={messages} locale={locale} />
@@ -130,7 +150,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
     );
   }
   if (jointClassification.kind === "inconsistent") {
-    return renderUnknownJoint(null, true);
+    return renderUnknownJoint(null, true, buildUnavailableFormatPresentation());
   }
 
   if (jointClassification.kind === "two_format") {
@@ -139,7 +159,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       storeId: campaign.store_id,
     });
     if (control.kind !== "found") {
-      return renderUnknownJoint(null, true);
+      return renderUnknownJoint(null, true, buildUnavailableFormatPresentation());
     }
 
     const jointRead = await readTwoFormatDelivery(
@@ -240,6 +260,37 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       state: jointState,
     };
     props.jointFlow = true;
+
+    // F61 — apresentação conjunta: estados do read model (já com os outcomes
+    // duráveis aplicados) copiados sem reinterpretação; `refunded` só quando a
+    // autoridade conhece o crédito devolvido. O chip ativo existe SOMENTE
+    // quando há preview efetivamente exibido (URL assinada presente).
+    const jointPreviewFormat = access?.allowed === true ? targetFormat : null;
+    // F61 — href SOMENTE para formato `delivered`; `?format=` continua estrito.
+    const jointFormatHrefs: Partial<Record<CampaignFormatKey, string>> = {};
+    if (square === "delivered") {
+      jointFormatHrefs["1:1"] = `/campanhas/${id}?format=1:1`;
+    }
+    if (vertical === "delivered") {
+      jointFormatHrefs["9:16"] = `/campanhas/${id}?format=9:16`;
+    }
+    props = {
+      ...props,
+      formatPresentation: buildJointFormatPresentation(
+        {
+          "1:1": {
+            state: square,
+            refunded: view.square.creditRefunded === true,
+          },
+          "9:16": {
+            state: vertical,
+            refunded: view.vertical.creditRefunded === true,
+          },
+        },
+        previewUrl !== null ? jointPreviewFormat : null,
+      ),
+      formatHrefs: jointFormatHrefs,
+    };
 
     let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
     try {
@@ -407,14 +458,39 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
         newFlowRecovery = mapNewFlowCopyRecovery(null, delivery);
       }
     }
-    props.newFlow = {
-      state: newFlowState,
-      supportReference: newFlowOperation.supportReference ?? null,
-      operationId: newFlowOperation.operationId,
-      supportEmail: process.env.SUPPORT_EMAIL,
-      copy: newFlowCopy,
-      recovery: newFlowRecovery,
-      restoredForm,
+    props = {
+      ...props,
+      newFlow: {
+        state: newFlowState,
+        supportReference: newFlowOperation.supportReference ?? null,
+        operationId: newFlowOperation.operationId,
+        supportEmail: process.env.SUPPORT_EMAIL,
+        copy: newFlowCopy,
+        recovery: newFlowRecovery,
+        restoredForm,
+      },
+    };
+    // F61 — apresentação do fluxo individual novo: o formato PERSISTIDO carrega o
+    // ciclo derivado da OPERAÇÃO; o outro é sempre `absent/not_requested`.
+    // Ativo SOMENTE com entrega comprovada E arte efetivamente exibida.
+    const newFlowLifecycle: IndividualFormatLifecycle =
+      newFlowState === "delivered"
+        ? "delivered"
+        : newFlowState === "running"
+          ? "processing"
+          : newFlowState === "refunded"
+            ? "refunded"
+            : "unknown";
+    props = {
+      ...props,
+      formatPresentation: buildIndividualFormatPresentation(
+        { resolution: formatResolution, lifecycle: newFlowLifecycle },
+        newFlowState === "delivered" &&
+          props.imageUrl !== null &&
+          formatResolution.kind !== "unavailable"
+          ? formatResolution.kind
+          : null,
+      ),
     };
     return (
       <CampaignPageClient {...props} messages={messages} locale={locale} />
@@ -504,6 +580,42 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       };
     }
   }
+
+  // F61 — apresentação individual/LEGADA. A resolução do formato VENCE qualquer
+  // estado de aprovação/regeneração (indisponível ⇒ ambos `unavailable`); `error`
+  // e `stale` NUNCA comprovam ausência ⇒ `unknown`. O chip ativo existe SOMENTE
+  // quando a arte está efetivamente exibida (`props.imageUrl`) e o gate de
+  // aprovação não está revisando/regenerando.
+  const legacyFormatResolution = resolveCampaignFormat(campaign.input_snapshot);
+  const legacyApprovalStatus = props.approval?.state.status ?? null;
+  const hasApprovalCandidate =
+    legacyApprovalStatus === "pending" &&
+    Boolean(props.approval?.candidateImageUrl) &&
+    Boolean(props.approval?.candidateVersionId);
+  let legacyLifecycle: IndividualFormatLifecycle =
+    props.displayStatus === "stale"
+      ? "unknown"
+      : individualLifecycleFromStatus(props.displayStatus);
+  if (legacyApprovalStatus === "regenerating") {
+    legacyLifecycle = "processing";
+  } else if (hasApprovalCandidate) {
+    legacyLifecycle = "delivered";
+  }
+  const legacyActiveFormat: CampaignFormatKey | null =
+    legacyFormatResolution.kind !== "unavailable" &&
+    props.displayStatus === "ready" &&
+    props.imageUrl !== null &&
+    legacyApprovalStatus !== "regenerating" &&
+    !hasApprovalCandidate
+      ? legacyFormatResolution.kind
+      : null;
+  props = {
+    ...props,
+    formatPresentation: buildIndividualFormatPresentation(
+      { resolution: legacyFormatResolution, lifecycle: legacyLifecycle },
+      legacyActiveFormat,
+    ),
+  };
 
   return (
     <CampaignPageClient {...props} messages={messages} locale={locale} />

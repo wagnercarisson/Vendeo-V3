@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderToString } from "react-dom/server";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
+
+const SQUARE_DELIVERED = buildIndividualFormatPresentation({
+  resolution: { kind: "1:1", source: "absent" },
+  lifecycle: "delivered",
+});
 
 const mockRequirePageUser = vi
   .fn()
@@ -120,6 +126,7 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
             createdAt: "2026-01-01T00:00:00Z",
             thumbnailUrl: null,
             storagePath: "s/c1.jpg",
+            formatPresentation: SQUARE_DELIVERED,
           },
         ],
         1,
@@ -148,6 +155,7 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
             createdAt: "2026-01-01T00:00:00Z",
             thumbnailUrl: null,
             storagePath: "s/c1.jpg",
+            formatPresentation: SQUARE_DELIVERED,
           },
         ],
         1,
@@ -176,6 +184,7 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
             createdAt: "2026-01-01T00:00:00Z",
             thumbnailUrl: null,
             storagePath: "s/c1.jpg",
+            formatPresentation: SQUARE_DELIVERED,
           },
         ],
         1,
@@ -344,6 +353,7 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
             createdAt: "2026-01-01T00:00:00Z",
             thumbnailUrl: null,
             storagePath: "s/c1.jpg",
+            formatPresentation: SQUARE_DELIVERED,
           },
         ],
         1,
@@ -402,6 +412,7 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
             createdAt: "2026-01-01T00:00:00Z",
             thumbnailUrl: null,
             storagePath: "s/c1.jpg",
+            formatPresentation: SQUARE_DELIVERED,
           },
         ],
         1,

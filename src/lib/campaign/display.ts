@@ -15,6 +15,11 @@ import {
 } from "./format-resolution";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
+import {
+  buildUnknownFormatPresentation,
+  type CampaignFormatKey,
+  type CampaignFormatPresentation,
+} from "./format-presentation";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -140,6 +145,17 @@ export interface CampaignPageProps {
     /** F37.2 (R1): caso sem consumo (relato inexistente ou `open`). */
     hasOpportunity?: boolean;
   };
+  /**
+   * F61 — apresentação dos formatos (somente DTO de UI). `mapCampaignToProps`
+   * entrega o default FAIL-CLOSED `unknown`; a página sobrescreve em TODOS os
+   * ramos com a autoridade já lida. Nenhum snapshot/path/URL entra aqui.
+   */
+  readonly formatPresentation: CampaignFormatPresentation;
+  /**
+   * F61 — destinos de seleção do detalhe. Apenas formatos `delivered` recebem
+   * href; nunca há link para formato ausente/processando/desconhecido.
+   */
+  readonly formatHrefs?: Partial<Record<CampaignFormatKey, string>>;
 }
 
 /**
@@ -812,5 +828,8 @@ export function mapCampaignToProps(campaign: CampaignRecord, id: string): Campai
     downloadUrl: `/api/campaign/${id}/download`,
     campaignId: id,
     isPublicationCopyEdited: campaign.publication_copy_current !== null,
+    // F61 — default FAIL-CLOSED: `mapCampaignToProps` não tem a view conjunta nem
+    // o ciclo individual; a página sobrescreve a apresentação em todos os ramos.
+    formatPresentation: buildUnknownFormatPresentation(),
   };
 }

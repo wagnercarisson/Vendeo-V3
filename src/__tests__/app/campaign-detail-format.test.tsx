@@ -10,7 +10,16 @@ vi.mock("next/navigation", () => ({
 }));
 
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 import { ptBRCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
+
+const VERTICAL_DELIVERED = buildIndividualFormatPresentation(
+  {
+    resolution: { kind: "9:16", contractVersion: "f59-vertical-9-16-v1" },
+    lifecycle: "delivered",
+  },
+  "9:16",
+);
 
 const BASE_PROPS = {
   imageUrl: "https://example.com/art.jpg",
@@ -26,6 +35,7 @@ const BASE_PROPS = {
   isPublicationCopyEdited: false,
   messages: ptBRCampaignDetailMessages,
   locale: "pt-BR" as const,
+  formatPresentation: VERTICAL_DELIVERED,
   newFlow: {
     state: "delivered" as const,
     operationId: "660e8400-e29b-41d4-a716-446655440000",
@@ -83,5 +93,93 @@ describe("F59/59-08 — detalhe da campanha por formato", () => {
     expect(pageSource).toMatch(/product-vertical-9-16/);
     expect(pageSource).toMatch(/getSignedArtifactUrl/);
     expect(pageSource).toMatch(/formatResolution\.kind === "9:16"/);
+  });
+});
+
+describe("F61 — chips de formato no nível da página do detalhe", () => {
+  it("exibe os dois chips uma única vez, sem rótulos crus nem duplicação", () => {
+    render(<CampaignPageClient {...BASE_PROPS} />);
+
+    expect(
+      screen.getAllByRole("list", { name: "Formatos da campanha" }),
+    ).toHaveLength(1);
+    expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
+    expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(screen.getByText("Não incluído")).toBeInTheDocument();
+    expect(screen.getByText("Selecionado")).toBeInTheDocument();
+    expect(screen.queryByText("Não gerado")).toBeNull();
+    expect(screen.queryByText("+")).toBeNull();
+  });
+
+  it("mantém os chips nos estados generating/stale/error", () => {
+    for (const displayStatus of ["generating", "stale", "error"] as const) {
+      const { unmount } = render(
+        <CampaignPageClient
+          {...BASE_PROPS}
+          newFlow={undefined}
+          displayStatus={displayStatus}
+          imageUrl={null}
+        />,
+      );
+      expect(
+        screen.getByRole("list", { name: "Formatos da campanha" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Não gerado")).toBeNull();
+      unmount();
+    }
+  });
+
+  it("aprovação pendente com candidata mantém chips sem ativo e sem preview/download novos", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={undefined}
+        imageUrl={null}
+        formatPresentation={buildIndividualFormatPresentation({
+          resolution: { kind: "9:16", contractVersion: "f59-vertical-9-16-v1" },
+          lifecycle: "delivered",
+        })}
+        approval={{
+          state: { status: "pending" },
+          candidateImageUrl: "https://preview.example.com/art.jpg",
+          candidateVersionId: "v1",
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "Formatos da campanha" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Selecionado")).toBeNull();
+    expect(screen.queryByRole("button", { name: /baixar/i })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /aprovar arte/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("regenerating mostra chips sem ativo e sem download", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={undefined}
+        imageUrl={null}
+        formatPresentation={buildIndividualFormatPresentation({
+          resolution: { kind: "9:16", contractVersion: "f59-vertical-9-16-v1" },
+          lifecycle: "processing",
+        })}
+        approval={{
+          state: { status: "regenerating" },
+          candidateImageUrl: "https://preview.example.com/art.jpg",
+          candidateVersionId: "v1",
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "Formatos da campanha" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Corrigindo a arte...")).toBeInTheDocument();
+    expect(screen.queryByText("Selecionado")).toBeNull();
+    expect(screen.queryByRole("button", { name: /baixar/i })).toBeNull();
   });
 });

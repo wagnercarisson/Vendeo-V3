@@ -53,6 +53,16 @@ vi.mock("@/lib/campaign/display", () => ({
     downloadUrl: `/api/campaign/${h.campaign.id}/download`,
     campaignId: h.campaign.id,
     isPublicationCopyEdited: false,
+    // Default FAIL-CLOSED (a página sobrescreve em todos os ramos reais).
+    formatPresentation: {
+      formats: {
+        "1:1": { state: "unknown", refunded: false, reason: null, active: false },
+        "9:16": { state: "unknown", refunded: false, reason: null, active: false },
+      },
+      flow: "single_format",
+      partial: false,
+      anyDelivered: false,
+    },
   })),
   mapNewFlowDisplayState: vi.fn(() => "delivered"),
   mapNewFlowCopy: vi.fn(() => null),
@@ -205,6 +215,19 @@ describe("F60.7 C3 — detalhe conjunto", () => {
         previewFormat: "9:16",
         state: "delivered",
       },
+      formatPresentation: {
+        flow: "two_format",
+        partial: false,
+        anyDelivered: true,
+        formats: {
+          "1:1": { state: "delivered", active: false, refunded: false },
+          "9:16": { state: "delivered", active: true, refunded: false },
+        },
+      },
+      formatHrefs: {
+        "1:1": `/campanhas/${h.campaign.id}?format=1:1`,
+        "9:16": `/campanhas/${h.campaign.id}?format=9:16`,
+      },
       newFlow: expect.objectContaining({
         operationId: "33333333-3333-4333-8333-333333333333",
         state: "delivered",
@@ -228,6 +251,23 @@ describe("F60.7 C3 — detalhe conjunto", () => {
         previewFormat: null,
         previewUrl: null,
         state: "partial_terminal",
+      },
+      formatPresentation: {
+        flow: "two_format",
+        partial: true,
+        anyDelivered: true,
+        formats: {
+          "1:1": {
+            state: "absent",
+            reason: "not_delivered",
+            refunded: true,
+            active: false,
+          },
+          "9:16": { state: "delivered", active: false, refunded: false },
+        },
+      },
+      formatHrefs: {
+        "9:16": `/campanhas/${h.campaign.id}?format=9:16`,
       },
     });
   });
@@ -313,6 +353,12 @@ describe("F60.7 C3 — detalhe conjunto", () => {
           previewFormat: null,
           previewUrl: null,
         },
+        formatPresentation: {
+          formats: {
+            "1:1": { state: "delivered", active: false },
+            "9:16": { state: "delivered", active: false },
+          },
+        },
       });
     }
   });
@@ -325,6 +371,12 @@ describe("F60.7 C3 — detalhe conjunto", () => {
     expect(h.attemptStartCalls).toBe(0);
     expect(props).toMatchObject({
       jointFlow: true,
+      formatPresentation: {
+        formats: {
+          "1:1": { state: "unavailable", active: false },
+          "9:16": { state: "unavailable", active: false },
+        },
+      },
       newFlow: expect.objectContaining({ state: "unknown", operationId: null }),
     });
   });

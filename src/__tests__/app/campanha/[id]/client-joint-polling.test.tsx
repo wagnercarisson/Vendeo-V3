@@ -10,6 +10,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import {
+  buildJointFormatPresentation,
+  type CampaignFormatKey,
+} from "@/lib/campaign/format-presentation";
 import type { CampaignPageProps } from "@/lib/campaign/display";
 import { ptBRCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
 
@@ -29,6 +33,13 @@ const baseProps = {
   isPublicationCopyEdited: false,
   messages: ptBRCampaignDetailMessages,
   locale: "pt-BR" as const,
+  formatPresentation: buildJointFormatPresentation(
+    {
+      "1:1": { state: "delivered", refunded: false },
+      "9:16": { state: "processing", refunded: false },
+    },
+    "1:1",
+  ),
   newFlow: {
     state: "delivered" as const,
     operationId: "op-1",
@@ -255,5 +266,72 @@ describe("F60.7 C3 — cliente conjunto montado", () => {
     expect(
       screen.getByRole("button", { name: "Recuperar imagem salva" }),
     ).toBeInTheDocument();
+  });
+
+  it("F61 — chips conjuntos no topo, link só para entregue e nota única", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const hrefs: Partial<Record<CampaignFormatKey, string>> = {
+      "1:1": "/campanhas/c1?format=1:1",
+    };
+
+    render(
+      <CampaignPageClient
+        {...baseProps}
+        imageUrl={null}
+        downloadDisabled
+        joint={joint({
+          formats: { "1:1": "delivered", "9:16": "absent" },
+          preferredFormat: "1:1",
+          previewFormat: "1:1",
+          previewUrl: null,
+          state: "partial_terminal",
+        })}
+        formatPresentation={buildJointFormatPresentation({
+          "1:1": { state: "delivered", refunded: false },
+          "9:16": { state: "absent", refunded: true },
+        })}
+        formatHrefs={hrefs}
+      />,
+    );
+
+    expect(
+      screen.getAllByRole("list", { name: "Formatos da campanha" }),
+    ).toHaveLength(1);
+    const formatLinks = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href")?.includes("?format="));
+    expect(formatLinks).toHaveLength(1);
+    expect(formatLinks[0]).toHaveAttribute("href", "/campanhas/c1?format=1:1");
+    expect(
+      screen.getAllByText("Entrega parcial: um formato foi estornado."),
+    ).toHaveLength(1);
+    expect(screen.getByText("Crédito devolvido")).toBeInTheDocument();
+    expect(screen.queryByText("Não gerado")).toBeNull();
+  });
+
+  it("F61 — invalidRequest tem precedência sobre a nota de estado", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    render(
+      <CampaignPageClient
+        {...baseProps}
+        imageUrl={null}
+        downloadDisabled
+        joint={joint({
+          requestedFormatInvalid: true,
+          previewFormat: null,
+          previewUrl: null,
+          state: "partial_processing",
+        })}
+      />,
+    );
+
+    expect(
+      screen.getAllByText(
+        "Formato solicitado inválido. Escolha um dos formatos entregues.",
+      ),
+    ).toHaveLength(1);
+    expect(
+      screen.queryByText("Entrega parcial: o outro formato está em processamento."),
+    ).toBeNull();
   });
 });
