@@ -30,6 +30,9 @@ supabase/.temp/
 # Tsconfig dedicado do laboratorio local (gerado em runtime)
 tsconfig.landing-lab.json
 
+# Saída padrão do inventário do lint diagnóstico (quick 261121-k4g)
+.lint-diagnostic/
+
 # Scenarios are deterministic; only placeholder images go in this dir
 # Images require rights verification before committing
 .vercel
