@@ -1022,6 +1022,10 @@ export function useCampaignForm(
   const prevImageFileRef = useRef<File | null>(null);
   const lastRestoredUrlRef = useRef<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  // Quick 261121-m97 — identidade da leitura corrente do preview. Um callback
+  // de FileReader só grava se ainda for a leitura mais recente; leituras de
+  // arquivos/escopos superados são descartadas.
+  const imageReadSeqRef = useRef(0);
   // F43 (mini-fix): último body CONFIRMADO na revisão (snapshot travado +
   // brief_review_confirmed) — o retry pós-falha reutiliza EXATAMENTE essa
   // tentativa, sem contornar o gate de revisão nem reativar a validação vision.
@@ -1040,6 +1044,11 @@ export function useCampaignForm(
   const imageDraftKey = draftScope
     ? `campaign_draft_image:${draftScope}`
     : "campaign_draft_image";
+  // Chave vigente: o callback compara com a chave capturada no início da
+  // leitura e DESCARTA em caso de mudança de escopo (não redireciona a escrita
+  // para a chave nova nem sobrescreve a imagem efetivamente enviada).
+  const imageDraftKeyRef = useRef(imageDraftKey);
+  imageDraftKeyRef.current = imageDraftKey;
 
   /**
    * Recorte 3 (Plano 10): associa o rascunho+imagem à IDENTIDADE efetivamente
@@ -1475,14 +1484,21 @@ export function useCampaignForm(
     }
 
     if (currentFile instanceof File) {
+      const readId = ++imageReadSeqRef.current;
+      const readKey = imageDraftKey;
       const url = URL.createObjectURL(currentFile);
       setImagePreviewUrl(url);
       objectUrlRef.current = url;
       // Read as data URL for draft persistence
       const reader = new FileReader();
       reader.onloadend = () => {
+        // Quick 261121-m97 — leitura superada (outro arquivo/remoção/unmount)
+        // ou de escopo diferente: descarta. Nunca grava na chave antiga nem
+        // redireciona para a vigente.
+        if (readId !== imageReadSeqRef.current) return;
+        if (imageDraftKeyRef.current !== readKey) return;
         try {
-          sessionStorage.setItem(imageDraftKey, reader.result as string);
+          sessionStorage.setItem(readKey, reader.result as string);
         } catch {
           // storage full or unavailable
         }
@@ -1490,9 +1506,20 @@ export function useCampaignForm(
       reader.readAsDataURL(currentFile);
       setRestoredImageDataUrl(null);
     } else if (restoredImageDataUrl) {
+      imageReadSeqRef.current += 1;
       setImagePreviewUrl(restoredImageDataUrl);
       objectUrlRef.current = null;
     } else {
+      imageReadSeqRef.current += 1;
+      // Descarte explícito: sem arquivo atual e sem restauração, a imagem
+      // removida não pode permanecer no rascunho (evita ressurgir no reload).
+      if (prevFile) {
+        try {
+          sessionStorage.removeItem(imageDraftKey);
+        } catch {
+          // storage indisponível
+        }
+      }
       setImagePreviewUrl(null);
       objectUrlRef.current = null;
     }
@@ -1500,6 +1527,20 @@ export function useCampaignForm(
     prevImageFileRef.current = currentFile;
     lastRestoredUrlRef.current = restoredImageDataUrl;
   }, [fields.productImages, restoredImageDataUrl, imageDraftKey]);
+
+  // Quick 261121-m97 — libera a object URL do preview e invalida leitura
+  // pendente ao desmontar. O Strict Mode roda este cleanup no ciclo duplo de
+  // montagem: ali `objectUrlRef` ainda é nulo, então nenhuma URL válida é
+  // revogada e nenhuma leitura de seleção posterior é afetada.
+  useEffect(() => {
+    return () => {
+      imageReadSeqRef.current += 1;
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, []);
 
   const setField = useCallback(
     (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => {
