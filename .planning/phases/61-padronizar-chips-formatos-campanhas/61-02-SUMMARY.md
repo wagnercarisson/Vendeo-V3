@@ -1,16 +1,17 @@
 # Phase 61 Plan 02: Lista e dashboard com chips padronizados
 
-**Status:** ⛔ **NÃO ACEITO / AGUARDANDO REVISÃO** — execução local/offline concluída; parada obrigatória no `## Review Stop`. Nenhuma aprovação implícita. `61-03` **NÃO** iniciado. Fase **NÃO** marcada como concluída.
+**Status:** ✅ **ACEITO LOCALMENTE/OFFLINE EM 2026-11-21** — sem bloqueadores; `61-03` autorizado isoladamente; fase **NÃO** concluída até o Review Stop do `61-03`.
 
 **Executado em:** 2026-11-21
 **Branch:** `feat/campaign-format-chips`
 **Base da wave:** `4f5d8e00` (aceite local do `61-01`)
 **HEAD ao final da execução:** `f31ecd95`
 
-> Este documento registra a execução do plano `61-02` (integração dos chips na
-> listagem `/campanhas` e nas campanhas disponíveis do dashboard). Ele é
-> deliberadamente marcado como **não aceito**: a revisão do responsável é o
-> próximo passo e `61-03` permanece bloqueado até aprovação explícita.
+> Este documento registra a execução e o ACEITE LOCAL/OFFLINE do plano `61-02`
+> (integração dos chips na listagem `/campanhas` e nas campanhas disponíveis do
+> dashboard). `61-03` foi autorizado após a revisão e permanece sujeito ao seu
+> próprio Review Stop. Build e suíte global permanecem como evidência anterior
+> do executor.
 
 ---
 
@@ -246,16 +247,34 @@ Nenhum desvio de escopo. Nenhuma decisão arquitetural nova.
    permanecem como evidência anterior do executor.
 5. **Gates de integração de banco/Storage/homolog/produção não executados** por
    ausência de autorização/ambiente.
-6. **`61-03` não iniciado.** A fase não está concluída nem aceita; nenhum
-   `sync`, `archive`, `merge`, `push` ou `deploy` foi executado.
+6. **`61-03` autorizado após o aceite; não iniciado até esta revisão.** A fase
+   não está concluída nem aceita como um todo; nenhum `sync`, `archive`, `merge`,
+   `push` ou `deploy` foi executado.
 
 ---
 
+## Aceite local/offline
+
+**Aceito em 2026-11-21, sem bloqueadores.**
+
+Evidência da revisão de aceite:
+- 38 arquivos / **324 testes PASS** (318 dirigidos + 6 de fronteiras);
+- baseline em leitura passou; JSON original preservado;
+- `git diff --check` do range limpo e árvore limpa;
+- chips informativos, sem navegação/geração; classificação e estados coerentes;
+- ações, miniaturas e contagens preservadas; nenhuma chamada adicional no
+  percurso testado;
+- ajuste de `dashboard-layout-order.test.tsx` restrito à fixture exigida pelo
+  novo campo, sem enfraquecer asserções.
+
+Build e suíte global não foram reexecutados nesta revisão; devem ser atualizados
+no fechamento do `61-03`. `61-03` está autorizado isoladamente e deve parar no
+seu Review Stop.
+
 ## Próximo passo
 
-Revisão do diff (`4f5d8e00..f31ecd95`) e dos gates por responsável humano.
-Somente após aprovação explícita o `61-03` (detalhe `/campanhas/[id]`) pode ser
-autorizado.
+Executar somente o `61-03` (detalhe `/campanhas/[id]`) e parar no Review Stop.
+A validação visual das superfícies continua necessária antes do fechamento.
 
 ## Self-Check: PASSED
 

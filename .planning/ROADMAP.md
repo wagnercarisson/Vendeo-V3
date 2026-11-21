@@ -980,12 +980,12 @@ Plans:
 
 ### Phase 61: F61 - Padronizacao dos chips de formato 1:1 e 9:16
 
-**Status (2026-11-21):** **61-01 ACEITO LOCALMENTE/OFFLINE; 61-02 EXECUTADO; NÃO ACEITO; 61-03 NÃO AUTORIZADO.** Fonte tecnica: `openspec/changes/padronizar-chips-formatos-campanhas/` (`--strict` valido). A fase padroniza a apresentacao dos formatos Quadrado 1:1 e Vertical 9:16 na listagem `/campanhas`, nas campanhas disponiveis do dashboard e no detalhe `/campanhas/[id]`, incluindo campanhas legadas, individuais e conjuntas. Revisão `655958c1`/`b3ad3cbb`/`c29b2195`/`65c22798`: `<a>` sem prefetch, primeiro clique fixa a explicação, texto “não incluído” corrigido e baseline imutável. Evidência de aceite do 61-01: 13 arquivos/93 testes PASS, baseline em leitura, JSON preservado, diff-check do range limpo e árvore limpa. `61-02` implementado em `8b5b4fb6`/`ff250330`/`f31ecd95`; evidência: 37 arquivos/318 testes, baseline em leitura antes/depois, zero chamadas adicionais.
+**Status (2026-11-21):** **61-01 E 61-02 ACEITOS LOCALMENTE/OFFLINE; 61-03 AUTORIZADO; FASE AINDA NÃO CONCLUÍDA.** Fonte tecnica: `openspec/changes/padronizar-chips-formatos-campanhas/` (`--strict` valido). A fase padroniza a apresentacao dos formatos Quadrado 1:1 e Vertical 9:16 na listagem `/campanhas`, nas campanhas disponiveis do dashboard e no detalhe `/campanhas/[id]`, incluindo campanhas legadas, individuais e conjuntas. Evidência 61-01: 13 arquivos/93 testes, baseline em leitura, JSON preservado. Evidência 61-02: 38 arquivos/324 testes, baseline em leitura, zero chamadas adicionais e diff-check do range limpo. `61-03` deve ser executado isoladamente e parar no Review Stop; validação visual continua necessária antes do fechamento.
 
 **Planos:** 3 waves sequenciais, cada uma com `autonomous: false` e `## Review Stop`:
 - [x] 61-01-PLAN.md - Baseline medido + modelo puro + catalogo compartilhado + componente de chips; aceito localmente/offline.
-- [ ] 61-02-PLAN.md - Integracao na listagem e no dashboard com dados ja carregados, chips informativos e zero consultas adicionais; executado, aguardando revisao.
-- [ ] 61-03-PLAN.md - Integracao no detalhe, selecao conjunta/`?format=` estrito/gates, remocao da duplicacao e regressoes finais; nao autorizado.
+- [x] 61-02-PLAN.md - Integracao na listagem e no dashboard com dados ja carregados, chips informativos e zero consultas adicionais; aceito localmente/offline.
+- [ ] 61-03-PLAN.md - Integracao no detalhe, selecao conjunta/`?format=` estrito/gates, remocao da duplicacao e regressoes finais; autorizado, aguardando execucao.
 
 **Baseline:** `.planning/phases/61-padronizar-chips-formatos-campanhas/61-BASELINE.md` (HEAD `c971d631a190d426be21341f4616f6e4c7cb5135`, branch `feat/campaign-format-chips`); evidencia medida em `evidence/baseline-calls.test.ts`/`baseline-calls.json`.
 
