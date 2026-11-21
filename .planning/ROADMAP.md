@@ -977,3 +977,20 @@ Plans:
 **Directory:** .planning/phases/60.7-entrega-conjunta-formatos-1-1-9-16/ (a criar no planejamento).
 
 **Depends on:** F60.6 publicada e aceita como relato do usuário; aprovação da proposta OpenSpec; plano GSD aprovado. Migration, homolog, prova real e produção exigem autorização explícita separada.
+
+### Phase 61: F61 - Padronizacao dos chips de formato 1:1 e 9:16
+
+**Status (2026-11-21):** **61-01 EXECUTADO; NAO ACEITO; 61-02/03 NAO INICIADOS.** Fonte tecnica: `openspec/changes/padronizar-chips-formatos-campanhas/` (`--strict` valido). A fase padroniza a apresentacao dos formatos Quadrado 1:1 e Vertical 9:16 na listagem `/campanhas`, nas campanhas disponiveis do dashboard e no detalhe `/campanhas/[id]`, incluindo campanhas legadas, individuais e conjuntas.
+
+**Planos:** 3 waves sequenciais, cada uma com `autonomous: false` e `## Review Stop`:
+- [x] 61-01-PLAN.md - Baseline medido + modelo puro + catalogo compartilhado + componente de chips; executado e aguardando revisao.
+- [ ] 61-02-PLAN.md - Integracao na listagem e no dashboard com dados ja carregados, chips informativos e zero consultas adicionais.
+- [ ] 61-03-PLAN.md - Integracao no detalhe, selecao conjunta/`?format=` estrito/gates, remocao da duplicacao e regressoes finais.
+
+**Baseline:** `.planning/phases/61-padronizar-chips-formatos-campanhas/61-BASELINE.md` (HEAD `c971d631a190d426be21341f4616f6e4c7cb5135`, branch `feat/campaign-format-chips`); evidencia medida em `evidence/baseline-calls.test.ts`/`baseline-calls.json`.
+
+**Fora de escopo:** expansao, entrega quadrada adicional, geracao, reserva/estorno/pricing/provider/flag/RPC, migration, banco/Storage/homolog/producao, alteracao de copy/miniaturas/aprovacao/recuperacao existentes, deploy, merge, push, sync ou archive.
+
+**Depends on:** revisao/aprovacao explicita do `61-01-SUMMARY.md` antes de `61-02`; aprovacao posterior antes de `61-03`.
+
+**Directory:** `.planning/phases/61-padronizar-chips-formatos-campanhas/`.

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { CampaignFormatChips } from "../campaign-format-chips";
 import {
@@ -19,21 +19,6 @@ import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import { es419CampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/es-419";
 import { ptBRCampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/pt-BR";
 import type { CampaignFormatPresentationMessages } from "@/lib/i18n/campaign-formats/messages";
-
-vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href: string;
-  }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
 
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 
@@ -179,7 +164,7 @@ describe("F61 — componente compartilhado de chips de formato", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
-  it("explicação abre/fecha por clique, com aria-expanded e aria-controls resolvido", () => {
+  it("explicação reconcilia clique, segundo clique, hover e foco com aria-expanded", () => {
     renderChips(joint("delivered", "delivered"));
 
     const button = screen.getByRole("button", {
@@ -192,18 +177,34 @@ describe("F61 — componente compartilhado de chips de formato", () => {
     const region = document.getElementById(controls ?? "");
     expect(region).not.toBeNull();
     expect(region).toHaveAttribute("role", "note");
-    expect(region?.className).toContain("hidden");
-    expect(region?.className).toContain("group-hover:block");
-    expect(region?.className).toContain("group-focus-within:block");
+    expect(region).not.toBeVisible();
 
     fireEvent.click(button);
-
     expect(button).toHaveAttribute("aria-expanded", "true");
-    expect(region?.className).toContain("block");
-    expect(region?.className).not.toContain("hidden");
+    expect(region).toBeVisible();
     expect(region).toHaveTextContent(
       "Este formato está disponível nesta campanha.",
     );
+
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(region).not.toBeVisible();
+
+    const item = button.closest("li");
+    expect(item).not.toBeNull();
+    fireEvent.mouseEnter(item as HTMLLIElement);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(region).toBeVisible();
+    fireEvent.mouseLeave(item as HTMLLIElement);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(region).not.toBeVisible();
+
+    fireEvent.focus(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(region).toBeVisible();
+    fireEvent.blur(button, { relatedTarget: document.body });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(region).not.toBeVisible();
   });
 
   it("controle de informação é focável, 44x44 e nunca desabilitado", () => {
@@ -267,7 +268,7 @@ describe("F61 — componente compartilhado de chips de formato", () => {
     expect(container.querySelectorAll(".break-words").length).toBeGreaterThan(0);
   });
 
-  it("não importa Supabase, storage, fetch, server-only ou HTML cru", () => {
+  it("não importa Supabase, storage, fetch, server-only, next/link ou HTML cru", () => {
     const source = readFileSync(
       join(
         process.cwd(),
@@ -281,6 +282,8 @@ describe("F61 — componente compartilhado de chips de formato", () => {
     expect(source).not.toMatch(/["']server-only["']/);
     expect(source).not.toMatch(/\bfetch\s*\(/);
     expect(source).not.toMatch(/\.storage\b/);
+    expect(source).not.toMatch(/next\/link/);
+    expect(source).not.toMatch(/prefetch=/);
     expect(source).not.toMatch(/dangerouslySetInnerHTML/);
   });
 });

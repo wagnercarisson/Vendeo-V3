@@ -12,8 +12,7 @@
  * para formato `delivered`.
  */
 
-import { useId, useState, type ReactElement } from "react";
-import Link from "next/link";
+import { useId, useState, type FocusEvent, type ReactElement } from "react";
 import {
   Check,
   CircleHelp,
@@ -131,8 +130,12 @@ function FormatChip({
   readonly href: string | undefined;
 }): ReactElement {
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const explanationId = useId();
   const name = messages.formats[formatKey].name;
+  const visible = open || (!dismissed && (hovered || focused));
   const chipClass = [
     BASE_CHIP_CLASS,
     stateClasses(entry),
@@ -142,6 +145,32 @@ function FormatChip({
     .join(" ");
   const hasLink =
     typeof href === "string" && href.length > 0 && entry.state === "delivered";
+
+  const handleToggle = () => {
+    if (visible) {
+      setOpen(false);
+      setDismissed(true);
+      return;
+    }
+    setOpen(true);
+    setDismissed(false);
+  };
+
+  const handleFocus = (event: FocusEvent<HTMLLIElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+    setFocused(true);
+    setDismissed(false);
+  };
+
+  const handleBlur = (event: FocusEvent<HTMLLIElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+    setFocused(false);
+    setDismissed(false);
+  };
 
   const chipContent = (
     <>
@@ -160,25 +189,37 @@ function FormatChip({
   );
 
   return (
-    <li className="group flex min-w-0 flex-wrap items-center gap-1">
+    <li
+      className="flex min-w-0 flex-wrap items-center gap-1"
+      onMouseEnter={() => {
+        setHovered(true);
+        setDismissed(false);
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+        setDismissed(false);
+      }}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+    >
       {hasLink ? (
-        <Link
+        <a
           href={href}
           aria-current={entry.active ? "true" : undefined}
           className={chipClass}
         >
           {chipContent}
-        </Link>
+        </a>
       ) : (
         <span className={chipClass}>{chipContent}</span>
       )}
 
       <button
         type="button"
-        aria-expanded={open}
+        aria-expanded={visible}
         aria-controls={explanationId}
         aria-label={`${messages.infoAria}: ${name}`}
-        onClick={() => setOpen((value) => !value)}
+        onClick={handleToggle}
         className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border text-text-muted transition-colors duration-200 hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep"
       >
         <CircleHelp aria-hidden="true" className="h-4 w-4" />
@@ -187,12 +228,8 @@ function FormatChip({
       <p
         id={explanationId}
         role="note"
-        className={[
-          open
-            ? "block"
-            : "hidden group-hover:block group-focus-within:block",
-          "w-full basis-full text-xs text-text-secondary font-body",
-        ].join(" ")}
+        hidden={!visible}
+        className="w-full basis-full text-xs text-text-secondary font-body"
       >
         {explanation(entry, messages)}
       </p>

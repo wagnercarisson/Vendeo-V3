@@ -14,7 +14,7 @@
  * Nenhum acesso a banco, Storage, homolog ou produção: todo I/O é mock.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -575,9 +575,8 @@ describe("Fase 61 — baseline medido de chamadas (lista/dashboard/detalhe)", ()
     };
 
     const capture = process.env.BASELINE_CAPTURE === "1";
-    const exists = existsSync(BASELINE_PATH);
 
-    if (capture || !exists) {
+    if (capture) {
       mkdirSync(dirname(BASELINE_PATH), { recursive: true });
       writeFileSync(
         BASELINE_PATH,

@@ -2,7 +2,7 @@
 
 **Capturada em:** 2026-11-21
 **Fonte técnica:** `openspec/changes/padronizar-chips-formatos-campanhas/`
-**Escopo:** apresentação dos chips de formato (modelo, catálogo, componente, lista/dashboard/detalhe).  
+**Escopo:** apresentação dos chips de formato (modelo, catálogo, componente, lista/dashboard/detalhe).
 **Fora de escopo:** expansão, entrega quadrada adicional, efeitos financeiros, geração, migration, banco/Storage/provider, deploy, merge, push, sync, archive.
 
 ## Repositório
