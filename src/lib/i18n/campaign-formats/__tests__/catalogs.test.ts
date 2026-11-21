@@ -130,7 +130,7 @@ describe("catálogo compartilhado de formatos pt-BR e es-419", () => {
       delivered: "Este formato está disponível nesta campanha.",
       deliveredActive: "Este é o formato exibido agora.",
       processing: "Este formato está sendo processado.",
-      notRequested: "Esta campanha foi criada apenas neste formato.",
+      notRequested: "Este formato não foi incluído na criação da campanha.",
       notDelivered: "Este formato foi solicitado, mas não foi entregue.",
       refunded:
         "Este formato não está disponível e o crédito foi devolvido.",

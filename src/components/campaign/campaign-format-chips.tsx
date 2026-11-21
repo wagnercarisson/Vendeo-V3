@@ -147,7 +147,7 @@ function FormatChip({
     typeof href === "string" && href.length > 0 && entry.state === "delivered";
 
   const handleToggle = () => {
-    if (visible) {
+    if (open) {
       setOpen(false);
       setDismissed(true);
       return;

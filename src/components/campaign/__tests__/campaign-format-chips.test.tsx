@@ -164,34 +164,70 @@ describe("F61 — componente compartilhado de chips de formato", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
-  it("explicação reconcilia clique, segundo clique, hover e foco com aria-expanded", () => {
+  it("hover → foco → primeiro clique fixa a explicação; segundo clique fecha", () => {
     renderChips(joint("delivered", "delivered"));
 
     const button = screen.getByRole("button", {
       name: "Ver explicação do formato: Quadrado 1:1",
     });
-    expect(button).toHaveAttribute("aria-expanded", "false");
-
     const controls = button.getAttribute("aria-controls");
-    expect(controls).toBeTruthy();
     const region = document.getElementById(controls ?? "");
     expect(region).not.toBeNull();
-    expect(region).toHaveAttribute("role", "note");
-    expect(region).not.toBeVisible();
+
+    const item = button.closest("li");
+    expect(item).not.toBeNull();
+    fireEvent.mouseEnter(item as HTMLLIElement);
+    fireEvent.focus(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(region).toBeVisible();
 
     fireEvent.click(button);
     expect(button).toHaveAttribute("aria-expanded", "true");
     expect(region).toBeVisible();
-    expect(region).toHaveTextContent(
-      "Este formato está disponível nesta campanha.",
-    );
+
+    fireEvent.mouseLeave(item as HTMLLIElement);
+    fireEvent.blur(button, { relatedTarget: document.body });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(region).toBeVisible();
 
     fireEvent.click(button);
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(region).not.toBeVisible();
+  });
 
+  it("foco → primeiro clique fixa; segundo clique fecha", () => {
+    renderChips(joint("delivered", "delivered"));
+
+    const button = screen.getAllByRole("button")[1];
+    const controls = button.getAttribute("aria-controls");
+    const region = document.getElementById(controls ?? "");
+    expect(region).not.toBeNull();
+
+    fireEvent.focus(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(region).toBeVisible();
+
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(region).toBeVisible();
+
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(region).not.toBeVisible();
+  });
+
+  it("hover e foco abrem a explicação; saída de ponteiro/foco fecha quando não fixada", () => {
+    renderChips(joint("delivered", "delivered"));
+
+    const button = screen.getByRole("button", {
+      name: "Ver explicação do formato: Quadrado 1:1",
+    });
+    const controls = button.getAttribute("aria-controls");
+    const region = document.getElementById(controls ?? "");
     const item = button.closest("li");
+    expect(region).not.toBeNull();
     expect(item).not.toBeNull();
+
     fireEvent.mouseEnter(item as HTMLLIElement);
     expect(button).toHaveAttribute("aria-expanded", "true");
     expect(region).toBeVisible();

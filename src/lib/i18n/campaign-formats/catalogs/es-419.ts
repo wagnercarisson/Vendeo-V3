@@ -29,7 +29,7 @@ export const es419CampaignFormatMessages = Object.freeze({
     delivered: "Este formato está disponible en esta campaña.",
     deliveredActive: "Este es el formato que se muestra ahora.",
     processing: "Este formato se está procesando.",
-    notRequested: "Esta campaña se creó solo en este formato.",
+    notRequested: "Este formato no fue incluido en la creación de la campaña.",
     notDelivered: "Este formato se solicitó, pero no se entregó.",
     refunded:
       "Este formato no está disponible y el crédito fue devuelto.",

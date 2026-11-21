@@ -187,7 +187,7 @@ Textos canônicos (congelados; testes de paridade/identidade):
 | `explanations.delivered` | Este formato está disponível nesta campanha. | Este formato está disponible en esta campaña. |
 | `explanations.deliveredActive` | Este é o formato exibido agora. | Este es el formato que se muestra ahora. |
 | `explanations.processing` | Este formato está sendo processado. | Este formato se está procesando. |
-| `explanations.notRequested` | Esta campanha foi criada apenas neste formato. | Esta campaña se creó solo en este formato. |
+| `explanations.notRequested` | Este formato não foi incluído na criação da campanha. | Este formato no fue incluido en la creación de la campaña. |
 | `explanations.notDelivered` | Este formato foi solicitado, mas não foi entregue. | Este formato se solicitó, pero no se entregó. |
 | `explanations.refunded` | Este formato não está disponível e o crédito foi devolvido. | Este formato no está disponible y el crédito fue devuelto. |
 | `explanations.unknown` | Não foi possível confirmar o estado deste formato. | No fue posible confirmar el estado de este formato. |

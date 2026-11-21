@@ -195,7 +195,7 @@ Textos de conteúdo persistido (nome do produto, copy) continuam com `lang=""`; 
 ## Risks / Trade-offs
 
 - **Campanhas antigas com `input_snapshot = null`** passam a mostrar ambos os chips como `unavailable` em vez de nenhum rótulo. → Mitigação: contrato explícito, testes de snapshot nulo/malformado e nenhum fallback para `1:1`.
-- **“Não incluído” no outro formato de campanha individual** pode ser lido como incompatibilidade definitiva. → Mitigação: explicação “Esta campanha foi criada apenas neste formato”, sem prometer nem negar geração futura; a elegibilidade permanece fora da fatia.
+- **“Não incluído” no outro formato de campanha individual** pode ser lido como incompatibilidade definitiva. → Mitigação: explicação “Este formato não foi incluído na criação da campanha”, sem prometer nem negar geração futura; a elegibilidade permanece fora da fatia.
 - **Chips de lista/dashboard versus gate de aprovação no detalhe.** O chip representa entrega persistida; o gate continua nas ações. → Mitigação: documentar a semântica, não adicionar links/download onde o gate bloqueia e manter os testes de aprovação existentes.
 - **Snapshot conjunto inconsistente** pode aparecer no dashboard porque a elegibilidade continua `status = ready`. → Mitigação: ambos `unavailable`/`unknown`, sem tratar como `1:1`; não alterar contagem/eligibility nesta fatia e cobrir com teste.
 - **Leitura conjunta falha** retorna `unknown`; não cair no individual. → Mitigação: classificação conjunta antes do resolvedor e teste de falha de leitura.
