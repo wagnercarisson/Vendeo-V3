@@ -1,0 +1,92 @@
+{
+  "list": {
+    "joint": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "createSignedUrl": 0,
+      "createSignedUrls": 1
+    },
+    "legacy_only": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "createSignedUrl": 2,
+      "createSignedUrls": 0
+    },
+    "no_signable_thumbnail": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "createSignedUrl": 0,
+      "createSignedUrls": 0
+    },
+    "batch_1": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "createSignedUrl": 0,
+      "createSignedUrls": 1
+    },
+    "batch_3": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "createSignedUrl": 0,
+      "createSignedUrls": 1
+    }
+  },
+  "dashboard": {
+    "joint": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "generateBatchPreferredThumbnailUrls": 1,
+      "generateBatchThumbnailUrls": 1
+    },
+    "legacy_only": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "generateBatchPreferredThumbnailUrls": 1,
+      "generateBatchThumbnailUrls": 1
+    },
+    "no_signable_thumbnail": {
+      "from": 1,
+      "readTwoFormatListSummaries": 1,
+      "generateBatchPreferredThumbnailUrls": 1,
+      "generateBatchThumbnailUrls": 1
+    }
+  },
+  "detail": {
+    "joint": {
+      "resolveTwoFormatControlOperation": 1,
+      "readTwoFormatDelivery": 1,
+      "readTwoFormatDurableOutcomes": 1,
+      "ProductOneToOneAttemptStartClient": 0,
+      "generateSignedPreviewUrl": 0,
+      "readCopyDelivery": 1,
+      "readCopyCancellation": 0,
+      "readCopyRecoverySummary": 0,
+      "artifactProbes": 0,
+      "createSignedUrl": 1
+    },
+    "new_flow": {
+      "resolveTwoFormatControlOperation": 0,
+      "readTwoFormatDelivery": 0,
+      "readTwoFormatDurableOutcomes": 0,
+      "ProductOneToOneAttemptStartClient": 1,
+      "generateSignedPreviewUrl": 0,
+      "readCopyDelivery": 1,
+      "readCopyCancellation": 0,
+      "readCopyRecoverySummary": 1,
+      "artifactProbes": 1,
+      "createSignedUrl": 0
+    },
+    "legacy": {
+      "resolveTwoFormatControlOperation": 0,
+      "readTwoFormatDelivery": 0,
+      "readTwoFormatDurableOutcomes": 0,
+      "ProductOneToOneAttemptStartClient": 1,
+      "generateSignedPreviewUrl": 1,
+      "readCopyDelivery": 0,
+      "readCopyCancellation": 0,
+      "readCopyRecoverySummary": 0,
+      "artifactProbes": 0,
+      "createSignedUrl": 1
+    }
+  }
+}
