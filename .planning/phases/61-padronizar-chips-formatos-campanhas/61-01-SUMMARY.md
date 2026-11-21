@@ -33,6 +33,7 @@ banco, Storage ou provider:
 | `cc093005` | feat | Catálogo compartilhado pt-BR/es-419 + wiring de list/dashboard/detail |
 | `280d0c9a` | feat | Componente compartilhado de chips + testes de estados/a11y |
 | `8db67eee` | fix | Remoção de literal que violava o contrato de fronteiras F60.7 |
+| `655958c1` | fix | Revisão: remover prefetch (`<a>`), reconciliar explicação (clique/2º clique/hover/foco) e baseline imutável (sem recaptura silenciosa) |
 
 Nenhum commit em `supabase/`, `src/lib/product-two-format/**` ou
 `src/lib/campaign/format-resolution.ts`.
@@ -79,16 +80,17 @@ Nenhum commit em `supabase/`, `src/lib/product-two-format/**` ou
 
 | Gate | Comando | Exit | Resultado |
 |---|---|---|---|
-| Typecheck | `npm.cmd run typecheck` | **0** | Sem erros |
-| Lint | `npm.cmd run lint` | **0** | Sem erros |
-| Suítes dirigidas do plano | `npx vitest run src/lib/campaign/__tests__/format-presentation.test.ts src/lib/i18n/campaign-formats/__tests__ src/lib/i18n/campaign-list/__tests__ src/lib/i18n/dashboard/__tests__ src/lib/i18n/campaign-detail/__tests__ src/components/campaign/__tests__/campaign-format-chips.test.tsx` | **0** | 12 arquivos, 90 testes |
+| Typecheck | `npm.cmd run typecheck` | **0** | Sem erros (repetido após a revisão) |
+| Lint | `npm.cmd run lint` | **0** | Sem erros (repetido após a revisão) |
+| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, evidência>` | **0** | 13 arquivos, 91 testes |
 | Regressão dirigida (baseline) | `npx vitest run <8 arquivos de list/dashboard/detail>` | **0** | 8 arquivos, 65 testes |
 | Evidência em modo leitura | `npx vitest run .planning/.../evidence/baseline-calls.test.ts` | **0** | `toEqual` contra o JSON imutável |
+| Baseline ausente (modo leitura) | mesmo teste com JSON temporariamente removido | **1** | Falha corretamente; JSON restaurado em seguida |
 | Fronteiras F60.7 | `npx vitest run src/lib/product-two-format/orchestration/__tests__/joint-boundaries.contract.test.ts` | **0** | 6 testes |
 | Suíte global | `npm.cmd run test` | **0** | 841 arquivos passaram, 2 skipped; 10375 testes passaram, 10 skipped |
 | Build (baseline) | `npm.cmd run build` | **0** | `check:cnae OK`; 102 páginas estáticas |
-| Diff-check | `git diff --check` | **0** | Limpo (apenas warning de LF→CRLF no `61-BASELINE.md`; sem trailing whitespace) |
-| Status | `git status --porcelain` | — | Baseline documental autorizada preservada; `STATE.md` registra o planejamento F61 |
+| Diff-check do range | `git diff --check c971d631..HEAD` | **0** | Limpo |
+| Status | `git status --porcelain` | — | Árvore limpa após o commit documental |
 
 ### Falhas preexistentes / limites
 
@@ -96,9 +98,9 @@ Nenhum commit em `supabase/`, `src/lib/product-two-format/**` ou
   permanecem **NÃO EXECUTADOS** por ausência de ambiente. Nenhum banco/Storage/
   homolog/produção foi acessado.
 - Nenhuma falha de teste/typecheck/lint/build foi introduzida no estado final.
-- O `ROADMAP.md` não recebeu seção da fase 61 para evitar um falso positivo de
-  trailing whitespace; o tracking do planejamento está em `STATE.md` e nos
-  artefatos da fase.
+- O `ROADMAP.md` agora registra a fase 61; o diff-check do range está limpo.
+- A árvore de trabalho está limpa; a única advertência residual do Git é a
+  conversão LF→CRLF em arquivos de planejamento (não é erro de whitespace).
 
 ---
 
@@ -151,6 +153,27 @@ os chips).
 
 ## Desvios do plano
 
+### Corrigidos na revisão
+
+**1. Navegação sem prefetch**
+- `next/link` removido; o chip entregue usa `<a href>` como a navegação anterior.
+- Teste estático proíbe `next/link`/`prefetch`; nenhuma consulta antecipada.
+
+**2. Explicação reconciliada**
+- Estado React controla `hidden`/`aria-expanded`; clique abre, segundo clique fecha,
+  hover e foco abrem, saída de ponteiro/foco fecha.
+- Teste cobre segundo acionamento, teclado e saída de foco/ponteiro, usando
+  `toBeVisible`/`not.toBeVisible`, não apenas classes.
+
+**3. Baseline imutável**
+- `baseline-calls.json` só é gravado com `BASELINE_CAPTURE=1`.
+- Em modo leitura, JSON ausente falha (exit 1); não há recaptura silenciosa.
+- JSON original preservado.
+
+**4. Tracking e whitespace**
+- Fase 61 registrada no `ROADMAP.md`; trailing whitespace corrigido.
+- `git diff --check c971d631..HEAD` limpo.
+
 ### Auto-corrigidos
 
 **1. [Rule 3 — bloqueio de fronteira] Guardião F60.7 rejeitou comentário literal**
@@ -174,8 +197,9 @@ copy, miniatura, aprovação ou recuperação foi alterada.
   stub funcional — apenas fundação não plugada.
 - O baseline de chamadas é comparativo; a integração futura deve reexecutar
   `baseline-calls.test.ts` e exigir `toEqual` (zero chamadas adicionais).
-- O tracking da fase está em `STATE.md`/artefatos da fase; o `ROADMAP.md` foi
-  mantido sem a seção 61 para evitar falso positivo de whitespace naquele arquivo.
+- O tracking da fase está em `STATE.md`, `ROADMAP.md` e nos artefatos da fase.
+- A explicação do chip usa estado React (`hidden`/`aria-expanded`), não apenas
+  CSS; o link é `<a>` sem prefetch do Next.
 
 ---
 
@@ -185,7 +209,7 @@ copy, miniatura, aprovação ou recuperação foi alterada.
 - Nenhum merge, push, deploy, sync ou archive.
 - Nenhuma migration/RPC/flag/pricing/copy/miniatura/aprovação/recuperação criada ou alterada.
 - `61-02` e `61-03` NÃO executados.
-- Fase NÃO marcada como concluída; `STATE.md` registra o planejamento F61 e `ROADMAP.md` foi mantido sem a seção 61 para evitar falso positivo de whitespace.
+- Fase NÃO marcada como concluída; `STATE.md` e `ROADMAP.md` registram a fase 61 e o estado de revisão.
 
 ---
 

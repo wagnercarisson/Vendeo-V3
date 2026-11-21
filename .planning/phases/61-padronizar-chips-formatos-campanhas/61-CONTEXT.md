@@ -229,9 +229,9 @@ Contrato visual/estrutural obrigatório:
 - `processing`: `text-amber-400 bg-amber-400/10 border-amber-400/30` + `Loader2`.
 - `absent`: `text-text-muted bg-bg-elevated border-border`; rótulo por `reason` (`notRequested`/`notDelivered`), ou `labels.refunded` quando `refunded`, com `Undo2`.
 - `unknown`/`unavailable`: `border-dashed border-border text-text-muted`; rótulos distintos e honestos.
-- Link somente quando `hrefs?.[key]` existe **e** `state === "delivered"`; demais são `span` (sem ação, sem geração).
-- Controle de informação: `button type="button"`, `aria-expanded`, `aria-controls` apontando para o parágrafo de explicação (id gerado com `useId()`), `aria-label={`${messages.infoAria}: ${name}`}` (concatenação, sem placeholder no catálogo), classe `min-h-11 min-w-11` (44×44) e `focus-visible:ring-2`. Nunca `disabled`.
-- Explicação: `<p id={...} role="note">`; visível quando aberta via estado local; quando fechada usa `hidden group-hover:block group-focus-within:block` (hover/foco em desktop; toggle cobre toque). Sem `useEffect`, sem fetch, sem storage.
+- Link `<a href>` (sem `next/link`/prefetch) somente quando `hrefs?.[key]` existe **e** `state === "delivered"`; demais são `span` (sem ação, sem geração).
+- Controle de informação: `button type="button"`, `aria-expanded={visible}`, `aria-controls` apontando para o parágrafo de explicação (id gerado com `useId()`), `aria-label={`${messages.infoAria}: ${name}`}` (concatenação, sem placeholder no catálogo), classe `min-h-11 min-w-11` (44×44) e `focus-visible:ring-2`. Nunca `disabled`.
+- Explicação: `<p id={...} role="note" hidden={!visible}>`; `visible = open || (!dismissed && (hovered || focused))`. Clique abre, segundo clique fecha; hover/foco abrem; saída de ponteiro/foco fecha. Estado acessível e `hidden` reconciliados; sem `useEffect`, fetch ou storage.
 - Explicação escolhida: `deliveredActive` se `active`; `refunded` se `refunded`; senão por estado/reason.
 - Sem emojis; tema dark; sem light mode; sem `dangerouslySetInnerHTML`.
 
