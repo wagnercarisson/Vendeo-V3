@@ -28,8 +28,9 @@ const BASE_SHA_RECORD = path.resolve(
 //    autorização e commit por entrada.
 //
 // Reconciliação 2026-11-21 (quick 261121-iqh): registra as 37 mudanças de
-// fronteira JÁ APROVADAS por fases/quicks posteriores (F60.3-02, F60.4-03,
-// F60.6-01/05, quicks 261107-hcx, 261107-qvo, 261116-vpx) e atualiza o commit
+// fronteira JÁ AUTORIZADAS por fases/quicks posteriores (F60.3-02, F60.4-03,
+// F60.6-01/05, quicks 261107-hcx, 261107-qvo, 261116-vpx) — registro de código
+// offline, que NÃO é aceite formal de provider/ambiente/publicação — e atualiza o commit
 // aprovado de 7 caminhos cujo conteúdo avançou. A exceção da rota generate-image
 // passa a ser exatamente "linha de import de `@/lib/campaign/persistence`
 // substituída pela MESMA linha acrescida de `uploadCampaignInputFile`"; qualquer
