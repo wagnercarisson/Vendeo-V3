@@ -1,0 +1,218 @@
+
+> vendeo-v3@0.1.0 build
+> npm run check:cnae && next build
+
+
+> vendeo-v3@0.1.0 check:cnae
+> tsx scripts/check-cnae.ts
+
+check:cnae OK — no contradictions in CNAE_SEGMENT_MAP
+   ▲ Next.js 15.5.18
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 9.9s
+   Linting and checking validity of types ...
+
+ ⚠ The Next.js plugin was not detected in your ESLint configuration. See https://nextjs.org/docs/app/api-reference/config/eslint#migrating-existing-config
+   Collecting page data ...
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+   Generating static pages (0/102) ...
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+   Generating static pages (25/102) 
+[seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
+   Generating static pages (50/102) 
+   Generating static pages (76/102) 
+ ✓ Generating static pages (102/102)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                     Size  First Load JS
+┌ ○ /                                                         4.4 kB         180 kB
+├ ○ /_not-found                                                 1 kB         103 kB
+├ ƒ /admin                                                     811 B         103 kB
+├ ƒ /admin/access-requests                                   2.09 kB         108 kB
+├ ƒ /admin/ai-model-selection                                8.84 kB         114 kB
+├ ƒ /admin/ai-operation-costs                                5.77 kB         108 kB
+├ ƒ /admin/audit-log                                           836 B         106 kB
+├ ƒ /admin/campaign-reports                                    836 B         106 kB
+├ ƒ /admin/campaign-reports/[reportId]                         777 B         106 kB
+├ ƒ /admin/campaigns/errors                                    836 B         106 kB
+├ ƒ /admin/data-subject-requests                               426 B         103 kB
+├ ƒ /admin/feature-flags                                     5.29 kB         108 kB
+├ ƒ /admin/image-model-pair                                    426 B         103 kB
+├ ƒ /admin/laboratorio                                         828 B         106 kB
+├ ƒ /admin/laboratorio/bancada                               17.2 kB         129 kB
+├ ƒ /admin/laboratorio/bancada/expandir                      10.3 kB         122 kB
+├ ƒ /admin/laboratorio/cenarios                                828 B         106 kB
+├ ƒ /admin/laboratorio/experimentos/[id]                     7.05 kB         113 kB
+├ ƒ /admin/laboratorio/experimentos/[id]/comparar            7.99 kB         127 kB
+├ ƒ /admin/laboratorio/experimentos/novo                     5.46 kB         125 kB
+├ ƒ /admin/laboratorio/programas                             4.21 kB         110 kB
+├ ƒ /admin/metrics                                           1.59 kB         107 kB
+├ ƒ /admin/operation-costs                                   2.87 kB         119 kB
+├ ƒ /admin/product-1-1-pending                               5.13 kB         111 kB
+├ ƒ /admin/reviews                                           1.15 kB         107 kB
+├ ƒ /admin/support-credit-requests                             426 B         103 kB
+├ ƒ /admin/users                                               836 B         106 kB
+├ ƒ /admin/users/[id]                                        4.51 kB         107 kB
+├ ƒ /admin/users/[id]/create-test-store                      3.66 kB         106 kB
+├ ƒ /admin/users/[id]/grant-freemium-exception               2.26 kB         104 kB
+├ ƒ /api/access-requests                                       426 B         103 kB
+├ ƒ /api/admin/access-requests/[id]                            426 B         103 kB
+├ ƒ /api/admin/access-requests/[id]/invite                     426 B         103 kB
+├ ƒ /api/admin/ai-costs                                        426 B         103 kB
+├ ƒ /api/admin/ai-model-pricing                                426 B         103 kB
+├ ƒ /api/admin/ai-model-selection                              426 B         103 kB
+├ ƒ /api/admin/ai-operation-runs                               426 B         103 kB
+├ ƒ /api/admin/ai-operation-runs/[operationRunId]              426 B         103 kB
+├ ƒ /api/admin/audit-log                                       426 B         103 kB
+├ ƒ /api/admin/campaign-reports/[reportId]                     426 B         103 kB
+├ ƒ /api/admin/campaigns/errors                                426 B         103 kB
+├ ƒ /api/admin/credits/grant                                   426 B         103 kB
+├ ƒ /api/admin/data-subject-requests                           426 B         103 kB
+├ ƒ /api/admin/economic-parameters                             426 B         103 kB
+├ ƒ /api/admin/feature-flags                                   426 B         103 kB
+├ ƒ /api/admin/freemium/exception                              426 B         103 kB
+├ ƒ /api/admin/image-generation-diagnosis                      426 B         103 kB
+├ ƒ /api/admin/image-model-pair                                426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/branding                    426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/briefing                    426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/compose                     426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/estimate                    426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/expand/runs                 426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/inputs                      426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/presets                     426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/runs                        426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/runs/[id]                   426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/runs/[id]/attempts          426 B         103 kB
+├ ƒ /api/admin/laboratorio/bancada/stores                      426 B         103 kB
+├ ƒ /api/admin/laboratorio/experiments                         426 B         103 kB
+├ ƒ /api/admin/laboratorio/experiments/[id]                    426 B         103 kB
+├ ƒ /api/admin/laboratorio/experiments/[id]/estimate           426 B         103 kB
+├ ƒ /api/admin/laboratorio/experiments/[id]/evaluations        426 B         103 kB
+├ ƒ /api/admin/laboratorio/experiments/[id]/runs               426 B         103 kB
+├ ƒ /api/admin/laboratorio/programs                            426 B         103 kB
+├ ƒ /api/admin/laboratorio/programs/[id]                       426 B         103 kB
+├ ƒ /api/admin/laboratorio/runs/[id]                           426 B         103 kB
+├ ƒ /api/admin/laboratorio/scenarios                           426 B         103 kB
+├ ƒ /api/admin/monthly-credits/grant                           426 B         103 kB
+├ ƒ /api/admin/nine-sixteen-expansion-model-config             426 B         103 kB
+├ ƒ /api/admin/operation-costs                                 426 B         103 kB
+├ ƒ /api/admin/product-1-1-activation                          426 B         103 kB
+├ ƒ /api/admin/product-1-1-pending                             426 B         103 kB
+├ ƒ /api/admin/product-flow-authorizations                     426 B         103 kB
+├ ƒ /api/admin/product-two-format-pending                      426 B         103 kB
+├ ƒ /api/admin/reviews                                         426 B         103 kB
+├ ƒ /api/admin/reviews/[id]                                    426 B         103 kB
+├ ƒ /api/admin/reviews/[id]/approve                            426 B         103 kB
+├ ƒ /api/admin/reviews/[id]/exception                          426 B         103 kB
+├ ƒ /api/admin/reviews/[id]/reject                             426 B         103 kB
+├ ƒ /api/admin/reviews/[id]/reveal-cnpj                        426 B         103 kB
+├ ƒ /api/admin/stores                                          426 B         103 kB
+├ ƒ /api/admin/stores/create-test                              426 B         103 kB
+├ ƒ /api/admin/support-credit-requests                         426 B         103 kB
+├ ƒ /api/admin/trial-offer                                     426 B         103 kB
+├ ƒ /api/admin/trial-offer/activate                            426 B         103 kB
+├ ƒ /api/admin/users                                           426 B         103 kB
+├ ƒ /api/admin/users/[id]                                      426 B         103 kB
+├ ƒ /api/admin/visual-signature-model-config                   426 B         103 kB
+├ ƒ /api/auth/invite-completed                                 426 B         103 kB
+├ ƒ /api/campaign/[id]/approve                                 426 B         103 kB
+├ ƒ /api/campaign/[id]/continue                                426 B         103 kB
+├ ƒ /api/campaign/[id]/copy-recovery                           426 B         103 kB
+├ ƒ /api/campaign/[id]/download                                426 B         103 kB
+├ ƒ /api/campaign/[id]/image-recovery                          426 B         103 kB
+├ ƒ /api/campaign/[id]/problem-report                          426 B         103 kB
+├ ƒ /api/campaign/[id]/publication-copy                        426 B         103 kB
+├ ƒ /api/campaign/generate                                     426 B         103 kB
+├ ƒ /api/campaign/generate-image                               426 B         103 kB
+├ ƒ /api/campaign/generation-status                            426 B         103 kB
+├ ƒ /api/cnpj/lookup                                           426 B         103 kB
+├ ƒ /api/cron/demo-credits                                     426 B         103 kB
+├ ƒ /api/cron/monthly-credits                                  426 B         103 kB
+├ ƒ /api/cron/sync-openai-pricing                              426 B         103 kB
+├ ƒ /api/legal/accept                                          426 B         103 kB
+├ ƒ /api/legal/acknowledge-privacy                             426 B         103 kB
+├ ƒ /api/legal/communications-consent                          426 B         103 kB
+├ ƒ /api/legal/current-versions                                426 B         103 kB
+├ ƒ /api/legal/status                                          426 B         103 kB
+├ ƒ /api/notifications/read                                    426 B         103 kB
+├ ƒ /api/operation-costs                                       426 B         103 kB
+├ ƒ /api/preferences                                           426 B         103 kB
+├ ƒ /api/store                                                 426 B         103 kB
+├ ƒ /api/store/[id]                                            426 B         103 kB
+├ ƒ /api/store/[id]/brand-profile                              426 B         103 kB
+├ ƒ /api/store/[id]/brand-profile/generate-without-logo        426 B         103 kB
+├ ƒ /api/store/[id]/brand-profile/infer                        426 B         103 kB
+├ ƒ /api/store/[id]/brand-profile/metadata                     426 B         103 kB
+├ ƒ /api/store/[id]/brand-profile/realign                      426 B         103 kB
+├ ƒ /api/store/[id]/legal-status                               426 B         103 kB
+├ ƒ /api/store/[id]/logo                                       426 B         103 kB
+├ ƒ /api/store/[id]/logo/retry-brand-director                  426 B         103 kB
+├ ƒ /api/store/[id]/reconsult-cnpj                             426 B         103 kB
+├ ƒ /api/store/[id]/visual-signature                           426 B         103 kB
+├ ƒ /api/store/[id]/visual-signature/approve                   426 B         103 kB
+├ ƒ /api/store/[id]/visual-signature/dismiss-critical-drift    426 B         103 kB
+├ ƒ /api/store/[id]/visual-signature/generate-without-logo     426 B         103 kB
+├ ƒ /api/store/[id]/visual-signature/reject                    426 B         103 kB
+├ ƒ /api/store/[id]/visual-signature/restore                   426 B         103 kB
+├ ƒ /api/store/billing/confirm                                 426 B         103 kB
+├ ƒ /api/store/check-readiness                                 426 B         103 kB
+├ ƒ /api/store/market-settings                                 426 B         103 kB
+├ ƒ /api/store/trial-offer/retry                               426 B         103 kB
+├ ƒ /api/store/update-cnpj                                     426 B         103 kB
+├ ƒ /api/support/credit-request                                426 B         103 kB
+├ ƒ /auth/callback                                             426 B         103 kB
+├ ƒ /auth/confirm                                              426 B         103 kB
+├ ƒ /auth/signout                                              426 B         103 kB
+├ ƒ /cadastro/cnpj                                             426 B         103 kB
+├ ƒ /campanhas                                               5.92 kB         112 kB
+├ ○ /campanhas-para-sua-loja                                   205 B         176 kB
+├ ƒ /campanhas/[id]                                          13.9 kB         119 kB
+├ ƒ /campanhas/nova                                          29.2 kB         138 kB
+├ ƒ /check-email                                               172 B         106 kB
+├ ƒ /configuracoes                                           2.79 kB         108 kB
+├ ƒ /conta                                                   10.3 kB         153 kB
+├ ƒ /convite                                                   172 B         106 kB
+├ ƒ /dashboard                                               5.83 kB         111 kB
+├ ○ /dev/progress-preview                                      996 B         107 kB
+├ ○ /floriculturas                                             205 B         176 kB
+├ ○ /forgot-password                                         2.25 kB         170 kB
+├ ƒ /legal/reaccept                                          2.31 kB         105 kB
+├ ƒ /login                                                   3.34 kB         175 kB
+├ ƒ /loja                                                    43.9 kB         186 kB
+├ ○ /manifest.webmanifest                                      426 B         103 kB
+├ ƒ /novidades                                               1.31 kB         107 kB
+├ ○ /ofertas-para-mercados                                     205 B         176 kB
+├ ○ /padarias                                                  205 B         176 kB
+├ ○ /privacidade                                             2.18 kB         142 kB
+├ ○ /privacidade/transferencias                              2.18 kB         142 kB
+├ ○ /robots.txt                                                426 B         103 kB
+├ ○ /signup                                                  6.52 kB         212 kB
+├ ○ /sitemap.xml                                               426 B         103 kB
+├ ○ /termos                                                  2.18 kB         142 kB
+├ ƒ /update-password                                         1.67 kB         173 kB
+└ ○ /uso-aceitavel                                           2.18 kB         142 kB
++ First Load JS shared by all                                 102 kB
+  ├ chunks/1255-eae4096fb21f1304.js                            46 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js                      54.2 kB
+  └ other shared chunks (total)                              2.03 kB
+
+
+ƒ Middleware                                                 91.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

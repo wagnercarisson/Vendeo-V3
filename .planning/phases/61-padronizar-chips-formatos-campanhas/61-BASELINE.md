@@ -127,3 +127,76 @@ Prova de lote: 1 vs 3 conjuntas mantém **1** chamada de `createSignedUrls`.
 
 - Execução local apenas; nenhum acesso a banco, Storage, homolog, produção, provider ou chamada paga.
 - Nenhum arquivo de `src/` foi criado/alterado/modificado nesta Task.
+
+---
+
+# VALIDACAO FINAL F61
+
+**Capturada em:** 2026-11-21 (execução do plano `61-03`)
+**Branch:** `feat/campaign-format-chips`
+**HEAD da implementação:** `aed5db7e` (Task 1+2 combinadas; ver desvio no SUMMARY do 61-03)
+**Escopo:** detalhe `/campanhas/[id]` com os chips compartilhados no nível da página.
+
+## Gates reais (exit codes / contagens)
+
+| Gate | Comando | Exit | Resultado |
+|---|---|---|---|
+| Baseline em leitura (antes de editar) | `npx vitest run .planning/.../evidence/baseline-calls.test.ts` | **0** | `toEqual` contra o JSON imutável |
+| Typecheck | `npm.cmd run typecheck` | **0** | Sem erros |
+| Lint | `npm.cmd run lint` | **0** | Sem erros/avisos |
+| Task 1 (página + matriz) | `npx vitest run .../format-presentation.test.tsx campaign-detail-joint.test.tsx` | **0** | 2 arquivos / **43 testes** (36 novos na matriz) |
+| Task 2 (cliente + fixtures) | `npx vitest run <9 arquivos dirigidos>` | **0** | 9 arquivos / **142 testes** |
+| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, lista, dashboard, detalhe, baseline>` | **0** | **63 arquivos / 636 testes PASS** |
+| Baseline em leitura (depois) | `npx vitest run .../evidence/baseline-calls.test.ts` | **0** | `toEqual`; JSON inalterado |
+| suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10466 testes PASS**, 10 skipped (10476) |
+| Build | `npm.cmd run build` | **0** | `check:cnae OK`; 102 páginas estáticas |
+| `git diff --check` | `git diff --check` | **0** | Limpo |
+| `git status --porcelain` | — | — | Apenas logs `61-03-*.log` untracked antes do commit documental |
+
+**Falhas preexistentes:** nenhuma no baseline do 61-01 (typecheck/lint/build/global verdes).
+**Falhas introduzidas:** nenhuma no estado final. Durante a primeira execução global **antes** do commit, o contrato F60.4 (`square-base/boundaries.contract.test.ts`) falhou listando 3 arquivos de teste sob `src/app/.../__tests__/` no working tree — é um guard de árvore limpa, não regressão de comportamento. Reexecutado após o commit: **7/7 PASS**; a suíte global pós-commit passou integralmente.
+
+## Prova de ZERO chamadas adicionais (detalhe)
+
+`format-presentation.test.tsx` reexecuta a página real com fixtures fixas e afirma as contagens **idênticas** ao baseline do 61-01:
+
+| Fixture | control | delivery | durable | attemptStart | signedPreview | copyDelivery | copyCancel | copyRecovery | probes | createSignedUrl |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `detail.joint` | 1 | 1 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 1 |
+| `detail.new_flow` | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 1 | 1 | 0 |
+| `detail.legacy` | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 1 |
+
+A baseline de lista/dashboard (`baseline-calls.test.ts`) continuou passando em leitura: **zero drift**.
+
+## Matriz de regressão documentada (detalhe, outras superfícies cobertas pelos testes dirigidos)
+
+| Caso | Detalhe |
+|---|---|
+| Legado quadrado | `1:1` delivered; `9:16` absent/not_requested; ativo com arte |
+| Individual 1:1 (novo fluxo) | delivered/running/refunded/unknown conforme operação; ativo só com arte |
+| Vertical F59 / por expansão | `9:16` conforme ciclo; `1:1` not_requested; sem seleção inventada |
+| Conjunta completa | dois delivered; ativo pelo `?format=` e só com `previewUrl`; hrefs nos dois |
+| Conjunta parcial | `absent` + `refunded` (crédito devolvido), `partial=true`, sem href no ausente |
+| `delivered` sem preview | entregue porém sem ativo |
+| `?format=` inválido/vazio/duplicado/não entregue | falha fechado; sem preview/download; sem ativo |
+| Aprovação `pending` com candidata | delivered sem ativo; gate existente preservado |
+| `regenerating` | processing sem ativo; sem download novo |
+| `error` / `stale` | `unknown`; nunca ausência nem “Não gerado” |
+| Snapshot nulo | resolver `malformed_format` ⇒ ambos unavailable |
+| Snapshot não-objeto/array | fluxo indeterminado ⇒ ambos unknown |
+| Snapshot objeto malformado/incoerente | ambos unavailable; sem fallback 1:1 |
+| Resolução `unavailable` | vence aprovação/regeneração ⇒ ambos unavailable |
+
+## Acessibilidade, localização e responsividade
+
+Coberto por testes: chips sempre em `<ul aria-label>` único por página; botão de informação com `aria-expanded`/`aria-controls`, alvo `min-h-11 min-w-11` (44 px), foco visível `focus-visible:ring-2`; estados distinguidos por texto + ícone (nunca só cor); hover/foco/clique (toggle) e explicação `role="note"`; ausência de “Não gerado” e de `+`; `flex min-w-0 flex-wrap` (sem overflow estrutural); `pt-BR`/`es-419` pelos catálogos compartilhados; região dos chips com `lang="es-419"` mesmo quando o restante do estado permanece em português; conteúdo persistido segue `lang=""`.
+
+**Confirmação visual final é HUMANA** e continua pendente antes do fechamento.
+
+## Limites explícitos
+
+- Execução local/offline apenas; nenhum acesso a banco, Storage, homolog, produção, provider ou chamada paga.
+- Gates de integração (Postgres/homolog/local/app-env/Product 1:1/F60/F60.1) permanecem **NÃO EXECUTADOS** por ausência de ambiente.
+- Nenhuma migration/RPC/flag/pricing/provider/copy/miniatura/aprovação/recuperação foi criada ou alterada.
+- Nenhum merge, push, deploy, sync ou archive executado.
+- `61-03` **NÃO ACEITO**: aguardando revisão no Review Stop; a fase 61 não está concluída.

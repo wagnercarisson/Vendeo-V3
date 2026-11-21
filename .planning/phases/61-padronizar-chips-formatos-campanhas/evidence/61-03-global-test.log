@@ -1,0 +1,69 @@
+
+> vendeo-v3@0.1.0 test
+> node scripts/testing/run-local-suite.mjs
+
+[antes] PostgreSQL/homolog (F57.2): GATE NÃO EXECUTADO — NÃO APROVADO (TEST_DATABASE_URL (esperado 127.0.0.1:57782/postgres); F57_2_EXPECTED_LEDGER_COUNT (inteiro >= 149); F57_2_EXPECTED_LEDGER_SHA256 (64 hex))
+[antes] PostgreSQL/local-disposable: GATE NÃO EXECUTADO — NÃO APROVADO (TEST_DATABASE_URL (PostgreSQL loopback); POSTGRES_LOCAL_ALLOW_WRITES=1 (as suítes gravam e limpam fixtures))
+[antes] PostgreSQL/f50-4: GATE NÃO EXECUTADO — NÃO APROVADO (F50_4_RUN_CONCURRENCY=1 (opt-in explícito); F50_4_DB_URL (127.0.0.1:54422/postgres))
+[antes] app-env (.env.local): ambiente presente — NÃO EXECUTADO (use o comando dedicado)
+[antes] Produto 1:1: GATE NÃO EXECUTADO — NÃO APROVADO (F562A_ISOLATED_* (API 127.0.0.1:56321 / DB 56322))
+[antes] F60 duas etapas: GATE NÃO EXECUTADO — NÃO APROVADO (TEST_DATABASE_URL (URL PostgreSQL válida); F60_TEST_ALLOW_WRITES=1 (a suíte grava fixtures))
+[antes] F60.1 artefatos de composição: GATE NÃO EXECUTADO — NÃO APROVADO (F60_1_TARGET=homolog-existing|disposable-local; TEST_DATABASE_URL (PostgreSQL loopback); SUPABASE_URL (HTTP loopback obrigatório; alvo remoto recusado); F60_TEST_ALLOW_WRITES=1 (a suíte grava fixtures))
+
+ RUN  v4.1.9 C:/Projetos/Vendeo V3
+
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+
+ Test Files  843 passed | 2 skipped (845)
+      Tests  10466 passed | 10 skipped (10476)
+   Start at  20:53:38
+   Duration  105.71s (transform 41.53s, setup 0ms, import 217.93s, tests 227.29s, environment 388.31s)
+
+[depois] PostgreSQL/homolog (F57.2): GATE NÃO EXECUTADO — NÃO APROVADO (TEST_DATABASE_URL (esperado 127.0.0.1:57782/postgres); F57_2_EXPECTED_LEDGER_COUNT (inteiro >= 149); F57_2_EXPECTED_LEDGER_SHA256 (64 hex))
+[depois] PostgreSQL/local-disposable: GATE NÃO EXECUTADO — NÃO APROVADO (TEST_DATABASE_URL (PostgreSQL loopback); POSTGRES_LOCAL_ALLOW_WRITES=1 (as suítes gravam e limpam fixtures))
+[depois] PostgreSQL/f50-4: GATE NÃO EXECUTADO — NÃO APROVADO (F50_4_RUN_CONCURRENCY=1 (opt-in explícito); F50_4_DB_URL (127.0.0.1:54422/postgres))
+[depois] app-env (.env.local): ambiente presente — NÃO EXECUTADO (use o comando dedicado)
+[depois] Produto 1:1: GATE NÃO EXECUTADO — NÃO APROVADO (F562A_ISOLATED_* (API 127.0.0.1:56321 / DB 56322))
+[depois] F60 duas etapas: GATE NÃO EXECUTADO — NÃO APROVADO (TEST_DATABASE_URL (URL PostgreSQL válida); F60_TEST_ALLOW_WRITES=1 (a suíte grava fixtures))
+[depois] F60.1 artefatos de composição: GATE NÃO EXECUTADO — NÃO APROVADO (F60_1_TARGET=homolog-existing|disposable-local; TEST_DATABASE_URL (PostgreSQL loopback); SUPABASE_URL (HTTP loopback obrigatório; alvo remoto recusado); F60_TEST_ALLOW_WRITES=1 (a suíte grava fixtures))
