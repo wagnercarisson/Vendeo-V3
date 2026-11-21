@@ -26,6 +26,16 @@ const BASE_SHA_RECORD = path.resolve(
 //  - a quick 261013-hxm acrescentou os caminhos lab/bench tocados pela correção
 //    test-only das fixtures + alinhamento do snapshot do laboratório, com
 //    autorização e commit por entrada.
+//
+// Reconciliação 2026-11-21 (quick 261121-iqh): registra as 37 mudanças de
+// fronteira JÁ APROVADAS por fases/quicks posteriores (F60.3-02, F60.4-03,
+// F60.6-01/05, quicks 261107-hcx, 261107-qvo, 261116-vpx) e atualiza o commit
+// aprovado de 7 caminhos cujo conteúdo avançou. A exceção da rota generate-image
+// passa a ser exatamente "linha de import de `@/lib/campaign/persistence`
+// substituída pela MESMA linha acrescida de `uploadCampaignInputFile`"; qualquer
+// outra remoção continua falha. Nenhum caminho é liberado em bloco, BASE_SHA e
+// LEGACY_FRONTIER_PATHS permanecem, e cada entrada usa commit IMUTÁVEL — nunca
+// HEAD, branch ou "conteúdo atual".
 const AUTHORIZED_ROUTE_FILE = "src/app/api/campaign/generate-image/route.ts";
 // F56.2b1b (Plano 06 — reconciliação G-LF): a rota de download passa a carregar o
 // portão do novo fluxo (aditivo). Tem entrada AUTORIZADA própria (autorização +
@@ -111,14 +121,15 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   },
   {
     path: "src/lib/lab/bench/__tests__/prompt-policy.contract.test.ts",
-    authorization: "quick 261009-u3h (testes/versões do laboratório)",
-    commit: "b7ab7b1b",
+    authorization:
+      "quick 261009-u3h (testes/versões do laboratório) + quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
   },
   {
     path: "src/lib/ai/types.ts",
     authorization:
-      "quick 261010-rsp + F56.2b1b Plano 08 P1 Opção A + quick 261026-p11 + F59/59-09 (metadata aditivo de auditoria por tentativa)",
-    commit: "98cabd39",
+      "quick 261010-rsp + F56.2b1b Plano 08 P1 Opção A + quick 261026-p11 + F59/59-09 (metadata aditivo de auditoria por tentativa) + quick 261120-qvp (snapshot econômico na telemetria — somente campos opcionais de tipo `number | null`, aditivo)",
+    commit: "12288035",
   },
   {
     path: "src/lib/ai/telemetry-sink.ts",
@@ -135,8 +146,8 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/adapters/chat-completions.ts",
     authorization:
-      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + quick gpt6-luna (adapter gpt-6-luna: reasoning_effort none / max_completion_tokens, sem temperature — GPT-4o/Gemini preservados)",
-    commit: "322809d0",
+      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + quick gpt6-luna (adapter gpt-6-luna: reasoning_effort none / max_completion_tokens, sem temperature — GPT-4o/Gemini preservados) + F60.4-03 (ajustes do adapter no fluxo da base quadrada)",
+    commit: "9b6c2351",
   },
   {
     path: "src/lib/ai/adapters/__tests__/chat-completions.test.ts",
@@ -214,8 +225,8 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/lab/bench/__tests__/prompt-base.contract.test.ts",
     authorization:
-      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
-    commit: "e13732a2",
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório + quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
   },
   {
     path: "src/lib/lab/bench/__tests__/form-parity.contract.test.ts",
@@ -369,8 +380,9 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   },
   {
     path: "src/lib/ai-cost/ai-model-pricing.ts",
-    authorization: "quick 261026-p11 (novas dimensões no caminho com qualidade)",
-    commit: "2d42c512",
+    authorization:
+      "quick 261026-p11 (novas dimensões no caminho com qualidade) + quick 261116-vpx (preflight de pricing — leitura estrita aditiva)",
+    commit: "f82a3ca3",
   },
   {
     path: "src/lib/ai-cost/image-pair-pricing.ts",
@@ -404,8 +416,9 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   },
   {
     path: "src/lib/ai/adapters/upstream-images.ts",
-    authorization: "quick 261026-p11 gap closure (cache isolado no upstream)",
-    commit: "5816a8ce",
+    authorization:
+      "quick 261026-p11 gap closure (cache isolado no upstream) + F60.3-02 (opções de expansão 9:16 no adapter de imagens upstream)",
+    commit: "e03336ea",
   },
   // 261027-llm — correção test-only de tipagem (aceite aprovado).
   {
@@ -426,14 +439,243 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   },
   {
     path: "src/lib/ai/adapters/responses.ts",
-    authorization: "quick 261025-k8e (modelo efetivo no ResponsesAdapter)",
-    commit: "f3dcfa8f",
+    authorization:
+      "quick 261025-k8e (modelo efetivo no ResponsesAdapter) + F60.4-03 (ajustes do adapter no fluxo da base quadrada)",
+    commit: "9b6c2351",
   },
   // 261102-o00 — normalização CRLF restrita ao teste de contrato.
   {
     path: "src/lib/ai-cost/__tests__/openai-pricing-migration.contract.test.ts",
     authorization: "quick 261102-o00 (contrato independente de CRLF/LF)",
     commit: "4d5cfc19",
+  },
+  // Reconciliação 2026-11-21 (quick 261121-iqh) — quick 261116-vpx: preflight de
+  // pricing antes da base (leitura estrita ADITIVA do catálogo/pricing; nenhum
+  // provider, ambiente ou publicação aprovado por este registro offline).
+  {
+    path: "src/lib/ai/ai-model-catalog-service.ts",
+    authorization: "quick 261116-vpx (leitura estrita aditiva do catálogo de modelos)",
+    commit: "f82a3ca3",
+  },
+  {
+    path: "src/lib/ai/__tests__/ai-model-catalog-service.test.ts",
+    authorization: "quick 261116-vpx (testes da leitura estrita aditiva do catálogo)",
+    commit: "f82a3ca3",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/ai-model-pricing.test.ts",
+    authorization: "quick 261116-vpx (testes da leitura estrita aditiva de pricing)",
+    commit: "f82a3ca3",
+  },
+  // Reconciliação 2026-11-21 (quick 261121-iqh) — F60.6-01: configuração de
+  // modelo da expansão 9:16 (preset/tipo e contratos de migração).
+  {
+    path: "src/lib/ai/nine-sixteen-expansion-model-config.ts",
+    authorization: "F60.6-01 (configuração de modelo da expansão 9:16 — aditiva)",
+    commit: "bc25feb4",
+  },
+  {
+    path: "src/lib/ai/__tests__/nine-sixteen-expansion-model-config.contract.test.ts",
+    authorization: "F60.6-01 (contrato da configuração de modelo da expansão 9:16)",
+    commit: "77a59733",
+  },
+  {
+    path: "src/lib/ai/__tests__/nine-sixteen-expansion-model-config-migration.contract.test.ts",
+    authorization: "F60.6-01 (contrato de migração da configuração de modelo 9:16)",
+    commit: "096cb703",
+  },
+  // Reconciliação 2026-11-21 (quick 261121-iqh) — F60.6-05: serviço e view da
+  // configuração de modelo (somente leitura/exibição, aditivos).
+  {
+    path: "src/lib/ai/nine-sixteen-expansion-model-config-service.ts",
+    authorization: "F60.6-05 (serviço da configuração de modelo da expansão 9:16)",
+    commit: "8cfef0f1",
+  },
+  {
+    path: "src/lib/ai/__tests__/nine-sixteen-expansion-model-config-service.test.ts",
+    authorization: "F60.6-05 (testes do serviço da configuração de modelo 9:16)",
+    commit: "8cfef0f1",
+  },
+  {
+    path: "src/lib/ai/nine-sixteen-expansion-model-config-view.ts",
+    authorization: "F60.6-05 (view da configuração de modelo da expansão 9:16)",
+    commit: "4bc61965",
+  },
+  {
+    path: "src/lib/ai/__tests__/nine-sixteen-expansion-model-config-view.test.ts",
+    authorization: "F60.6-05 (testes da view da configuração de modelo 9:16)",
+    commit: "4bc61965",
+  },
+  // Reconciliação 2026-11-21 (quick 261121-iqh) — F60.3-02: opções de expansão
+  // no adapter de imagens upstream (contrato offline; sem chamada paga).
+  {
+    path: "src/lib/ai/__tests__/upstream-images-expansion-options.test.ts",
+    authorization: "F60.3-02 (opções de expansão 9:16 no adapter de imagens upstream)",
+    commit: "485736fb",
+  },
+  // Reconciliação 2026-11-21 (quick 261121-iqh) — quick 261107-hcx: bancada 9:16
+  // e preset 2.6 experimental (Checkpoint A; preset `enabled: false`). Código
+  // offline de laboratório: NÃO aprova provider, ambiente, publicação nem o
+  // Checkpoint B (ativação local + primeiras chamadas pagas).
+  {
+    path: "src/lib/ai/adapters/bench-images.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/bench-execution.contract.test.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/bench-images-adapter.test.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/domain/bench-model-allowlist.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/domain/policies/formato-9-16.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/domain/schemas.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 e preset 2.6 experimental — laboratório; código offline)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/execution/bench-cost-resolver.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/execution/bench-execution-service.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/gateway/runtime.ts",
+    authorization:
+      "quick 261107-hcx (bancada 9:16 — laboratório; código offline, Checkpoint B não executado)",
+    commit: "6d9ef070",
+  },
+  {
+    path: "src/lib/lab/bench/domain/preset-registry.ts",
+    authorization:
+      "quick 261107-hcx (preset 2.6 experimental registrado como `enabled: false` — laboratório; código offline)",
+    commit: "0ba82d30",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/preset-registry.test.ts",
+    authorization:
+      "quick 261107-hcx (preset 2.6 desabilitado no Checkpoint A — laboratório; código offline)",
+    commit: "0ba82d30",
+  },
+  // Reconciliação 2026-11-21 (quick 261121-iqh) — quick 261107-qvo: expansão de
+  // campanha pronta e formato 4:5 na bancada (módulos puros e políticas de
+  // formato). Código offline de laboratório: NÃO aprova provider, ambiente ou
+  // publicação.
+  {
+    path: "src/lib/lab/bench/__tests__/bench-format.test.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/bench-pricing.test.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/config-registry.test.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/expand-contract.test.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/expand-geometry.test.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/bench-format.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/bench-pricing.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/config-registry.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/expand-geometry.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/expand-prompt.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/expand-schema.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/policies/formato-4-5.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/policies/registry.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/domain/prompt-base.ts",
+    authorization:
+      "quick 261107-qvo (expansão pronta e formato 4:5 na bancada — laboratório; código offline)",
+    commit: "575ce816",
+  },
+  {
+    path: "src/lib/lab/bench/persistence/bench-run-service.ts",
+    authorization:
+      "quick 261107-qvo (persistência da bancada de expansão 4:5 — laboratório; código offline)",
+    commit: "7e297770",
   },
 ];
 
@@ -521,6 +763,82 @@ function contentMismatches(
     .map((entry) => entry.path);
 }
 
+// Exceção ESTREITA da rota generate-image (quick 261121-iqh): a ÚNICA remoção
+// admitida é a linha de import de `@/lib/campaign/persistence`, substituída pela
+// MESMA linha acrescida de `uploadCampaignInputFile`. Mesma instrução, mesmo
+// specifier, todos os símbolos anteriores preservados e exatamente um símbolo
+// novo. Nenhuma outra remoção de linha é aceita.
+const PERSISTENCE_IMPORT_SPECIFIER = "@/lib/campaign/persistence";
+const PERSISTENCE_IMPORT_BEFORE =
+  'import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from "@/lib/campaign/persistence";';
+const PERSISTENCE_IMPORT_AFTER =
+  'import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion, uploadCampaignInputFile } from "@/lib/campaign/persistence";';
+
+/** Specifier de um import nomeado `import { ... } from "specifier";`. */
+function importSpecifier(line: string): string | null {
+  const match = /^import\s*\{[^}]*\}\s*from\s*["']([^"']+)["'];?$/.exec(line.trim());
+  return match ? match[1] : null;
+}
+
+/** Símbolos nomeados (nome original, ignorando alias) de um import nomeado. */
+function importedSymbols(line: string): string[] {
+  const match = /^import\s*\{([^}]*)\}\s*from\s*["'][^"']+["'];?$/.exec(line.trim());
+  if (!match) return [];
+  return match[1]
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .map((token) => token.split(/\s+as\s+/)[0].trim());
+}
+
+/** Remoções da rota que NÃO são exatamente o import de persistência original. */
+function unexpectedRouteRemovals(removed: readonly string[]): string[] {
+  return removed.filter((line) => line !== PERSISTENCE_IMPORT_BEFORE);
+}
+
+/**
+ * Violações fechadas da exceção aditiva do import de persistência. Devolve
+ * códigos estáveis — nunca um booleano — para que o teste nomeie o desvio.
+ */
+function additivePersistenceImportViolations(
+  removed: readonly string[],
+  added: readonly string[],
+): string[] {
+  const violations: string[] = [];
+
+  if (removed.length !== 1 || removed[0] !== PERSISTENCE_IMPORT_BEFORE) {
+    violations.push("removed_not_exactly_persistence_import");
+  }
+  if (!added.includes(PERSISTENCE_IMPORT_AFTER)) {
+    violations.push("added_missing_persistence_import");
+  }
+
+  // Linha de persistência efetivamente adicionada (pode divergir da constante;
+  // nesse caso as violações de símbolo/specifier nomeiam o desvio).
+  const candidate =
+    added.find(
+      (line) =>
+        importSpecifier(line) === PERSISTENCE_IMPORT_SPECIFIER,
+    ) ?? PERSISTENCE_IMPORT_AFTER;
+
+  if (importSpecifier(candidate) !== PERSISTENCE_IMPORT_SPECIFIER) {
+    violations.push("specifier_changed");
+  }
+
+  const beforeSymbols = new Set(importedSymbols(PERSISTENCE_IMPORT_BEFORE));
+  const afterSymbols = new Set(importedSymbols(candidate));
+  for (const symbol of beforeSymbols) {
+    if (!afterSymbols.has(symbol)) violations.push(`symbol_lost:${symbol}`);
+  }
+  for (const symbol of afterSymbols) {
+    if (!beforeSymbols.has(symbol) && symbol !== "uploadCampaignInputFile") {
+      violations.push(`unexpected_symbol:${symbol}`);
+    }
+  }
+
+  return violations;
+}
+
 describe("legacy-frontier guard — F56.2a", () => {
   it("usa o BASE_SHA literal registrado e confirma commit/ancestry", () => {
     const evidence = readFileSync(BASE_SHA_RECORD, "utf8");
@@ -584,14 +902,20 @@ describe("legacy-frontier guard — F56.2a", () => {
       AUTHORIZED_ROUTE_FILE,
     ]);
     const lines = diff.split(/\r?\n/);
-    const removed = lines.filter((l) => l.startsWith("-") && !l.startsWith("---"));
-    const added = lines.filter((l) => l.startsWith("+") && !l.startsWith("+++"));
+    const removedDiffLines = lines.filter((l) => l.startsWith("-") && !l.startsWith("---"));
+    const addedDiffLines = lines.filter((l) => l.startsWith("+") && !l.startsWith("+++"));
+    // Linhas de código sem o marcador do diff: base da exceção ESTREITA.
+    const removed = removedDiffLines.map((line) => line.replace(/^-/, ""));
+    const added = addedDiffLines.map((line) => line.replace(/^\+/, ""));
 
-    // (i) Nenhuma linha existente removida/alterada: o fluxo legado é preservado
-    // byte a byte (prova concreta de preservação do comportamento legado).
-    expect(removed).toEqual([]);
+    // (i) A ÚNICA remoção admitida é o import de `@/lib/campaign/persistence`,
+    // substituído pela MESMA linha acrescida de `uploadCampaignInputFile`. O
+    // restante do fluxo legado permanece preservado byte a byte.
+    expect(removed).toEqual([PERSISTENCE_IMPORT_BEFORE]);
+    expect(unexpectedRouteRemovals(removed)).toEqual([]);
+    expect(additivePersistenceImportViolations(removed, added)).toEqual([]);
 
-    const addedText = added.join("\n");
+    const addedText = addedDiffLines.join("\n");
     // Os imports do guard b1a continuam presentes.
     expect(addedText).toMatch(/\+import \{ detectExclusiveNewFlowFields \}/);
     expect(addedText).toMatch(/\+import \{ assertSubmissionEligible \}/);
@@ -616,11 +940,11 @@ describe("legacy-frontier guard — F56.2a", () => {
 
     // (ii) As linhas adicionadas ANTES do índice do guard NÃO contêm `safeParse(`/
     // `fieldErrors` — as adições do novo ramo ficam confinadas ao caminho `allowed`.
-    const guardAddedIdx = added.findIndex((l) =>
+    const guardAddedIdx = addedDiffLines.findIndex((l) =>
       l.includes("detectExclusiveNewFlowFields(body)"),
     );
     expect(guardAddedIdx).toBeGreaterThan(-1);
-    const beforeGuard = added.slice(0, guardAddedIdx).join("\n");
+    const beforeGuard = addedDiffLines.slice(0, guardAddedIdx).join("\n");
     expect(beforeGuard).not.toMatch(/safeParse\(/);
     expect(beforeGuard).not.toMatch(/fieldErrors/);
 
@@ -759,4 +1083,61 @@ describe("legacy-frontier guard — reconciliação (testes negativos)", () => {
     );
     expect(mismatches).toEqual([]);
   }, 20000);
+
+  it("a exceção da rota aceita SOMENTE a remoção do import de persistência", () => {
+    expect(unexpectedRouteRemovals([PERSISTENCE_IMPORT_BEFORE])).toEqual([]);
+
+    const legacyLine =
+      '  const safeName = campaign.product_name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase() || "campanha";';
+    const removals = unexpectedRouteRemovals([
+      PERSISTENCE_IMPORT_BEFORE,
+      legacyLine,
+    ]);
+    expect(removals).toContain(legacyLine);
+    expect(removals).toHaveLength(1);
+  });
+
+  it("a transformação aditiva exata do import de persistência não gera violação", () => {
+    expect(
+      additivePersistenceImportViolations(
+        [PERSISTENCE_IMPORT_BEFORE],
+        [PERSISTENCE_IMPORT_AFTER],
+      ),
+    ).toEqual([]);
+  });
+
+  it("perder um símbolo do import de persistência é violação NOMEADA", () => {
+    const missingSymbol = PERSISTENCE_IMPORT_AFTER.replace(
+      "createArtVersion, uploadCampaignInputFile",
+      "uploadCampaignInputFile",
+    );
+    expect(missingSymbol).not.toBe(PERSISTENCE_IMPORT_AFTER);
+    expect(
+      additivePersistenceImportViolations(
+        [PERSISTENCE_IMPORT_BEFORE],
+        [missingSymbol],
+      ),
+    ).toContain("symbol_lost:createArtVersion");
+  });
+
+  it("símbolo extra ou import ausente no diff da rota é violação NOMEADA", () => {
+    const extraSymbol = PERSISTENCE_IMPORT_AFTER.replace(
+      "createArtVersion, uploadCampaignInputFile",
+      "createArtVersion, uploadCampaignInputFile, deleteCampaign",
+    );
+    expect(extraSymbol).not.toBe(PERSISTENCE_IMPORT_AFTER);
+    expect(
+      additivePersistenceImportViolations(
+        [PERSISTENCE_IMPORT_BEFORE],
+        [extraSymbol],
+      ),
+    ).toContain("unexpected_symbol:deleteCampaign");
+
+    expect(
+      additivePersistenceImportViolations(
+        [PERSISTENCE_IMPORT_BEFORE],
+        ['import { outro } from "@/lib/outro";'],
+      ),
+    ).toContain("added_missing_persistence_import");
+  });
 });
