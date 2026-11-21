@@ -108,8 +108,21 @@ skip novo atribuível ao lote.
 - `git diff --check` limpo; worktree limpo; sem arquivos não rastreados.
 - Nenhum `eslint --fix`, prettier, organizeImports ou substituição em massa foi usado.
 - Sem merge, push, deploy, PR, migration, banco, Storage, provider, geração paga ou acesso a ambiente.
-- Este SUMMARY e os artefatos de planejamento **não** foram commitados por este executor (conforme
-  instrução do orquestrador); o commit de documentação/STATE é responsabilidade do orquestrador.
+- Este SUMMARY foi criado pelo executor e commitado pelo orquestrador no commit documental
+  `1c471bb4 docs(261121-nru): registrar limpeza conservadora de imports sem uso`; a atualização do
+  STATE é feita no fechamento da quick.
 
 **Ponto de parada respeitado.** A quick é higiene de testes, não correção funcional; nenhum novo lote
 foi iniciado.
+
+## Aceite
+
+- **Aprovado em 2026-11-21, sem bloqueadores no diff.** A revisão conferiu o commit `6820e0f5`:
+  exatamente dez remoções de símbolos nas linhas de import, módulos ainda importados, nenhuma
+  asserção/mock/código de produção alterado, `git diff --check` limpo e árvore limpa.
+- Os resultados registrados foram considerados coerentes com o lote; nesta revisão os testes **não**
+  foram reexecutados pelo revisor.
+- Ajuste documental solicitado e aplicado: esta nota corrige a frase anterior que dizia que o SUMMARY
+  não havia sido commitado.
+- Os três imports adiados permanecem limpeza opcional; não são pendência funcional nem bloqueio de
+  publicação. Nenhum novo lote foi iniciado.
