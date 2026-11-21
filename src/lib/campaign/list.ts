@@ -14,7 +14,16 @@ import {
   readTwoFormatListSummaries,
   type TwoFormatListSummary,
 } from "@/lib/product-two-format/list-summary";
+import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
+import {
+  buildIndividualFormatPresentation,
+  buildJointFormatPresentation,
+  buildUnavailableFormatPresentation,
+  buildUnknownFormatPresentation,
+  individualLifecycleFromStatus,
+  type CampaignFormatPresentation,
+} from "./format-presentation";
 
 /** Classificação PERSISTIDA do fluxo (novo fluxo × legado) para exibição. */
 export type CampaignListFlow = "new" | "legacy";
@@ -43,7 +52,16 @@ export interface CampaignListItem {
     Record<TwoFormatFormat, TwoFormatDeliveryState>
   >;
   preferredFormat?: TwoFormatFormat | null;
+  /**
+   * F61 — apresentação PADRONIZADA dos formatos `1:1`/`9:16`, montada
+   * SERVER-SIDE a partir do snapshot classificado e da leitura conjunta em lote.
+   * Somente estados/booleanos: nenhum snapshot, path ou URL cruza a fronteira.
+   */
+  readonly formatPresentation: CampaignFormatPresentation;
 }
+
+/** Base interna: a apresentação só existe depois da leitura em lote. */
+export type CampaignListItemBase = Omit<CampaignListItem, "formatPresentation">;
 
 export interface ListCampaignsParams {
   page?: number;
@@ -71,7 +89,7 @@ function mapToListItem(row: {
   created_at: string;
   storage_path: string;
   input_snapshot: Record<string, unknown> | null;
-}): CampaignListItem {
+}): CampaignListItemBase {
   // A classificação é feita AQUI (servidor); o `input_snapshot` NÃO é retornado.
   const flow: CampaignListFlow =
     classifyCampaignFlow(row.input_snapshot) === "new_flow" ? "new" : "legacy";
@@ -86,6 +104,58 @@ function mapToListItem(row: {
     flow,
     format: formatResolution.kind === "unavailable" ? null : formatResolution.kind,
   };
+}
+
+/**
+ * F61 — matriz de apresentação (61-CONTEXT §5) para UMA linha da listagem.
+ *
+ * Ordem obrigatória: classificação conjunta ANTES do resolvedor individual.
+ * `inconsistent` ⇒ ambos `unavailable`; conjunto sem leitura ⇒ ambos `unknown`
+ * (nunca cai no individual); individual segue `resolveCampaignFormat` + status.
+ *
+ * Puro sobre `rows`/`summaries` já obtidos: nenhuma consulta, assinatura,
+ * RPC ou leitura adicional; nada é inferido por `storage_path`/miniatura.
+ */
+function buildListFormatPresentation(input: {
+  readonly inputSnapshot: Record<string, unknown> | null;
+  readonly status: CampaignStatus;
+  readonly summary: TwoFormatListSummary | undefined;
+}): CampaignFormatPresentation {
+  const classification = classifyTwoFormatCampaign(input.inputSnapshot);
+
+  if (classification.kind === "inconsistent") {
+    return buildUnavailableFormatPresentation();
+  }
+
+  if (classification.kind === "two_format") {
+    const summary = input.summary;
+    // Sem summary apesar de classificado como conjunto ⇒ leitura indeterminada.
+    if (!summary) return buildUnknownFormatPresentation();
+
+    const view = summary.view;
+    if (view === null) {
+      // Leitura em lote sem `view`: usa os estados do lote, sem presumir estorno.
+      return buildJointFormatPresentation({
+        "1:1": { state: summary.formats["1:1"], refunded: false },
+        "9:16": { state: summary.formats["9:16"], refunded: false },
+      });
+    }
+    return buildJointFormatPresentation({
+      "1:1": {
+        state: view.square.state,
+        refunded: view.square.creditRefunded,
+      },
+      "9:16": {
+        state: view.vertical.state,
+        refunded: view.vertical.creditRefunded,
+      },
+    });
+  }
+
+  return buildIndividualFormatPresentation({
+    resolution: resolveCampaignFormat(input.inputSnapshot),
+    lifecycle: individualLifecycleFromStatus(input.status),
+  });
 }
 
 export async function listCampaigns(
@@ -139,6 +209,7 @@ export async function listCampaigns(
   }
 
   const rows = data ?? [];
+  const rowsById = new Map(rows.map((row) => [row.id, row] as const));
   const items = rows.map(mapToListItem);
   const summaries = await readTwoFormatListSummaries({
     // RLS: `product_two_format_deliveries` concede SELECT somente a
@@ -164,6 +235,11 @@ export async function listCampaigns(
   );
   const itemsWithThumbnails = items.map((item) => {
     const summary = summaries.get(item.id);
+    const formatPresentation = buildListFormatPresentation({
+      inputSnapshot: rowsById.get(item.id)?.input_snapshot ?? null,
+      status: item.status,
+      summary,
+    });
     if (summary) {
       return {
         ...item,
@@ -171,9 +247,14 @@ export async function listCampaigns(
         formats: summary.formats,
         preferredFormat: summary.preferredFormat,
         thumbnailUrl: preferredThumbnails[item.id] ?? null,
+        formatPresentation,
       };
     }
-    return { ...item, thumbnailUrl: legacyThumbnails[item.id] ?? null };
+    return {
+      ...item,
+      thumbnailUrl: legacyThumbnails[item.id] ?? null,
+      formatPresentation,
+    };
   });
 
   const total = count ?? itemsWithThumbnails.length;

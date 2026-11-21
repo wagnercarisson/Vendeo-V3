@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CampaignCard } from "../client";
 import type { CampaignListItem } from "@/lib/campaign/list";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 import { ptBRCampaignListMessages } from "@/lib/i18n/campaign-list/catalogs/pt-BR";
 
 vi.mock("next/navigation", () => ({
@@ -24,6 +25,13 @@ function campaign(overrides: Partial<CampaignListItem> = {}): CampaignListItem {
     storagePath: `store/${CAMPAIGN}/op/vertical.jpg`,
     flow: "new",
     format: "9:16",
+    formatPresentation: buildIndividualFormatPresentation({
+      resolution: {
+        kind: "9:16",
+        contractVersion: "f59-vertical-9-16-v1",
+      },
+      lifecycle: "delivered",
+    }),
     ...overrides,
   };
 }

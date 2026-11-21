@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
+
 const mockRequirePageUser = vi
   .fn()
   .mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
@@ -78,18 +80,30 @@ const ITEMS = [
     productName: "Tênis Runner Pro",
     createdAt: "2026-07-02T10:00:00Z",
     thumbnailUrl: "https://cdn.test/c1.jpg",
+    formatPresentation: buildIndividualFormatPresentation({
+      resolution: { kind: "1:1", source: "absent" },
+      lifecycle: "delivered",
+    }),
   },
   {
     id: "c2",
     productName: "Café Gourmet",
     createdAt: "2026-07-01T10:00:00Z",
     thumbnailUrl: null,
+    formatPresentation: buildIndividualFormatPresentation({
+      resolution: { kind: "1:1", source: "absent" },
+      lifecycle: "delivered",
+    }),
   },
   {
     id: "c3",
     productName: "Sofá 3 Lugares",
     createdAt: "2026-06-30T10:00:00Z",
     thumbnailUrl: "https://cdn.test/c3.jpg",
+    formatPresentation: buildIndividualFormatPresentation({
+      resolution: { kind: "1:1", source: "absent" },
+      lifecycle: "delivered",
+    }),
   },
 ];
 

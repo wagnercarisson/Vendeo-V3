@@ -4,6 +4,7 @@ import { renderToString } from "react-dom/server";
 
 import { ptBRDashboardMessages } from "@/lib/i18n/dashboard";
 import type { EligibleCampaignCard } from "@/lib/dashboard/campaigns";
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 
 import { DashboardCampaigns } from "../dashboard-campaigns";
 
@@ -32,6 +33,16 @@ function makeItems(...ids: string[]): EligibleCampaignCard[] {
     createdAt: "2026-10-19T10:00:00.000Z",
     thumbnailUrl: `https://cdn.test/${id}.jpg`,
     format: index % 2 === 0 ? "1:1" : "9:16",
+    formatPresentation: buildIndividualFormatPresentation({
+      resolution:
+        index % 2 === 0
+          ? { kind: "1:1", source: "absent" }
+          : {
+              kind: "9:16",
+              contractVersion: "f59-vertical-9-16-v1",
+            },
+      lifecycle: "delivered",
+    }),
   }));
 }
 

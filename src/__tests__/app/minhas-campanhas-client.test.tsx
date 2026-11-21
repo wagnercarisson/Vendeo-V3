@@ -9,6 +9,10 @@ vi.mock("next/navigation", () => ({
 
 import CampaignListClient from "@/app/(app)/campanhas/client";
 import type { CampaignListItem } from "@/lib/campaign/list";
+import {
+  buildIndividualFormatPresentation,
+  buildUnavailableFormatPresentation,
+} from "@/lib/campaign/format-presentation";
 import { ptBRCampaignListMessages } from "@/lib/i18n/campaign-list/catalogs/pt-BR";
 import { es419CampaignListMessages } from "@/lib/i18n/campaign-list/catalogs/es-419";
 
@@ -28,6 +32,10 @@ const mockReadyCampaign: CampaignListItem = {
   storagePath: "store-123/id-1.jpg",
   flow: "legacy",
   format: "1:1",
+  formatPresentation: buildIndividualFormatPresentation({
+    resolution: { kind: "1:1", source: "absent" },
+    lifecycle: "delivered",
+  }),
 };
 
 const mockErrorCampaign: CampaignListItem = {
@@ -39,6 +47,13 @@ const mockErrorCampaign: CampaignListItem = {
   storagePath: "store-123/id-2.jpg",
   flow: "legacy",
   format: "9:16",
+  formatPresentation: buildIndividualFormatPresentation({
+    resolution: {
+      kind: "9:16",
+      contractVersion: "f59-vertical-9-16-v1",
+    },
+    lifecycle: "unknown",
+  }),
 };
 
 const mockNewFlowClosedCampaign: CampaignListItem = {
@@ -50,6 +65,7 @@ const mockNewFlowClosedCampaign: CampaignListItem = {
   storagePath: "store-123/id-3.jpg",
   flow: "new",
   format: null,
+  formatPresentation: buildUnavailableFormatPresentation(),
 };
 
 const baseProps = {

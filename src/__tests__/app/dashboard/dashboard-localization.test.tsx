@@ -2,6 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
+
 const mockRequirePageUser = vi
   .fn()
   .mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
@@ -90,6 +92,10 @@ const ITEMS = [
     productName: "Tênis Runner Pro",
     createdAt: "2026-07-02T10:00:00Z",
     thumbnailUrl: null,
+    formatPresentation: buildIndividualFormatPresentation({
+      resolution: { kind: "1:1", source: "absent" },
+      lifecycle: "delivered",
+    }),
   },
 ];
 

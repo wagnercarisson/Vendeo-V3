@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
+
 const mockCreateServerClient = vi.fn();
 const mockAdmin = {};
 const mockGenerateBatchThumbnailUrls = vi.fn();
@@ -148,6 +150,10 @@ describe("queryEligibleCampaigns", () => {
       createdAt: "2026-07-13T12:00:00Z",
       thumbnailUrl: "https://signed/1.jpg",
       format: "1:1",
+      formatPresentation: buildIndividualFormatPresentation({
+        resolution: { kind: "1:1", source: "absent" },
+        lifecycle: "delivered",
+      }),
     });
     expect(result[1]).toMatchObject({ format: "9:16" });
     expect(result[0]).not.toHaveProperty("storagePath");

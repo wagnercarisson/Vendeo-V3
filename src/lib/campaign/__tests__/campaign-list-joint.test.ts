@@ -107,6 +107,21 @@ describe("F60.7 C3 — listagem real", () => {
     });
   });
 
+  it("F61: expõe a apresentação conjunta a partir do summary (view nula, lote)", async () => {
+    const { listCampaigns } = await import("@/lib/campaign/list");
+    const result = await listCampaigns("store-1");
+
+    expect(result.items[0].formatPresentation).toMatchObject({
+      flow: "two_format",
+      partial: false,
+      anyDelivered: true,
+      formats: {
+        "1:1": { state: "delivered", refunded: false, active: false },
+        "9:16": { state: "delivered", refunded: false, active: false },
+      },
+    });
+  });
+
   it("usa o cliente privilegiado e não passa conjuntos pela assinatura legada", async () => {
     const { listCampaigns } = await import("@/lib/campaign/list");
     await listCampaigns("store-1");
