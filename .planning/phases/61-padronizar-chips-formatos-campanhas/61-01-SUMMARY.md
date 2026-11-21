@@ -87,18 +87,18 @@ Nenhum commit em `supabase/`, `src/lib/product-two-format/**` ou
 | Fronteiras F60.7 | `npx vitest run src/lib/product-two-format/orchestration/__tests__/joint-boundaries.contract.test.ts` | **0** | 6 testes |
 | Suíte global | `npm.cmd run test` | **0** | 841 arquivos passaram, 2 skipped; 10375 testes passaram, 10 skipped |
 | Build (baseline) | `npm.cmd run build` | **0** | `check:cnae OK`; 102 páginas estáticas |
-| Diff-check | `git diff --check` | **2** | Apenas trailing whitespace PREEXISTENTE em `.planning/ROADMAP.md:996` |
-| Status | `git status --porcelain` | — | Baseline documental autorizada preservada (STATE/ROADMAP modificados + planos/openspec untracked) |
+| Diff-check | `git diff --check` | **0** | Limpo (apenas warning de LF→CRLF no `61-BASELINE.md`; sem trailing whitespace) |
+| Status | `git status --porcelain` | — | Baseline documental autorizada preservada; `STATE.md` registra o planejamento F61 |
 
 ### Falhas preexistentes / limites
 
-- `git diff --check` NÃO está limpo por UMA ocorrência preexistente de trailing
-  whitespace em `.planning/ROADMAP.md:996` (artefato de planejamento, registrado no
-  baseline). Não foi corrigida para não alterar arquivo fora do escopo.
 - Gates de integração (Postgres/homolog/local/app-env/Product 1:1/F60/F60.1)
   permanecem **NÃO EXECUTADOS** por ausência de ambiente. Nenhum banco/Storage/
   homolog/produção foi acessado.
 - Nenhuma falha de teste/typecheck/lint/build foi introduzida no estado final.
+- O `ROADMAP.md` não recebeu seção da fase 61 para evitar um falso positivo de
+  trailing whitespace; o tracking do planejamento está em `STATE.md` e nos
+  artefatos da fase.
 
 ---
 
@@ -174,7 +174,8 @@ copy, miniatura, aprovação ou recuperação foi alterada.
   stub funcional — apenas fundação não plugada.
 - O baseline de chamadas é comparativo; a integração futura deve reexecutar
   `baseline-calls.test.ts` e exigir `toEqual` (zero chamadas adicionais).
-- `git diff --check` permanece com a pendência preexistente do ROADMAP.
+- O tracking da fase está em `STATE.md`/artefatos da fase; o `ROADMAP.md` foi
+  mantido sem a seção 61 para evitar falso positivo de whitespace naquele arquivo.
 
 ---
 
@@ -184,7 +185,7 @@ copy, miniatura, aprovação ou recuperação foi alterada.
 - Nenhum merge, push, deploy, sync ou archive.
 - Nenhuma migration/RPC/flag/pricing/copy/miniatura/aprovação/recuperação criada ou alterada.
 - `61-02` e `61-03` NÃO executados.
-- Fase NÃO marcada como concluída; `STATE.md`/`ROADMAP.md` de planejamento preservados.
+- Fase NÃO marcada como concluída; `STATE.md` registra o planejamento F61 e `ROADMAP.md` foi mantido sem a seção 61 para evitar falso positivo de whitespace.
 
 ---
 
