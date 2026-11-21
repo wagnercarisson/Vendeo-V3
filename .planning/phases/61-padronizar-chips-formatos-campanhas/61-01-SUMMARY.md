@@ -34,6 +34,7 @@ banco, Storage ou provider:
 | `280d0c9a` | feat | Componente compartilhado de chips + testes de estados/a11y |
 | `8db67eee` | fix | Remoção de literal que violava o contrato de fronteiras F60.7 |
 | `655958c1` | fix | Revisão: remover prefetch (`<a>`), reconciliar explicação (clique/2º clique/hover/foco) e baseline imutável (sem recaptura silenciosa) |
+| `c29b2195` | fix | Revisão final: primeiro clique fixa a explicação após hover/foco e texto do formato não incluído corrigido em pt-BR/es-419 |
 
 Nenhum commit em `supabase/`, `src/lib/product-two-format/**` ou
 `src/lib/campaign/format-resolution.ts`.
@@ -82,7 +83,7 @@ Nenhum commit em `supabase/`, `src/lib/product-two-format/**` ou
 |---|---|---|---|
 | Typecheck | `npm.cmd run typecheck` | **0** | Sem erros (repetido após a revisão) |
 | Lint | `npm.cmd run lint` | **0** | Sem erros (repetido após a revisão) |
-| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, evidência>` | **0** | 13 arquivos, 91 testes |
+| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, evidência>` | **0** | 13 arquivos, 93 testes |
 | Regressão dirigida (baseline) | `npx vitest run <8 arquivos de list/dashboard/detail>` | **0** | 8 arquivos, 65 testes |
 | Evidência em modo leitura | `npx vitest run .planning/.../evidence/baseline-calls.test.ts` | **0** | `toEqual` contra o JSON imutável |
 | Baseline ausente (modo leitura) | mesmo teste com JSON temporariamente removido | **1** | Falha corretamente; JSON restaurado em seguida |
@@ -147,7 +148,7 @@ os chips).
 | Task 1 | `evidence/baseline-calls.test.ts` | 1 (captura + leitura) |
 | Task 2 | `src/lib/campaign/__tests__/format-presentation.test.ts` | 19 |
 | Task 3 | `src/lib/i18n/campaign-formats/__tests__/*` + três namespaces | 57 |
-| Task 4 | `src/components/campaign/__tests__/campaign-format-chips.test.tsx` | 14 |
+| Task 4 | `src/components/campaign/__tests__/campaign-format-chips.test.tsx` | 16 |
 
 ---
 
@@ -160,10 +161,9 @@ os chips).
 - Teste estático proíbe `next/link`/`prefetch`; nenhuma consulta antecipada.
 
 **2. Explicação reconciliada**
-- Estado React controla `hidden`/`aria-expanded`; clique abre, segundo clique fecha,
-  hover e foco abrem, saída de ponteiro/foco fecha.
-- Teste cobre segundo acionamento, teclado e saída de foco/ponteiro, usando
-  `toBeVisible`/`not.toBeVisible`, não apenas classes.
+- Estado React controla `hidden`/`aria-expanded`; hover e foco abrem; saída de ponteiro/foco fecha.
+- O primeiro clique após hover/foco **fixa** a explicação aberta; o segundo clique fecha.
+- Testes cobrem `hover → foco → clique`, `foco → clique`, segundo acionamento e saída de ponteiro/foco, usando `toBeVisible`/`not.toBeVisible`.
 
 **3. Baseline imutável**
 - `baseline-calls.json` só é gravado com `BASELINE_CAPTURE=1`.
@@ -173,6 +173,12 @@ os chips).
 **4. Tracking e whitespace**
 - Fase 61 registrada no `ROADMAP.md`; trailing whitespace corrigido.
 - `git diff --check c971d631..HEAD` limpo.
+
+**5. Texto do formato não incluído**
+- pt-BR: “Este formato não foi incluído na criação da campanha.”
+- es-419: “Este formato no fue incluido en la creación de la campaña.”
+- Catálogo compartilhado e testes de catálogo atualizados; a explicação agora se refere
+  ao formato não solicitado, não à campanha inteira.
 
 ### Auto-corrigidos
 
