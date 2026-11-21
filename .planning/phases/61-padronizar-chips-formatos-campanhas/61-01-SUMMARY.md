@@ -1,14 +1,17 @@
 # Phase 61 Plan 01: Fundação — modelo, catálogo e componente de chips
 
-**Status:** ⛔ **NÃO ACEITO — AGUARDANDO REVISÃO** (execução parada no `## Review Stop`)
+**Status:** ✅ **ACEITO LOCALMENTE/OFFLINE EM 2026-11-21** — sem bloqueadores remanescentes; `61-02` autorizado isoladamente; `61-03` NÃO autorizado.
 
 **Executado em:** 2026-11-21
 **Branch:** `feat/campaign-format-chips`
 **HEAD na captura do baseline:** `c971d631a190d426be21341f4616f6e4c7cb5135`
 
-> Este documento é um REGISTRO DE EXECUÇÃO, não um aceite. O plano `61-01` foi
-> executado isoladamente; `61-02` e `61-03` NÃO foram iniciados. Nenhuma fase foi
-> marcada como concluída. Nenhum merge, push, deploy, sync ou archive foi feito.
+> Este documento registra a execução e o ACEITE LOCAL/OFFLINE do plano `61-01`.
+> `61-02` foi autorizado isoladamente após a revisão; `61-03` NÃO foi iniciado.
+> Nenhuma fase foi marcada como concluída. Nenhum merge, push, deploy, sync ou
+> archive foi feito. Build e suíte global permanecem como evidência anterior do
+> executor; a revisão de aceite reexecutou 13 arquivos/93 testes e a baseline em
+> leitura.
 
 ---
 
@@ -214,19 +217,30 @@ copy, miniatura, aprovação ou recuperação foi alterada.
 - Nenhum acesso a banco, Storage, homolog, produção, provider ou chamada paga.
 - Nenhum merge, push, deploy, sync ou archive.
 - Nenhuma migration/RPC/flag/pricing/copy/miniatura/aprovação/recuperação criada ou alterada.
-- `61-02` e `61-03` NÃO executados.
-- Fase NÃO marcada como concluída; `STATE.md` e `ROADMAP.md` registram a fase 61 e o estado de revisão.
+- `61-03` NÃO iniciado; `61-02` autorizado isoladamente após este aceite.
+- Fase NÃO marcada como concluída; `STATE.md` e `ROADMAP.md` registram a fase 61 e o aceite local do `61-01`.
 
 ---
 
-## Review Stop
+## Aceite local/offline
 
-Parada obrigatória atingida. **Aguardando revisão e aprovação explícita** antes de
-qualquer continuação (61-02). Este SUMMARY não constitui aceite.
+**Aceito em 2026-11-21, sem bloqueadores remanescentes.**
+
+Evidência da revisão de aceite:
+- 13 arquivos / **93 testes PASS**, incluindo a baseline em leitura;
+- JSON original da baseline preservado;
+- `git diff --check c971d631..HEAD` limpo;
+- árvore limpa;
+- primeiro clique após hover/foco fixa a explicação;
+- textos pt-BR/es-419 coerentes.
+
+Build e suíte global permanecem como evidência anterior do executor; a revisão de
+aceite não os reexecutou. `61-02` está autorizado isoladamente; `61-03` permanece
+não autorizado.
 
 ## Self-Check: PASSED
 
 - Arquivos criados/alterados conferidos no disco (todos FOUND, nenhum MISSING).
-- Commits `489c2107`, `73255179`, `cc093005`, `280d0c9a`, `8db67eee` conferidos em `git rev-parse --verify`.
+- Commits `489c2107`, `73255179`, `cc093005`, `280d0c9a`, `8db67eee`, `f08e1586`, `a1475a45`, `b14328fc`, `655958c1`, `b3ad3cbb`, `c29b2195` e `65c22798` conferidos em `git rev-parse --verify`.
 - `baseline-calls.json` presente e releitura passou (`toEqual`).
 - Nenhum caminho proibido apareceu no diff desde o baseline.
