@@ -222,7 +222,7 @@ Esperado: 10 arquivos, 52 testes, 52 PASS, 0 FAIL, com as contagens por arquivo 
 
 4) `npm.cmd run build` ⇒ exit 0, rotas geradas como na baseline.
 
-5) `npm.cmd test` ⇒ registrar o resultado real da suíte global. Comparar com a baseline conhecida do STATE (F60.7: 10.207 PASS com 11 falhas preexistentes em 5 arquivos). Se houver falha, verificar se é preexistente conhecida; se houver **qualquer ampliação atribuível ao lote** (novo arquivo falhando, contagem de PASS menor que a baseline, teste skip novo), PARAR e registrar.
+5) `npm.cmd test` ⇒ registrar o resultado real da suíte global. Comparar com a baseline conhecida mais recente no STATE: quick `261121-m97`, imediatamente anterior a este lote no HEAD `1f876d61`, registrou **835 arquivos / 10.324 testes PASS / 0 failed**. Se houver falha, verificar se é preexistente conhecida; se houver **qualquer ampliação atribuível ao lote** (novo arquivo falhando, contagem de PASS menor que a baseline, teste skip novo), PARAR e registrar.
 
 6) Reavaliação diagnóstica **somente leitura**, sem `--fix`:
 `node scripts/lint/build-inventory.mjs --out $env:TEMP\nru-inventory --baseline .planning/quick/261121-k4g-diagnostico-real-de-lint-para-typescript/baseline/lint-json.relative.json`
@@ -291,7 +291,7 @@ Commit desta tarefa (local, sem push): `docs(quick): registrar limpeza conservad
 | 2 | `npm.cmd run typecheck` | exit 0, 0 erros |
 | 3 | `npm.cmd run lint` | exit 0, 0 problemas (gate oficial) |
 | 4 | `npm.cmd run build` | exit 0, build completo |
-| 5 | `npm.cmd test` | resultado real registrado; comparado à baseline F60.7 (10.207 PASS + 11 falhas preexistentes em 5 arquivos); sem ampliação atribuível ao lote |
+| 5 | `npm.cmd test` | resultado real registrado; comparado à baseline `261121-m97` no HEAD `1f876d61` (835 arquivos / 10.324 testes PASS / 0 failed); sem ampliação atribuível ao lote |
 | 6 | `node scripts/lint/build-inventory.mjs --out $env:TEMP\nru-inventory --baseline <k4g>` + extração AST | warnings 373 → **363**; ImportSpecifier 28 → **18** (6 suporte + 9 não utilitários + 3 adiados); fatal/configErrors vazios; nenhum arquivo do lote remanescente |
 | 7 | `git diff --check` | limpo |
 | 8 | `git diff --numstat` / `git status --short` | 10 arquivos com `1	1`; somente as 10 linhas de import + documentação da quick |
