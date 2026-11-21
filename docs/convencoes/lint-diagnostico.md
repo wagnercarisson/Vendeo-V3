@@ -132,3 +132,50 @@ atualização automática. Nenhum peer é instalado para a conferência.
 Diagnóstico **preparado e medido**: 1.964 arquivos, 373 warnings, 0 erros,
 0 fatais, 0 erros de configuração. A integração ao lint oficial e qualquer
 correção de achado exigem aprovação própria e ficam fora desta entrega.
+
+## Triagem de Hooks — 2026-11-21
+
+Referência de código revisada: `98fa6605`. A investigação somente leitura
+encontrou 23 avisos de `exhaustive-deps` em sete arquivos e nenhum de
+`rules-of-hooks`. **Não foi confirmado novo defeito funcional que justifique
+alterar as dependências agora.** Isso não classifica todos os avisos como
+falsos positivos nem dispensa revisões futuras.
+
+Antes de propor uma nova correção, consultar esta triagem e as quicks
+`261121-k4g` (diagnóstico) e `261121-m97` (ciclo de vida da imagem).
+
+| Área | Observação e decisão atual | Quando reabrir |
+| --- | --- | --- |
+| `use-onboarding-tabs.ts`: memo de tabs | Campos considerados desnecessários pelo scanner são sinais de invalidação: o cálculo lê `depsRef.current`. Removê-los pode deixar o estado das tabs obsoleto. Preservar. | Mudança no cálculo, na atualização da ref ou reprodução de tab desatualizada. |
+| Restauração inicial e deep link (`use-campaign-form.ts`, `store-identity-form.tsx`, `use-onboarding-tabs.ts`) | Há efeitos intencionalmente limitados à inicialização. Acrescentar objetos mutáveis pode repetir restauração ou resetar edição. Nenhum defeito novo confirmado. | Requisito de reidratação após montagem ou teste que demonstre perda de estado. |
+| Autosave do onboarding | Efeito acompanha `formData`, `storeId` e `userId`; adicionar o objeto `deps` inteiro pode reagendar a cada render. Preservar enquanto não houver falha reproduzida. | Campo relevante passa a mudar sem disparar o salvamento esperado. |
+| `use-drift-detection.ts` | Consulta remota e recálculo local têm gatilhos distintos. O callback de dispensa lista os campos individuais lidos da loja. Não substituir automaticamente por objetos inteiros. | Nova leitura não coberta pelos gatilhos ou drift incorreto reproduzido. |
+| `store-identity-form.tsx` | `setField` é estável; a UI atual usa handler dedicado para blur do subsegmento. O aviso no handler genérico não demonstrou falha nesse percurso. | Consumidor passa a usar o handler genérico para subsegmento ou a estabilidade de `setField` muda. |
+| `visual-signature-approval-modal.tsx`: `mode` | No consumidor atual, fechar desmonta o modal e abrir recria o callback com o modo escolhido. Nenhum modo obsoleto demonstrado. | Modal permanece montado enquanto `mode` muda para a mesma loja. |
+| Callbacks de geração (`use-campaign-form.ts`) | Cadeias de callbacks e refs precisam ser analisadas juntas. Não foi demonstrado uso obsoleto de `consumeStream`, `persistSubmittedDraft`, `applyJointOutcome` ou elegibilidade no percurso atual. | Teste de rerender demonstra uso de valor antigo, mudança de identidade/autoridade ou regressão real de continuação. |
+| Busca de campanhas (`campanhas/client.tsx`) | Aviso envolvendo `rawParams`/`router` não foi confirmado como defeito. Alterar gatilhos sem teste pode interferir na navegação e no debounce. | Reprodução de busca ou parâmetros perdidos após navegação concorrente. |
+| Dependências aparentemente redundantes | Remoção isolada pode ser apenas limpeza, mas deve distinguir invalidação intencional de leitura direta. Não é urgência funcional. | Ganho demonstrável e testes do consumidor antes/depois. |
+
+### Imagem do rascunho: correção já entregue
+
+A quick `261121-m97` reproduziu e corrigiu corridas de `FileReader`, descarte
+de imagem e liberação de object URL. Leitura superada, remoção, desmontagem ou
+mudança de escopo invalidam a gravação tardia. Os arrays de dependências e os
+avisos originais de `imagePreviewUrl` e `consumeStream`/`persistSubmittedDraft`
+permaneceram intocados: não confundir a correção comprovada com uma confirmação
+de defeito nesses avisos.
+
+### Evidência e regra para futuras correções
+
+- A investigação executou seis suítes existentes: modal de assinatura, drift,
+  onboarding, identidade, revisão e processamento da campanha — **93 testes
+  PASS**. Não foram criados casos novos para provar todos os avisos.
+- Essa evidência é local, não exaustiva. A estabilidade após deploy foi
+  informada pelo responsável; a investigação não acessou produção.
+- Reabrir com uma mudança concreta nas premissas acima ou um comportamento
+  incorreto reproduzido. Primeiro criar prova determinística, depois propor
+  a menor correção; nunca adicionar/remover dependências em massa.
+- Não há dispensa permanente: o diagnóstico continua mostrando os avisos.
+  Nenhuma supressão, allowlist ou regra foi alterada por esta triagem.
+- A consulta a este registro evita repetir a investigação sem evidência nova;
+  não impede investigar relatos de usuários ou regressões.
