@@ -7,6 +7,7 @@
  */
 
 import type { DashboardMessages } from "../messages";
+import { es419CampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/es-419";
 
 export const es419DashboardMessages = Object.freeze({
   greeting: Object.freeze({
@@ -38,6 +39,7 @@ export const es419DashboardMessages = Object.freeze({
       square: "1:1 cuadrado",
       vertical: "9:16 vertical",
     }),
+    formats: es419CampaignFormatMessages,
     countSingular: "{count} campaña disponible",
     countPlural: "{count} campañas disponibles",
     emptyTitle: "No hay campañas disponibles",

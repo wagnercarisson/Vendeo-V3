@@ -10,6 +10,8 @@
  * passam pelo catálogo.
  */
 
+import type { CampaignFormatPresentationMessages } from "@/lib/i18n/campaign-formats/messages";
+
 export interface CampaignDetailCopyMessages {
   readonly copy: string;
   readonly copied: string;
@@ -31,4 +33,18 @@ export interface CampaignDetailMessages {
   readonly downloadOriginal: string;
   readonly disclaimer: string;
   readonly copy: CampaignDetailCopyMessages;
+  /** F61 — catálogo COMPARTILHADO de apresentação dos formatos. */
+  readonly formats: CampaignFormatPresentationMessages;
+  /** F61 — notas de estado conjunto, em bloco único localizado. */
+  readonly jointNotes: CampaignDetailJointNotesMessages;
+}
+
+export interface CampaignDetailJointNotesMessages {
+  readonly invalidRequest: string;
+  readonly partialRefunded: string;
+  readonly partialUnconfirmed: string;
+  readonly partialProcessing: string;
+  readonly finalizationPending: string;
+  readonly refunded: string;
+  readonly processing: string;
 }

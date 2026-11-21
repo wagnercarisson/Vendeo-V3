@@ -6,6 +6,7 @@
  */
 
 import type { DashboardMessages } from "../messages";
+import { ptBRCampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/pt-BR";
 
 export const ptBRDashboardMessages: DashboardMessages = Object.freeze({
   greeting: Object.freeze({
@@ -37,6 +38,7 @@ export const ptBRDashboardMessages: DashboardMessages = Object.freeze({
       square: "1:1 quadrado",
       vertical: "9:16 vertical",
     }),
+    formats: ptBRCampaignFormatMessages,
     countSingular: "{count} campanha disponível",
     countPlural: "{count} campanhas disponíveis",
     emptyTitle: "Nenhuma campanha disponível",

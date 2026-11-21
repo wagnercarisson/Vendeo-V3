@@ -8,6 +8,7 @@
  */
 
 import type { CampaignListMessages } from "../messages";
+import { es419CampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/es-419";
 
 export const es419CampaignListMessages = Object.freeze({
   title: "Campañas",
@@ -40,6 +41,7 @@ export const es419CampaignListMessages = Object.freeze({
     square: "1:1 cuadrado",
     vertical: "9:16 vertical",
   }),
+  formats: es419CampaignFormatMessages,
   actions: Object.freeze({
     open: "Abrir",
     download: "Descargar",

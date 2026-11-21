@@ -34,6 +34,26 @@ const EXPECTED_PT_KEYS = [
   "empty.searchTitle",
   "format.square",
   "format.vertical",
+  "formats.activeLabel",
+  "formats.explanations.delivered",
+  "formats.explanations.deliveredActive",
+  "formats.explanations.notDelivered",
+  "formats.explanations.notRequested",
+  "formats.explanations.processing",
+  "formats.explanations.refunded",
+  "formats.explanations.unavailable",
+  "formats.explanations.unknown",
+  "formats.formats.1:1.name",
+  "formats.formats.9:16.name",
+  "formats.groupLabel",
+  "formats.infoAria",
+  "formats.labels.delivered",
+  "formats.labels.notDelivered",
+  "formats.labels.notRequested",
+  "formats.labels.processing",
+  "formats.labels.refunded",
+  "formats.labels.unavailable",
+  "formats.labels.unknown",
   "filters.period30d",
   "filters.period7d",
   "filters.period90d",
@@ -66,6 +86,7 @@ const NAMESPACES = [
   "filters",
   "status",
   "format",
+  "formats",
   "actions",
   "empty",
   "noStore",
@@ -125,6 +146,11 @@ describe("catálogos do namespace da listagem pt-BR e es-419", () => {
           `${namespace} não congelado`,
         ).toBe(true);
       }
+      // F61 — o catálogo compartilhado é congelado em todos os níveis.
+      expect(Object.isFrozen(catalog.formats.formats)).toBe(true);
+      expect(Object.isFrozen(catalog.formats.formats["1:1"])).toBe(true);
+      expect(Object.isFrozen(catalog.formats.labels)).toBe(true);
+      expect(Object.isFrozen(catalog.formats.explanations)).toBe(true);
     }
   });
 

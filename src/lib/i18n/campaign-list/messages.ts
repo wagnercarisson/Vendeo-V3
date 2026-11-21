@@ -6,6 +6,8 @@
  * exatamente a mesma estrutura de `pt-BR`. Chave faltante quebra o typecheck.
  */
 
+import type { CampaignFormatPresentationMessages } from "@/lib/i18n/campaign-formats/messages";
+
 export interface CampaignListSearchMessages {
   readonly placeholder: string;
   readonly ariaLabel: string;
@@ -69,6 +71,8 @@ export interface CampaignListMessages {
   readonly filters: CampaignListFilterMessages;
   readonly status: CampaignListStatusMessages;
   readonly format: CampaignListFormatMessages;
+  /** F61 — catálogo COMPARTILHADO de apresentação dos formatos. */
+  readonly formats: CampaignFormatPresentationMessages;
   readonly actions: CampaignListActionMessages;
   readonly empty: CampaignListEmptyMessages;
   readonly noStore: CampaignListNoStoreMessages;

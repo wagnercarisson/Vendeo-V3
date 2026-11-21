@@ -39,6 +39,33 @@ const EXPECTED_PT_KEYS = [
   "editedBadge",
   "fallbackTitle",
   "publicationKit",
+  "formats.activeLabel",
+  "formats.explanations.delivered",
+  "formats.explanations.deliveredActive",
+  "formats.explanations.notDelivered",
+  "formats.explanations.notRequested",
+  "formats.explanations.processing",
+  "formats.explanations.refunded",
+  "formats.explanations.unavailable",
+  "formats.explanations.unknown",
+  "formats.formats.1:1.name",
+  "formats.formats.9:16.name",
+  "formats.groupLabel",
+  "formats.infoAria",
+  "formats.labels.delivered",
+  "formats.labels.notDelivered",
+  "formats.labels.notRequested",
+  "formats.labels.processing",
+  "formats.labels.refunded",
+  "formats.labels.unavailable",
+  "formats.labels.unknown",
+  "jointNotes.finalizationPending",
+  "jointNotes.invalidRequest",
+  "jointNotes.partialProcessing",
+  "jointNotes.partialRefunded",
+  "jointNotes.partialUnconfirmed",
+  "jointNotes.processing",
+  "jointNotes.refunded",
 ].sort();
 
 describe("catálogos do namespace da campanha pronta pt-BR e es-419", () => {
@@ -90,6 +117,12 @@ describe("catálogos do namespace da campanha pronta pt-BR e es-419", () => {
       expect(Object.isFrozen(catalog)).toBe(true);
       expect(Object.isFrozen(catalog.copy)).toBe(true);
       expect(Object.isFrozen(catalog.copy.targets)).toBe(true);
+      // F61 — catálogo compartilhado e notas conjuntas congelados.
+      expect(Object.isFrozen(catalog.formats)).toBe(true);
+      expect(Object.isFrozen(catalog.formats.formats)).toBe(true);
+      expect(Object.isFrozen(catalog.formats.labels)).toBe(true);
+      expect(Object.isFrozen(catalog.formats.explanations)).toBe(true);
+      expect(Object.isFrozen(catalog.jointNotes)).toBe(true);
     }
   });
 

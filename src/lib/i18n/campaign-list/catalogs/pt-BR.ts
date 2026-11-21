@@ -7,6 +7,7 @@
  */
 
 import type { CampaignListMessages } from "../messages";
+import { ptBRCampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/pt-BR";
 
 export const ptBRCampaignListMessages: CampaignListMessages = Object.freeze({
   title: "Campanhas",
@@ -39,6 +40,7 @@ export const ptBRCampaignListMessages: CampaignListMessages = Object.freeze({
     square: "1:1 quadrado",
     vertical: "9:16 vertical",
   }),
+  formats: ptBRCampaignFormatMessages,
   actions: Object.freeze({
     open: "Abrir",
     download: "Baixar",

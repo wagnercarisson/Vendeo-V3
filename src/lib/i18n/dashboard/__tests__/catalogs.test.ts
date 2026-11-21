@@ -42,6 +42,26 @@ const EXPECTED_PT_KEYS = [
   "campaigns.sectionLabel",
   "campaigns.format.square",
   "campaigns.format.vertical",
+  "campaigns.formats.activeLabel",
+  "campaigns.formats.explanations.delivered",
+  "campaigns.formats.explanations.deliveredActive",
+  "campaigns.formats.explanations.notDelivered",
+  "campaigns.formats.explanations.notRequested",
+  "campaigns.formats.explanations.processing",
+  "campaigns.formats.explanations.refunded",
+  "campaigns.formats.explanations.unavailable",
+  "campaigns.formats.explanations.unknown",
+  "campaigns.formats.formats.1:1.name",
+  "campaigns.formats.formats.9:16.name",
+  "campaigns.formats.groupLabel",
+  "campaigns.formats.infoAria",
+  "campaigns.formats.labels.delivered",
+  "campaigns.formats.labels.notDelivered",
+  "campaigns.formats.labels.notRequested",
+  "campaigns.formats.labels.processing",
+  "campaigns.formats.labels.refunded",
+  "campaigns.formats.labels.unavailable",
+  "campaigns.formats.labels.unknown",
   "campaigns.countSingular",
   "campaigns.countPlural",
   "campaigns.emptyTitle",
@@ -129,6 +149,13 @@ describe("catálogos do namespace dashboard pt-BR e es-419", () => {
       for (const namespace of NAMESPACES) {
         expect(Object.isFrozen(catalog[namespace]), `${namespace} não congelado`).toBe(true);
       }
+      // F61 — catálogo compartilhado congelado em todos os níveis.
+      expect(Object.isFrozen(catalog.campaigns.formats)).toBe(true);
+      expect(Object.isFrozen(catalog.campaigns.formats.formats)).toBe(true);
+      expect(Object.isFrozen(catalog.campaigns.formats.labels)).toBe(true);
+      expect(Object.isFrozen(catalog.campaigns.formats.explanations)).toBe(
+        true,
+      );
     }
   });
 

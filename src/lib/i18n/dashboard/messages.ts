@@ -6,6 +6,8 @@
  * mesma estrutura de `pt-BR`. Chave faltante quebra o typecheck.
  */
 
+import type { CampaignFormatPresentationMessages } from "@/lib/i18n/campaign-formats/messages";
+
 export interface DashboardGreetingMessages {
   readonly morning: string;
   readonly afternoon: string;
@@ -39,6 +41,8 @@ export interface DashboardCampaignFormatMessages {
 export interface DashboardCampaignsMessages {
   readonly sectionLabel: string;
   readonly format: DashboardCampaignFormatMessages;
+  /** F61 — catálogo COMPARTILHADO de apresentação dos formatos. */
+  readonly formats: CampaignFormatPresentationMessages;
   readonly countSingular: string;
   readonly countPlural: string;
   readonly emptyTitle: string;

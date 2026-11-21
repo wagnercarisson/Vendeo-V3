@@ -6,6 +6,7 @@
  */
 
 import type { CampaignDetailMessages } from "../messages";
+import { es419CampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/es-419";
 
 export const es419CampaignDetailMessages = Object.freeze({
   breadcrumbCampaigns: "Campañas",
@@ -26,5 +27,19 @@ export const es419CampaignDetailMessages = Object.freeze({
       cta: "Llamada",
       title: "título",
     }),
+  }),
+  formats: es419CampaignFormatMessages,
+  jointNotes: Object.freeze({
+    invalidRequest:
+      "Formato solicitado no válido. Elige uno de los formatos entregados.",
+    partialRefunded: "Entrega parcial: se reembolsó un formato.",
+    partialUnconfirmed:
+      "Entrega parcial: el otro formato aún no se confirmó.",
+    partialProcessing:
+      "Entrega parcial: el otro formato se está procesando.",
+    finalizationPending:
+      "Finalización pendiente: se reembolsó un formato y el otro aún se está procesando.",
+    refunded: "Operación reembolsada.",
+    processing: "Procesando formatos...",
   }),
 }) satisfies CampaignDetailMessages;
