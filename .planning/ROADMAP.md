@@ -980,7 +980,7 @@ Plans:
 
 ### Phase 61: F61 - Padronizacao dos chips de formato 1:1 e 9:16
 
-**Status (2026-11-21):** **61-01 EXECUTADO; NAO ACEITO; 61-02/03 NAO INICIADOS.** Fonte tecnica: `openspec/changes/padronizar-chips-formatos-campanhas/` (`--strict` valido). A fase padroniza a apresentacao dos formatos Quadrado 1:1 e Vertical 9:16 na listagem `/campanhas`, nas campanhas disponiveis do dashboard e no detalhe `/campanhas/[id]`, incluindo campanhas legadas, individuais e conjuntas.
+**Status (2026-11-21):** **61-01 EXECUTADO; REVISÃO APLICADA; NÃO ACEITO; 61-02/03 NÃO INICIADOS.** Fonte tecnica: `openspec/changes/padronizar-chips-formatos-campanhas/` (`--strict` valido). A fase padroniza a apresentacao dos formatos Quadrado 1:1 e Vertical 9:16 na listagem `/campanhas`, nas campanhas disponiveis do dashboard e no detalhe `/campanhas/[id]`, incluindo campanhas legadas, individuais e conjuntas. Revisão `655958c1`/`b3ad3cbb`: `<a>` sem prefetch, explicação reconciliada e baseline imutável.
 
 **Planos:** 3 waves sequenciais, cada uma com `autonomous: false` e `## Review Stop`:
 - [x] 61-01-PLAN.md - Baseline medido + modelo puro + catalogo compartilhado + componente de chips; executado e aguardando revisao.
