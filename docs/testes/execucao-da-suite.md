@@ -29,7 +29,7 @@ No PowerShell, `npm` pode resolver para o shim de `C:\Windows\System32\npm`, que
 | Categoria | Runner | Arquivos | Pré-requisito |
 | --- | --- | --- | --- |
 | local (Vitest) | `npm.cmd test` | todos os testes restantes (598) | nenhum |
-| scripts (`node:test`) | `npm.cmd run test:scripts` | 6 | nenhum |
+| scripts (`node:test`) | `npm.cmd run test:scripts` | 11 | nenhum |
 | PostgreSQL/homolog (F57.2) | `npm.cmd run test:integration:postgres:homolog` | 3 | alvo exato + fingerprint do ledger |
 | PostgreSQL/local-disposable | `npm.cmd run test:integration:postgres:local` | 5 | `TEST_DATABASE_URL` loopback + opt-in de escrita |
 | PostgreSQL/f50-4 | `npm.cmd run test:integration:postgres:f50-4` | 1 | opt-in + alvo descartável dedicado |
