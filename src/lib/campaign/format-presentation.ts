@@ -29,7 +29,7 @@ export type CampaignFormatPresentationState =
 
 /**
  * Estruturalmente idêntica a `TwoFormatDeliveryState`; declaração LOCAL para
- * manter este módulo independente de `@/lib/product-two-format/**`.
+ * manter este módulo independente do módulo conjunto.
  */
 export type CampaignFormatDeliveryState = CampaignFormatPresentationState;
 
