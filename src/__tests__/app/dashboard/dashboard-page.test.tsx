@@ -214,6 +214,21 @@ describe("DashboardPage — estados operacionais", () => {
     expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(3);
     expect(html).toContain("9 campanhas disponíveis");
   });
+
+  it("F61: cada cartão exibe dois chips informativos, sem link por formato", async () => {
+    setupStore();
+
+    const html = await renderPage();
+
+    // Um grupo de formatos por cartão (3 campanhas, uma linha cada).
+    expect(html.match(/aria-label="Formatos da campanha"/g)?.length).toBe(3);
+    expect(html).toContain("Quadrado 1:1");
+    expect(html).toContain("Vertical 9:16");
+    expect(html).toContain("Disponível");
+    expect(html).toContain("Não incluído");
+    // Nenhuma navegação por formato na listagem do dashboard.
+    expect(html).not.toContain("?format=");
+  });
 });
 
 describe("DashboardPage — falhas parciais", () => {

@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
+
+import {
+  buildIndividualFormatPresentation,
+  buildJointFormatPresentation,
+  buildUnavailableFormatPresentation,
+  buildUnknownFormatPresentation,
+  type CampaignFormatPresentation,
+} from "@/lib/campaign/format-presentation";
+import { ptBRCampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/pt-BR";
 
 import { AvailableCampaignCard } from "../available-campaign-card";
 
@@ -20,21 +29,36 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const SQUARE_DELIVERED = buildIndividualFormatPresentation({
+  resolution: { kind: "1:1", source: "absent" },
+  lifecycle: "delivered",
+});
+
+const VERTICAL_DELIVERED = buildIndividualFormatPresentation({
+  resolution: { kind: "9:16", contractVersion: "f59-vertical-9-16-v1" },
+  lifecycle: "delivered",
+});
+
 function renderCard(
   thumbnailUrl: string | null = "https://cdn.test/thumb.jpg",
-  formatLabel: string | null = "1:1 quadrado",
+  presentation: CampaignFormatPresentation = SQUARE_DELIVERED,
 ) {
   return render(
     <AvailableCampaignCard
       id="c1"
       productName="Tênis Runner"
       dateLabel="19 de out. de 2026"
-      formatLabel={formatLabel}
+      formatPresentation={presentation}
+      messages={ptBRCampaignFormatMessages}
       thumbnailUrl={thumbnailUrl}
       openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
       openLabel="Abrir campanha"
     />,
   );
+}
+
+function formatGroup(): HTMLElement {
+  return screen.getByRole("list", { name: "Formatos da campanha" });
 }
 
 describe("AvailableCampaignCard", () => {
@@ -62,7 +86,8 @@ describe("AvailableCampaignCard", () => {
         id="c1"
         productName="Tênis Runner"
         dateLabel="19 de out. de 2026"
-        formatLabel="1:1 quadrado"
+        formatPresentation={SQUARE_DELIVERED}
+        messages={ptBRCampaignFormatMessages}
         thumbnailUrl="https://cdn.test/recovered.jpg"
         openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
         openLabel="Abrir campanha"
@@ -99,27 +124,8 @@ describe("AvailableCampaignCard", () => {
 
     expect(screen.getByText("Tênis Runner")).toHaveAttribute("lang", "");
     expect(screen.getByText("19 de out. de 2026")).not.toHaveAttribute("lang");
-    expect(screen.getByText("1:1 quadrado")).not.toHaveAttribute("lang");
-  });
-
-  it("Quick 261106-qxn: exibe o rótulo de formato e omite quando indisponível", () => {
-    const { rerender } = renderCard();
-    expect(screen.getByText("1:1 quadrado")).toBeInTheDocument();
-
-    rerender(
-      <AvailableCampaignCard
-        id="c1"
-        productName="Tênis Runner"
-        dateLabel="19 de out. de 2026"
-        formatLabel={null}
-        thumbnailUrl="https://cdn.test/thumb.jpg"
-        openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
-        openLabel="Abrir campanha"
-      />,
-    );
-
-    expect(screen.queryByText("1:1 quadrado")).not.toBeInTheDocument();
-    expect(screen.queryByText("9:16 vertical")).not.toBeInTheDocument();
+    expect(screen.getByText("Quadrado 1:1")).not.toHaveAttribute("lang");
+    expect(screen.getByText("Disponível")).not.toHaveAttribute("lang");
   });
 
   it("expõe nome acessível e alvo de foco no link do cartão", () => {
@@ -152,30 +158,132 @@ describe("AvailableCampaignCard", () => {
     }
   });
 
-  describe("F60.7 C3 — cartão conjunto", () => {
-    it("mostra chips dos formatos entregues e abre o formato preferido", () => {
-      render(
-        <AvailableCampaignCard
-          id="c1"
-          productName="Tênis Runner"
-          dateLabel="19 de out. de 2026"
-          formatLabel={null}
-          formatLabels={["1:1 quadrado", "9:16 vertical"]}
-          thumbnailUrl={null}
-          openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
-          openLabel="Abrir campanha"
-          openHref="/campanhas/c1?format=1:1"
-        />,
-      );
+describe("F61 — chips de formato no card do dashboard", () => {
+  it("individual pronta exibe o formato entregue e o outro como não incluído", () => {
+    renderCard();
 
-      expect(screen.getByText("1:1 quadrado")).toBeInTheDocument();
-      expect(screen.getByText("9:16 vertical")).toBeInTheDocument();
-      expect(screen.getByRole("link")).toHaveAttribute(
-        "href",
-        "/campanhas/c1?format=1:1",
-      );
-      // Sem miniatura do preferido ⇒ placeholder, nunca original.
-      expect(document.querySelector("img")).toBeNull();
-      expect(document.querySelector(".lucide-image-off")).not.toBeNull();
-    });
+    const group = formatGroup();
+    expect(within(group).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(group).getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(within(group).getByText("Disponível")).toBeInTheDocument();
+    expect(within(group).getByText("Não incluído")).toBeInTheDocument();
   });
+
+  it("individual 9:16 pronta não é apresentada como parcial", () => {
+    renderCard(null, VERTICAL_DELIVERED);
+
+    const group = formatGroup();
+    expect(within(group).getByText("Vertical 9:16")).toBeInTheDocument();
+    expect(within(group).getByText("Disponível")).toBeInTheDocument();
+    expect(within(group).getByText("Não incluído")).toBeInTheDocument();
+    // Campanha individual não tem indicador de entrega parcial no chip.
+    expect(within(group).queryByText("Não entregue")).toBeNull();
+  });
+
+  it("legado quadrado mostra os dois chips", () => {
+    renderCard(null, SQUARE_DELIVERED);
+
+    const group = formatGroup();
+    expect(within(group).getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(within(group).getByText("Vertical 9:16")).toBeInTheDocument();
+  });
+
+  it("conjunta completa mostra os dois formatos disponíveis", () => {
+    render(
+      <AvailableCampaignCard
+        id="c1"
+        productName="Tênis Runner"
+        dateLabel="19 de out. de 2026"
+        formatPresentation={buildJointFormatPresentation({
+          "1:1": { state: "delivered", refunded: false },
+          "9:16": { state: "delivered", refunded: false },
+        })}
+        messages={ptBRCampaignFormatMessages}
+        thumbnailUrl={null}
+        openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
+        openLabel="Abrir campanha"
+        openHref="/campanhas/c1?format=1:1"
+      />,
+    );
+
+    const group = formatGroup();
+    expect(within(group).getAllByText("Disponível")).toHaveLength(2);
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/campanhas/c1?format=1:1",
+    );
+    // Sem miniatura do preferido ⇒ placeholder, nunca original.
+    expect(document.querySelector("img")).toBeNull();
+    expect(document.querySelector(".lucide-image-off")).not.toBeNull();
+  });
+
+  it("conjunta parcial estornada mantém o estorno visível e a abertura disponível", () => {
+    render(
+      <AvailableCampaignCard
+        id="c1"
+        productName="Tênis Runner"
+        dateLabel="19 de out. de 2026"
+        formatPresentation={buildJointFormatPresentation({
+          "1:1": { state: "delivered", refunded: false },
+          "9:16": { state: "absent", refunded: true },
+        })}
+        messages={ptBRCampaignFormatMessages}
+        thumbnailUrl="https://cdn.test/thumb.jpg"
+        openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
+        openLabel="Abrir campanha"
+        openHref="/campanhas/c1?format=1:1"
+      />,
+    );
+
+    const group = formatGroup();
+    expect(within(group).getByText("Disponível")).toBeInTheDocument();
+    expect(within(group).getByText("Crédito devolvido")).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/campanhas/c1?format=1:1",
+    );
+  });
+
+  it("unknown e unavailable nunca exibem 'Não gerado'", () => {
+    const { rerender } = renderCard(null, buildUnknownFormatPresentation());
+
+    expect(screen.getAllByText("Não foi possível confirmar")).toHaveLength(2);
+    expect(screen.queryByText("Não gerado")).toBeNull();
+
+    rerender(
+      <AvailableCampaignCard
+        id="c1"
+        productName="Tênis Runner"
+        dateLabel="19 de out. de 2026"
+        formatPresentation={buildUnavailableFormatPresentation()}
+        messages={ptBRCampaignFormatMessages}
+        thumbnailUrl={null}
+        openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
+        openLabel="Abrir campanha"
+      />,
+    );
+
+    expect(screen.getAllByText("Indisponível")).toHaveLength(2);
+    expect(screen.queryByText("Não gerado")).toBeNull();
+  });
+
+  it("chips não são links e não navegam; 'Abrir campanha' permanece", () => {
+    renderCard(null);
+
+    const group = formatGroup();
+    expect(within(group).queryAllByRole("link")).toHaveLength(0);
+    expect(group.querySelectorAll("a")).toHaveLength(0);
+    expect(screen.getByRole("link", { name: /Abrir campanha/ })).toHaveAttribute(
+      "href",
+      "/campanhas/c1",
+    );
+  });
+
+  it("aplica layout responsivo nos chips", () => {
+    renderCard();
+
+    const group = formatGroup();
+    expect(group.className).toContain("flex-wrap");
+    expect(group.className).toContain("min-w-0");
+  });
+});

@@ -4,12 +4,18 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ImageOff } from "lucide-react";
 
+import { CampaignFormatChips } from "@/components/campaign/campaign-format-chips";
+import type { CampaignFormatPresentation } from "@/lib/campaign/format-presentation";
+import type { CampaignFormatPresentationMessages } from "@/lib/i18n/campaign-formats/messages";
+
 interface AvailableCampaignCardProps {
   id: string;
   productName: string;
   dateLabel: string;
-  formatLabel: string | null;
-  formatLabels?: string[];
+  /** F61 — apresentação padronizada dos formatos (informativa, sem hrefs). */
+  formatPresentation: CampaignFormatPresentation;
+  /** F61 — catálogo COMPARTILHADO de textos dos formatos. */
+  messages: CampaignFormatPresentationMessages;
   thumbnailUrl: string | null;
   openAria: string;
   openLabel: string;
@@ -23,13 +29,16 @@ interface AvailableCampaignCardProps {
  * A linha é não interativa; apenas a ação visível “Abrir campanha” é um link,
  * evitando links/botões aninhados. A miniatura é decorativa (`alt=""`) e o
  * fallback preserva a ação mesmo quando a arte não está disponível.
+ *
+ * F61: os chips de formato são informativos (sem `href`), nunca navegam por
+ * formato e não iniciam geração/reserva.
  */
 export function AvailableCampaignCard({
   id,
   productName,
   dateLabel,
-  formatLabel,
-  formatLabels,
+  formatPresentation,
+  messages,
   thumbnailUrl,
   openAria,
   openLabel,
@@ -82,27 +91,12 @@ export function AvailableCampaignCard({
           >
             {productName}
           </span>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-secondary font-body">
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-secondary font-body">
             <span className="whitespace-nowrap">{dateLabel}</span>
-            {formatLabels && formatLabels.length > 0 ? (
-              <span className="flex flex-wrap gap-1">
-                {formatLabels.map((label) => (
-                  <span
-                    key={label}
-                    className="rounded-full bg-bg-elevated px-2 py-0.5 text-xs text-text-secondary"
-                  >
-                    {label}
-                  </span>
-                ))}
-              </span>
-            ) : (
-              formatLabel && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>{formatLabel}</span>
-                </>
-              )
-            )}
+            <CampaignFormatChips
+              presentation={formatPresentation}
+              messages={messages}
+            />
           </div>
         </div>
       </div>

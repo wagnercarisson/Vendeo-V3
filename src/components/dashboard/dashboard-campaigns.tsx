@@ -102,26 +102,8 @@ export function DashboardCampaigns({
                   id={item.id}
                   productName={item.productName}
                   dateLabel={dateLabels[item.id] ?? item.createdAt}
-                  formatLabel={
-                    item.format === "1:1"
-                      ? messages.format.square
-                      : item.format === "9:16"
-                        ? messages.format.vertical
-                        : null
-                  }
-                  formatLabels={
-                    item.joint
-                      ? (["1:1", "9:16"] as const)
-                          .filter(
-                            (format) => item.formats?.[format] === "delivered",
-                          )
-                          .map((format) =>
-                            format === "1:1"
-                              ? messages.format.square
-                              : messages.format.vertical,
-                          )
-                      : undefined
-                  }
+                  formatPresentation={item.formatPresentation}
+                  messages={messages.formats}
                   thumbnailUrl={item.thumbnailUrl}
                   openAria={openAriaLabels[item.id] ?? item.productName}
                   openLabel={messages.open}

@@ -4,7 +4,11 @@ import { renderToString } from "react-dom/server";
 
 import { ptBRDashboardMessages } from "@/lib/i18n/dashboard";
 import type { EligibleCampaignCard } from "@/lib/dashboard/campaigns";
-import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
+import {
+  buildIndividualFormatPresentation,
+  buildJointFormatPresentation,
+  buildUnavailableFormatPresentation,
+} from "@/lib/campaign/format-presentation";
 
 import { DashboardCampaigns } from "../dashboard-campaigns";
 
@@ -121,21 +125,65 @@ describe("DashboardCampaigns", () => {
     expect(html).not.toContain("3 campanha disponível");
   });
 
-  it("Quick 261106-qxn: exibe os rótulos de formato nos cartões", () => {
+  it("F61: exibe os dois chips de formato em cada cartão", () => {
     const html = renderSection({ count: 2, items: makeItems("c1", "c2") });
 
-    expect(html).toContain("1:1 quadrado");
-    expect(html).toContain("9:16 vertical");
+    expect(html).toContain("Quadrado 1:1");
+    expect(html).toContain("Vertical 9:16");
+    expect(html).toContain("Disponível");
+    expect(html).toContain("Não incluído");
+    // Dois chips por cartão: 4 itens de lista para 2 cartões.
+    expect(html.match(/<li /g)?.length).toBe(4);
   });
 
-  it("Quick 261106-qxn: formato indisponível não exibe identificador", () => {
+  it("F61: formato indisponível exibe os dois chips como indisponíveis", () => {
     const html = renderSection({
       count: 1,
-      items: [{ ...makeItems("c1")[0], format: null }],
+      items: [
+        {
+          ...makeItems("c1")[0],
+          format: null,
+          formatPresentation: buildUnavailableFormatPresentation(),
+        },
+      ],
     });
 
+    expect(html).toContain("Indisponível");
     expect(html).not.toContain("1:1 quadrado");
-    expect(html).not.toContain("9:16 vertical");
+    expect(html).not.toContain("Não gerado");
+  });
+
+  it("F61: chips não são links (apenas a abertura da campanha)", () => {
+    const html = renderSection({ count: 1, items: makeItems("c1") });
+
+    // Um único link de campanha, nenhum link dentro da lista de formatos.
+    expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(1);
+    expect(html).not.toContain("?format=");
+  });
+
+  it("F61: conjunta parcial não duplica a linha e preserva openHref", () => {
+    const html = renderSection({
+      count: 1,
+      items: [
+        {
+          ...makeItems("c1")[0],
+          format: null,
+          joint: true,
+          formats: { "1:1": "delivered", "9:16": "absent" },
+          preferredFormat: "1:1",
+          formatPresentation: buildJointFormatPresentation({
+            "1:1": { state: "delivered", refunded: false },
+            "9:16": { state: "absent", refunded: true },
+          }),
+        },
+      ],
+    });
+
+    expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(1);
+    expect(html).toContain('href="/campanhas/c1?format=1:1"');
+    expect(html).toContain("Disponível");
+    expect(html).toContain("Crédito devolvido");
+    expect(html).toContain("1 campanha disponível");
   });
 
   it("não renderiza badges de status técnico nos cartões", () => {
