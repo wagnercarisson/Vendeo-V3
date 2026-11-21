@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { useCampaignForm, buildCampaignGenerationBody, buildValidityDisplayText, buildMandatoryArtworkText } from "../use-campaign-form";
