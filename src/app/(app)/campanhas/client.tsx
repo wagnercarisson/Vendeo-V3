@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
+import { CampaignFormatChips } from "@/components/campaign/campaign-format-chips";
 
 interface Props {
   items: CampaignListItem[];
@@ -273,19 +274,6 @@ export function CampaignCard({
   const router = useRouter();
   const formattedDate = formatCampaignListDate(campaign.createdAt, locale);
   const status = campaignStatusDisplay(campaign, messages.status);
-  const formatLabel =
-    campaign.format === "1:1"
-      ? messages.format.square
-      : campaign.format === "9:16"
-        ? messages.format.vertical
-        : null;
-  const jointLabels = campaign.joint
-    ? (["1:1", "9:16"] as const)
-        .filter((format) => campaign.formats?.[format] === "delivered")
-        .map((format) =>
-          format === "1:1" ? messages.format.square : messages.format.vertical,
-        )
-    : [];
   const preferredQuery =
     campaign.joint && campaign.preferredFormat
       ? `?format=${campaign.preferredFormat}`
@@ -323,34 +311,19 @@ export function CampaignCard({
           <div className="h-full w-full bg-bg-elevated" />
         )}
       </div>
-      <div className="flex flex-1 flex-col justify-center gap-1">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
         <h3
           lang=""
           className="text-lg font-semibold text-text-primary font-heading"
         >
           {campaign.productName}
         </h3>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted font-body">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted font-body">
           <span>{formattedDate}</span>
-          {jointLabels.length > 0 ? (
-            <span className="flex flex-wrap gap-1">
-              {jointLabels.map((label) => (
-                <span
-                  key={label}
-                  className="rounded-full bg-bg-elevated px-2 py-0.5 text-xs text-text-secondary"
-                >
-                  {label}
-                </span>
-              ))}
-            </span>
-          ) : (
-            formatLabel && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>{formatLabel}</span>
-              </>
-            )
-          )}
+          <CampaignFormatChips
+            presentation={campaign.formatPresentation}
+            messages={messages.formats}
+          />
         </div>
         <span className={`text-sm font-medium font-heading ${status.className}`}>
           {status.text}

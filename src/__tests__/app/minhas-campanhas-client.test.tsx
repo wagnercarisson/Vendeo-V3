@@ -1,16 +1,23 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+
+const routerMock = vi.hoisted(() => ({
+  replace: vi.fn(),
+  push: vi.fn(),
+  refresh: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => routerMock,
 }));
 
 import CampaignListClient from "@/app/(app)/campanhas/client";
 import type { CampaignListItem } from "@/lib/campaign/list";
 import {
   buildIndividualFormatPresentation,
+  buildJointFormatPresentation,
   buildUnavailableFormatPresentation,
 } from "@/lib/campaign/format-presentation";
 import { ptBRCampaignListMessages } from "@/lib/i18n/campaign-list/catalogs/pt-BR";
@@ -77,6 +84,85 @@ const baseProps = {
   locale: "pt-BR" as const,
 };
 
+const mockVerticalReadyCampaign: CampaignListItem = {
+  id: "id-4",
+  productName: "Produto Vertical",
+  status: "ready",
+  createdAt: "2026-07-07T12:00:00Z",
+  thumbnailUrl: null,
+  storagePath: "store-123/id-4.jpg",
+  flow: "new",
+  format: "9:16",
+  formatPresentation: buildIndividualFormatPresentation({
+    resolution: {
+      kind: "9:16",
+      contractVersion: "f59-vertical-9-16-v1",
+    },
+    lifecycle: "delivered",
+  }),
+};
+
+const mockGeneratingCampaign: CampaignListItem = {
+  id: "id-5",
+  productName: "Produto em Geração",
+  status: "generating",
+  createdAt: "2026-07-06T12:00:00Z",
+  thumbnailUrl: null,
+  storagePath: "store-123/id-5.jpg",
+  flow: "legacy",
+  format: "1:1",
+  formatPresentation: buildIndividualFormatPresentation({
+    resolution: { kind: "1:1", source: "absent" },
+    lifecycle: "processing",
+  }),
+};
+
+const mockJointCompleteCampaign: CampaignListItem = {
+  id: "id-6",
+  productName: "Conjunta Completa",
+  status: "ready",
+  createdAt: "2026-07-05T12:00:00Z",
+  thumbnailUrl: "https://example.com/joint.jpg",
+  storagePath: "store-123/id-6.jpg",
+  flow: "new",
+  format: null,
+  joint: true,
+  formats: { "1:1": "delivered", "9:16": "delivered" },
+  preferredFormat: "1:1",
+  formatPresentation: buildJointFormatPresentation({
+    "1:1": { state: "delivered", refunded: false },
+    "9:16": { state: "delivered", refunded: false },
+  }),
+};
+
+const mockJointPartialCampaign: CampaignListItem = {
+  id: "id-7",
+  productName: "Conjunta Parcial",
+  status: "ready",
+  createdAt: "2026-07-04T12:00:00Z",
+  thumbnailUrl: null,
+  storagePath: "store-123/id-7.jpg",
+  flow: "new",
+  format: null,
+  joint: true,
+  formats: { "1:1": "delivered", "9:16": "absent" },
+  preferredFormat: "1:1",
+  formatPresentation: buildJointFormatPresentation({
+    "1:1": { state: "delivered", refunded: false },
+    "9:16": { state: "absent", refunded: true },
+  }),
+};
+
+function renderSingle(item: CampaignListItem) {
+  return render(
+    <CampaignListClient items={[item]} {...baseProps} total={1} />,
+  );
+}
+
+function formatGroups(): HTMLElement[] {
+  return screen.getAllByRole("list", { name: "Formatos da campanha" });
+}
+
 describe("CampaignListClient — display", () => {
   it("renders list of campaign cards", () => {
     render(
@@ -96,28 +182,27 @@ describe("CampaignListClient — display", () => {
     ).toBeInTheDocument();
   });
 
-  it("Quick 261106-qxn: exibe os rótulos de formato junto aos metadados", () => {
+  it("F61: legado quadrado exibe os dois chips com estados independentes", () => {
     render(
-      <CampaignListClient
-        items={[mockReadyCampaign, mockErrorCampaign]}
-        {...baseProps}
-      />,
+      <CampaignListClient items={[mockReadyCampaign]} {...baseProps} total={1} />,
     );
 
-    expect(screen.getByText("1:1 quadrado")).toBeInTheDocument();
-    expect(screen.getByText("9:16 vertical")).toBeInTheDocument();
+    expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
+    expect(screen.getByText("Disponível")).toBeInTheDocument();
+    expect(screen.getByText("Não incluído")).toBeInTheDocument();
   });
 
-  it("Quick 261106-qxn: formato indisponível não exibe identificador", () => {
+  it("F61: formato indisponível exibe os dois chips como indisponíveis", () => {
     render(
       <CampaignListClient items={[mockNewFlowClosedCampaign]} {...baseProps} total={1} />,
     );
 
+    expect(screen.getAllByText("Indisponível")).toHaveLength(2);
     expect(screen.queryByText("1:1 quadrado")).not.toBeInTheDocument();
-    expect(screen.queryByText("9:16 vertical")).not.toBeInTheDocument();
   });
 
-  it("Quick 261106-qxn: traduz os rótulos de formato em es-419", () => {
+  it("F61: traduz nomes e estados dos chips em es-419", () => {
     render(
       <CampaignListClient
         items={[mockReadyCampaign, mockErrorCampaign]}
@@ -127,8 +212,11 @@ describe("CampaignListClient — display", () => {
       />,
     );
 
-    expect(screen.getByText("1:1 cuadrado")).toBeInTheDocument();
-    expect(screen.getByText("9:16 vertical")).toBeInTheDocument();
+    expect(screen.getAllByText("Cuadrado 1:1")).toHaveLength(2);
+    expect(screen.getAllByText("Vertical 9:16")).toHaveLength(2);
+    expect(screen.getByText("Disponible")).toBeInTheDocument();
+    expect(screen.getAllByText("No incluido")).toHaveLength(2);
+    expect(screen.getByText("No fue posible confirmar")).toBeInTheDocument();
   });
 
   it("shows Baixar button only for ready campaigns", () => {
@@ -446,5 +534,116 @@ describe("CampaignListClient — display", () => {
     expect(
       screen.getByText("Intenta ajustar la búsqueda o limpiar los filtros."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("F61 — chips informativos nos cards da listagem", () => {
+  beforeEach(() => {
+    routerMock.push.mockClear();
+    routerMock.replace.mockClear();
+  });
+
+  it("individual 9:16 pronto marca o vertical e deixa o quadrado não incluído", () => {
+    renderSingle(mockVerticalReadyCampaign);
+
+    const [group] = formatGroups();
+    const chips = within(group).getAllByRole("listitem");
+    expect(chips).toHaveLength(2);
+    expect(within(group).getByText("Vertical 9:16")).toBeInTheDocument();
+    expect(within(group).getByText("Disponível")).toBeInTheDocument();
+    expect(within(group).getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(within(group).getByText("Não incluído")).toBeInTheDocument();
+  });
+
+  it("campanha em geração mostra processamento sem entregar formato", () => {
+    renderSingle(mockGeneratingCampaign);
+
+    expect(screen.getByText("Processando")).toBeInTheDocument();
+    expect(screen.queryByText("Disponível")).not.toBeInTheDocument();
+  });
+
+  it("campanha com erro mostra estado indeterminado e nunca 'Não gerado'", () => {
+    renderSingle(mockErrorCampaign);
+
+    expect(screen.getByText("Não foi possível confirmar")).toBeInTheDocument();
+    expect(screen.queryByText("Não gerado")).not.toBeInTheDocument();
+    // O formato persistido não é apresentado como ausência/não entregue.
+    expect(screen.queryByText("Não entregue")).not.toBeInTheDocument();
+  });
+
+  it("conjunta completa mostra os dois formatos disponíveis", () => {
+    renderSingle(mockJointCompleteCampaign);
+
+    expect(screen.getAllByText("Disponível")).toHaveLength(2);
+    expect(screen.queryByText("Crédito devolvido")).not.toBeInTheDocument();
+  });
+
+  it("conjunta parcial estornada mostra o estorno e preserva o formato entregue", () => {
+    renderSingle(mockJointPartialCampaign);
+
+    expect(screen.getByText("Disponível")).toBeInTheDocument();
+    expect(screen.getByText("Crédito devolvido")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Baixar" })).toBeInTheDocument();
+  });
+
+  it("renderiza um único card por campanha com exatamente dois chips", () => {
+    render(
+      <CampaignListClient
+        items={[
+          mockReadyCampaign,
+          mockVerticalReadyCampaign,
+          mockJointCompleteCampaign,
+        ]}
+        {...baseProps}
+        total={3}
+      />,
+    );
+
+    const groups = formatGroups();
+    expect(groups).toHaveLength(3);
+    for (const group of groups) {
+      expect(within(group).getAllByRole("listitem")).toHaveLength(2);
+    }
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
+  });
+
+  it("chips não são links, não navegam e não disparam ações de geração", () => {
+    renderSingle(mockJointPartialCampaign);
+
+    const [group] = formatGroups();
+    expect(within(group).queryAllByRole("link")).toHaveLength(0);
+    expect(group.querySelectorAll("a")).toHaveLength(0);
+
+    fireEvent.click(within(group).getByText("Disponível"));
+    fireEvent.click(within(group).getByText("Crédito devolvido"));
+
+    expect(routerMock.push).not.toHaveBeenCalled();
+    expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
+  it("preserva Abrir, Baixar e a miniatura do card", () => {
+    renderSingle(mockReadyCampaign);
+
+    fireEvent.click(screen.getByRole("button", { name: "Abrir" }));
+    // Campanha legada não carrega `?format=`.
+    expect(routerMock.push).toHaveBeenCalledWith("/campanhas/id-1");
+
+    expect(screen.getByRole("button", { name: "Baixar" })).toBeInTheDocument();
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "src",
+      "https://example.com/thumb.jpg",
+    );
+  });
+
+  it("aplica layout responsivo nos chips (flex-wrap/min-w-0)", () => {
+    renderSingle(mockJointCompleteCampaign);
+
+    const [group] = formatGroups();
+    expect(group.className).toContain("flex-wrap");
+    expect(group.className).toContain("min-w-0");
+    for (const chip of within(group).getAllByRole("listitem")) {
+      expect(chip.className).toContain("min-w-0");
+    }
   });
 });

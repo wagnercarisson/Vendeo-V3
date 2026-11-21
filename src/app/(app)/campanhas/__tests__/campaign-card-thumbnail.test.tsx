@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { CampaignCard } from "../client";
 import type { CampaignListItem } from "@/lib/campaign/list";
 import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
@@ -79,8 +79,20 @@ describe("listagem — card do consumidor (miniatura × placeholder)", () => {
   it("campanha 9:16 entregue exibe miniatura e formato vertical", () => {
     renderCard(campaign());
 
-    expect(screen.getByText("9:16 vertical")).toBeInTheDocument();
+    expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
+    expect(screen.getByText("Disponível")).toBeInTheDocument();
+    expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(screen.getByText("Não incluído")).toBeInTheDocument();
     expect(screen.getByText("Pronta")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Cafeteira" })).toBeInTheDocument();
+  });
+
+  it("F61: exibe exatamente dois chips informativos, sem links", () => {
+    const { container } = renderCard(campaign());
+
+    const group = screen.getByRole("list", { name: "Formatos da campanha" });
+    expect(within(group).getAllByRole("listitem")).toHaveLength(2);
+    expect(group.querySelectorAll("a")).toHaveLength(0);
+    expect(container.querySelectorAll("ul a")).toHaveLength(0);
   });
 });
