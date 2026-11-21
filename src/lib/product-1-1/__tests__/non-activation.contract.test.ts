@@ -458,6 +458,62 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/identity-context",
     ],
   },
+  // F60.5 (60.5-01 / 60.5-02) — os módulos de orquestração 9:16 REUTILIZAM a
+  // autoridade financeira, os tipos de contexto e as projeções do Produto 1:1
+  // por design (registrado em 60.5-02-SUMMARY, "reutilizam F60/F60.1 por
+  // design"). Cada importador recebe SOMENTE o par exato que realmente importa;
+  // a união tipo/runtime abaixo é a mesma do bloco dedicado
+  // NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS, que impõe a distinção
+  // type-only × runtime. Nenhum prefixo de diretório é liberado.
+  ["src/lib/product-9-16-two-stage/orchestration/copy-recovery-runner.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/copy/default-copy-runner"],
+  },
+  ["src/lib/product-9-16-two-stage/orchestration/deadline-budget.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/deadline"],
+  },
+  ["src/lib/product-9-16-two-stage/orchestration/delivery-deps.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/orchestration/project-closed-campaign",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+    ],
+  },
+  ["src/lib/product-9-16-two-stage/orchestration/delivery.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/orchestration/project-closed-campaign",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+    ],
+  },
+  ["src/lib/product-9-16-two-stage/orchestration/resume-context.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/copy/default-copy-runner",
+      "@/lib/product-1-1/intent-selection",
+      "@/lib/product-1-1/policies/types",
+    ],
+  },
+  ["src/lib/product-9-16-two-stage/orchestration/types.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/copy/default-copy-runner",
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/intent-selection",
+      "@/lib/product-1-1/orchestration/project-closed-campaign",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+      "@/lib/product-1-1/policies/types",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
+    ],
+  },
+  ["src/lib/product-9-16-two-stage/orchestration/vertical-probe.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/artifact/types"],
+  },
 });
 const SIDE_EFFECT_IMPORT_RE =
   /(?:from\s*|import\s*\(\s*)["'][^"']*(?:\/api\/campaign|\/adapters?(?:\/|$)|\/gateway(?:\/|$)|provider|\/credit(?:\/|$)|delivery|download|image-generation-operations-repository|prompt-composition)[^"']*["']/i;
@@ -516,6 +572,202 @@ function hasUnauthorizedProductFlowImport(relativePath: string, source: string):
     (specifier) => !isAuthorizedAdminAuthorizationImport(relativePath, specifier),
   );
 }
+
+// ---------------------------------------------------------------------------
+// F60.5 — classificação TYPE-ONLY × RUNTIME das importações de `product-1-1`
+// por importador (reconciliação TEST-ONLY da quick 261121-iqh).
+//
+// Regras FECHADAS (nada de heurística frouxa):
+//  - instrução com modificador `import type` -> TYPE-ONLY;
+//  - `typeof import("...")` em posição de tipo -> TYPE-ONLY (o módulo é
+//    carregado apenas pelo sistema de tipos);
+//  - `import("...")` dinâmico -> RUNTIME;
+//  - instrução de VALOR com `type` INLINE dentro das chaves (por exemplo
+//    `import { projectDeliveredCampaign, type Result } from "..."`) -> RUNTIME,
+//    porque o módulo é carregado em runtime;
+//  - múltiplas instruções no mesmo specifier SOMAM no conjunto (`Set`).
+// O mapa global `AUTHORIZED_PRODUCT_FLOW_IMPORTS` continua sendo a autoridade
+// das duas varreduras; este bloco apenas prova qual metade (tipo ou runtime) é
+// legitimamente importada por cada importador.
+// ---------------------------------------------------------------------------
+const PRODUCT_FLOW_SPECIFIER_RE = /product-1-1|image-generation-operations-repository/;
+
+const STATIC_TYPE_IMPORT_RE =
+  /\bimport\s+type\s+(?:[\w$]+\s*,?\s*)?\{[^}]*\}\s*from\s*["']([^"']+)["']/g;
+const STATIC_TYPE_DEFAULT_IMPORT_RE =
+  /\bimport\s+type\s+[\w$]+\s*(?:,\s*\{[^}]*\}\s*)?from\s*["']([^"']+)["']/g;
+const STATIC_VALUE_IMPORT_RE =
+  /\bimport\s+(?!type\b)(?:[\w$]+\s*,?\s*)?(?:\*\s*as\s+[\w$]+\s*|\{[^}]*\}\s*)?from\s*["']([^"']+)["']/g;
+const SIDE_EFFECT_STATIC_IMPORT_RE = /\bimport\s*["']([^"']+)["']\s*;?/g;
+const TYPEOF_IMPORT_RE = /\btypeof\s+import\s*\(\s*["']([^"']+)["']\s*\)/g;
+const DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+
+interface ProductFlowImportClassification {
+  readonly typeOnly: string[];
+  readonly runtime: string[];
+}
+
+function isProductFlowSpecifier(specifier: string): boolean {
+  return PRODUCT_FLOW_SPECIFIER_RE.test(specifier);
+}
+
+function classifyProductFlowImports(source: string): ProductFlowImportClassification {
+  const typeOnly = new Set<string>();
+  const runtime = new Set<string>();
+
+  for (const match of source.matchAll(STATIC_TYPE_IMPORT_RE)) typeOnly.add(match[1]);
+  for (const match of source.matchAll(STATIC_TYPE_DEFAULT_IMPORT_RE)) typeOnly.add(match[1]);
+  // `typeof import("...")` é posição de TIPO: nunca carrega o módulo.
+  for (const match of source.matchAll(TYPEOF_IMPORT_RE)) typeOnly.add(match[1]);
+
+  for (const match of source.matchAll(STATIC_VALUE_IMPORT_RE)) runtime.add(match[1]);
+  for (const match of source.matchAll(SIDE_EFFECT_STATIC_IMPORT_RE)) runtime.add(match[1]);
+
+  for (const match of source.matchAll(DYNAMIC_IMPORT_RE)) {
+    const start = match.index ?? 0;
+    const prefix = source.slice(Math.max(0, start - 32), start);
+    // `typeof import("...")` já foi contabilizado como type-only.
+    if (/\btypeof\s*$/.test(prefix)) continue;
+    runtime.add(match[1]);
+  }
+
+  return {
+    typeOnly: [...typeOnly].filter(isProductFlowSpecifier).sort(),
+    runtime: [...runtime].filter(isProductFlowSpecifier).sort(),
+  };
+}
+
+// Bloco dedicado, congelado, por importador. Espelha o FONTE REAL dos 7 módulos
+// de `src/lib/product-9-16-two-stage/orchestration/` (60.5-01 para deps/tipos e
+// 60.5-02 para probe/factory). A união ordenada de `typeOnly` + `runtime` é o
+// `exact` da entrada correspondente em `AUTHORIZED_PRODUCT_FLOW_IMPORTS`.
+const NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS: Readonly<
+  Record<
+    string,
+    { readonly typeOnly: readonly string[]; readonly runtime: readonly string[] }
+  >
+> = Object.freeze({
+  "src/lib/product-9-16-two-stage/orchestration/copy-recovery-runner.ts": {
+    typeOnly: ["@/lib/product-1-1/copy/default-copy-runner"],
+    runtime: [],
+  },
+  "src/lib/product-9-16-two-stage/orchestration/deadline-budget.ts": {
+    typeOnly: [],
+    runtime: ["@/lib/product-1-1/orchestration/deadline"],
+  },
+  "src/lib/product-9-16-two-stage/orchestration/delivery-deps.ts": {
+    typeOnly: [],
+    runtime: [
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/orchestration/project-closed-campaign",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+    ],
+  },
+  "src/lib/product-9-16-two-stage/orchestration/delivery.ts": {
+    typeOnly: [
+      "@/lib/product-1-1/orchestration/project-closed-campaign",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+    ],
+    runtime: [],
+  },
+  "src/lib/product-9-16-two-stage/orchestration/resume-context.ts": {
+    typeOnly: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/copy/default-copy-runner",
+      "@/lib/product-1-1/intent-selection",
+      "@/lib/product-1-1/policies/types",
+    ],
+    runtime: [],
+  },
+  "src/lib/product-9-16-two-stage/orchestration/types.ts": {
+    typeOnly: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/copy/default-copy-runner",
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/intent-selection",
+      "@/lib/product-1-1/orchestration/project-closed-campaign",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+      "@/lib/product-1-1/policies/types",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
+    ],
+    runtime: [],
+  },
+  "src/lib/product-9-16-two-stage/orchestration/vertical-probe.ts": {
+    typeOnly: ["@/lib/product-1-1/artifact/types"],
+    runtime: [],
+  },
+});
+
+function isTypeOnlyAuthorized(importer: string, specifier: string): boolean {
+  return (
+    NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS[importer]?.typeOnly.includes(
+      specifier,
+    ) ?? false
+  );
+}
+
+function isRuntimeAuthorized(importer: string, specifier: string): boolean {
+  return (
+    NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS[importer]?.runtime.includes(
+      specifier,
+    ) ?? false
+  );
+}
+
+/**
+ * Divergências entre o `exact` do mapa global e a união tipo/runtime declarada:
+ * entrada ausente, duplicata, ordem divergente, specifier faltando/sobrando e
+ * specifier declarado simultaneamente como tipo e runtime.
+ */
+function authorizedUnionMismatches(): string[] {
+  const mismatches: string[] = [];
+
+  for (const [importer, declared] of Object.entries(
+    NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS,
+  )) {
+    const rule = AUTHORIZED_PRODUCT_FLOW_IMPORTS[importer];
+    if (!rule) {
+      mismatches.push(`${importer}::missing_global_rule`);
+      continue;
+    }
+
+    const union = [...declared.typeOnly, ...declared.runtime];
+    const unionSet = new Set(union);
+    if (unionSet.size !== union.length) {
+      mismatches.push(`${importer}::duplicate_specifier`);
+    }
+    for (const specifier of declared.runtime) {
+      if (declared.typeOnly.includes(specifier)) {
+        mismatches.push(`${importer}::type_and_runtime:${specifier}`);
+      }
+    }
+
+    const exact = rule.exact ?? [];
+    if (exact.length !== unionSet.size) {
+      mismatches.push(`${importer}::exact_length`);
+    }
+    for (const specifier of unionSet) {
+      if (!exact.includes(specifier)) {
+        mismatches.push(`${importer}::exact_missing:${specifier}`);
+      }
+    }
+    for (const specifier of exact) {
+      if (!unionSet.has(specifier)) {
+        mismatches.push(`${importer}::exact_extra:${specifier}`);
+      }
+    }
+    const expectedOrder = [...unionSet].sort().join("|");
+    if (exact.join("|") !== expectedOrder) {
+      mismatches.push(`${importer}::order_mismatch`);
+    }
+  }
+
+  return mismatches;
+}
+
+const NINE_SIXTEEN_ORCHESTRATION_IMPORTERS: readonly string[] = Object.freeze(
+  Object.keys(NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS),
+);
 
 describe("Product 1:1 — contrato transversal de não-ativação", () => {
   it("as combinações das chaves só produzem uma decisão sem efeitos de geração", async () => {
@@ -1513,5 +1765,133 @@ describe("F60.7 B — pares exatos joint-deps/deliver-square ↔ product-1-1 (te
         source,
       ),
     ).toBe(true);
+  });
+});
+
+// F60.5 — reconciliação TEST-ONLY da quick 261121-iqh. O mapa global continua
+// sendo a autoridade das duas varreduras; este bloco prova, por importador, o
+// que é TYPE-ONLY e o que é RUNTIME no fonte real, sem excluir diretórios nem
+// criar prefixos amplos.
+describe("F60.5 — importações type-only vs runtime da orquestração 9:16 (test-only)", () => {
+  it("igualdade real==autorizado por importador (tipo e runtime)", () => {
+    for (const importer of NINE_SIXTEEN_ORCHESTRATION_IMPORTERS) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      const actual = classifyProductFlowImports(source);
+      const declared = NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS[importer];
+
+      expect(new Set(actual.typeOnly), `${importer} :: type-only`).toEqual(
+        new Set(declared.typeOnly),
+      );
+      expect(new Set(actual.runtime), `${importer} :: runtime`).toEqual(
+        new Set(declared.runtime),
+      );
+    }
+  });
+
+  it("o mapa global continua sendo a autoridade dos 7 importadores", () => {
+    for (const importer of NINE_SIXTEEN_ORCHESTRATION_IMPORTERS) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      const declared = NINE_SIXTEEN_ORCHESTRATION_AUTHORIZED_IMPORTS[importer];
+      const rule = AUTHORIZED_PRODUCT_FLOW_IMPORTS[importer];
+      const union = new Set([...declared.typeOnly, ...declared.runtime]);
+
+      expect(rule, importer).toBeDefined();
+      expect(rule.prefixes, importer).toEqual([]);
+      expect(new Set(rule.exact ?? []), importer).toEqual(union);
+      expect(
+        hasUnauthorizedProductFlowImport(importer, source),
+        `${importer} importa módulo Produto 1:1 não autorizado`,
+      ).toBe(false);
+    }
+  });
+
+  it("nenhum prefixo amplo e nenhuma divergência entre mapa global e bloco dedicado", () => {
+    for (const importer of NINE_SIXTEEN_ORCHESTRATION_IMPORTERS) {
+      const rule = AUTHORIZED_PRODUCT_FLOW_IMPORTS[importer];
+      for (const exact of rule.exact ?? []) {
+        expect(exact, `${importer}::${exact}`).not.toBe("@/lib/product-1-1/");
+        expect(exact.endsWith("/product-1-1/"), `${importer}::${exact}`).toBe(false);
+        expect(exact.endsWith("/orchestration/"), `${importer}::${exact}`).toBe(false);
+        expect(exact.endsWith("/artifact/"), `${importer}::${exact}`).toBe(false);
+      }
+    }
+    expect(authorizedUnionMismatches()).toEqual([]);
+  });
+
+  it("o scanner NÃO exclui o diretório de orquestração 9:16", () => {
+    const sources = collectRuntimeSources(
+      path.join(SOURCE_ROOT, "lib/product-9-16-two-stage"),
+    ).map(({ relativePath }) => relativePath);
+
+    for (const importer of NINE_SIXTEEN_ORCHESTRATION_IMPORTERS) {
+      expect(sources, importer).toContain(importer);
+    }
+  });
+
+  it("NEGATIVO: importador novo fora do mapa é violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/lib/product-9-16-two-stage/orchestration/novo-runtime.ts",
+        'import type { X } from "@/lib/product-1-1/artifact/types";',
+      ),
+    ).toBe(true);
+  });
+
+  it("NEGATIVO: módulo adicional em importador autorizado é violação", () => {
+    const importer =
+      "src/lib/product-9-16-two-stage/orchestration/resume-context.ts";
+    expect(
+      hasUnauthorizedProductFlowImport(
+        importer,
+        'import { x } from "@/lib/product-1-1/orchestration/generation-orchestrator";',
+      ),
+    ).toBe(true);
+    expect(
+      isRuntimeAuthorized(
+        importer,
+        "@/lib/product-1-1/orchestration/generation-orchestrator",
+      ),
+    ).toBe(false);
+  });
+
+  it("NEGATIVO: dependência financeira em runtime de arquivo não autorizado para ela", () => {
+    const specifier = "@/lib/product-1-1/credit-operation/credit-operation-client";
+    for (const importer of [
+      "src/lib/product-9-16-two-stage/orchestration/vertical-probe.ts",
+      "src/lib/product-9-16-two-stage/orchestration/resume-context.ts",
+    ]) {
+      const source = `import { ProductOneToOneCreditOperationClient } from "${specifier}";`;
+      expect(
+        hasUnauthorizedProductFlowImport(importer, source),
+        importer,
+      ).toBe(true);
+      expect(isRuntimeAuthorized(importer, specifier), importer).toBe(false);
+    }
+  });
+
+  it("NEGATIVO: type-only não é liberado genericamente", () => {
+    const importer =
+      "src/lib/product-9-16-two-stage/orchestration/resume-context.ts";
+    const specifier = "@/lib/product-1-1/orchestration/generation-orchestrator";
+    const source = `import type { X } from "${specifier}";`;
+
+    expect(classifyProductFlowImports(source).typeOnly).toEqual([specifier]);
+    expect(isTypeOnlyAuthorized(importer, specifier)).toBe(false);
+    expect(hasUnauthorizedProductFlowImport(importer, source)).toBe(true);
+
+    // Valor (runtime) do mesmo specifier type-only de `vertical-probe` não é
+    // autorizado — o type-only não rebaixa o import de valor.
+    const probe = "src/lib/product-9-16-two-stage/orchestration/vertical-probe.ts";
+    const artifactTypes = "@/lib/product-1-1/artifact/types";
+    expect(isTypeOnlyAuthorized(probe, artifactTypes)).toBe(true);
+    expect(
+      isRuntimeAuthorized(probe, artifactTypes),
+      "valor não pode ser liberado pelo type-only",
+    ).toBe(false);
+    expect(
+      classifyProductFlowImports(
+        `import { ArtifactProbe } from "${artifactTypes}";`,
+      ).runtime,
+    ).toEqual([artifactTypes]);
   });
 });
