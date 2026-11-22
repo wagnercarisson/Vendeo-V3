@@ -134,7 +134,7 @@ Prova de lote: 1 vs 3 conjuntas mantém **1** chamada de `createSignedUrls`.
 
 **Capturada em:** 2026-11-21 (execução do plano `61-03`)
 **Branch:** `feat/campaign-format-chips`
-**HEAD da implementação:** `aed5db7e` (Task 1+2 combinadas; ver desvio no SUMMARY do 61-03)
+**HEAD da implementação:** `0dfd2f65` (Task 1+2 combinadas e correção do estado `unknown`; ver desvios no SUMMARY do 61-03)
 **Escopo:** detalhe `/campanhas/[id]` com os chips compartilhados no nível da página.
 
 ## Gates reais (exit codes / contagens)
@@ -148,13 +148,15 @@ Prova de lote: 1 vs 3 conjuntas mantém **1** chamada de `createSignedUrls`.
 | Task 2 (cliente + fixtures) | `npx vitest run <9 arquivos dirigidos>` | **0** | 9 arquivos / **142 testes** |
 | Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, lista, dashboard, detalhe, baseline>` | **0** | **63 arquivos / 637 testes PASS** |
 | Baseline em leitura (depois) | `npx vitest run .../evidence/baseline-calls.test.ts` | **0** | `toEqual`; JSON inalterado |
-| suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10467 testes PASS**, 10 skipped (10477) |
+| suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10467 testes PASS**, 10 skipped (10477) — log `61-03-global-test-post-unknown-fix.log` |
 | Build | `npm.cmd run build` | **0** | `check:cnae OK`; 102 páginas estáticas |
 | `git diff --check` | `git diff --check` | **0** | Limpo |
 | `git status --porcelain` | — | — | Apenas logs `61-03-*.log` untracked antes do commit documental |
 
 **Falhas preexistentes:** nenhuma no baseline do 61-01 (typecheck/lint/build/global verdes).
 **Falhas introduzidas:** nenhuma no estado final. Durante a primeira execução global **antes** do commit, o contrato F60.4 (`square-base/boundaries.contract.test.ts`) falhou listando 3 arquivos de teste sob `src/app/.../__tests__/` no working tree — é um guard de árvore limpa, não regressão de comportamento. Reexecutado após o commit: **7/7 PASS**; a suíte global pós-commit passou integralmente.
+
+**Reconciliação global:** `61-03-global-test.log` registra **10.466 PASS / 10 skipped** (execução pós-commit, antes do teste de `unknown`); `61-03-global-test-post-unknown-fix.log` registra **10.467 PASS / 10 skipped** em uma **nova execução global** após acrescentar 1 teste. O delta de +1 é o teste novo; não é soma de resultados de execuções distintas.
 
 ## Prova de ZERO chamadas adicionais (detalhe)
 

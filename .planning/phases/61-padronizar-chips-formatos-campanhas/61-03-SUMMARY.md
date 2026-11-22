@@ -113,14 +113,27 @@ recuperação:
 | Task 2 | `npx vitest run <9 arquivos dirigidos>` | **0** | 9 arquivos / **142 testes** |
 | Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, lista, dashboard, detalhe, baseline>` | **0** | **63 arquivos / 637 testes PASS** |
 | Baseline em leitura (depois) | `npx vitest run .../evidence/baseline-calls.test.ts` | **0** | `toEqual`; JSON inalterado |
-| Suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10467 testes PASS**, 10 skipped (10477) |
+| Suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10467 testes PASS**, 10 skipped (10477) — log `61-03-global-test-post-unknown-fix.log` |
 | Build | `npm.cmd run build` | **0** | `check:cnae OK`; 102 páginas estáticas |
 | `git diff --check` | `git diff --check` | **0** | Limpo |
 | `git status --porcelain` | — | — | Apenas logs `61-03-*.log` untracked antes do commit documental |
 
 Logs brutos em `.planning/phases/61-padronizar-chips-formatos-campanhas/evidence/`:
 `61-03-typecheck.log`, `61-03-lint.log`, `61-03-directed.log`,
-`61-03-global-test.log`, `61-03-build.log`, `61-03-baseline-read.log`.
+`61-03-global-test.log` (10.466, antes do teste de `unknown`),
+`61-03-global-test-post-unknown-fix.log` (10.467, execução posterior),
+`61-03-build.log`, `61-03-baseline-read.log`.
+
+### Reconciliação da suíte global
+
+- `61-03-global-test.log` registra **10.466 PASS / 10 skipped** — execução
+  pós-commit, antes do teste dedicado ao estado `unknown`.
+- `61-03-global-test-post-unknown-fix.log` registra **10.467 PASS / 10 skipped**
+  — **nova execução global** após acrescentar 1 teste em
+  `client-joint-polling.test.tsx`.
+- O delta de **+1** é o teste novo; não é uma soma de resultados de execuções
+  diferentes. Os totais de 10.466 e 10.467 pertencem a duas execuções distintas
+  e ambas ficaram preservadas.
 
 ### Observação sobre a suíte global (não mascarada)
 
