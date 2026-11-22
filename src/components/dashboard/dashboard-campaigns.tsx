@@ -12,6 +12,8 @@ interface DashboardCampaignsProps {
   count: number;
   items: EligibleCampaignCard[];
   messages: DashboardMessages["campaigns"];
+  /** F61 — idioma da ajuda flutuante dos chips (portal). */
+  helpLang?: string;
   failure?: boolean;
   dateLabels: Record<string, string>;
   openAriaLabels: Record<string, string>;
@@ -34,6 +36,7 @@ export function DashboardCampaigns({
   count,
   items,
   messages,
+  helpLang,
   failure = false,
   dateLabels,
   openAriaLabels,
@@ -104,6 +107,7 @@ export function DashboardCampaigns({
                   dateLabel={dateLabels[item.id] ?? item.createdAt}
                   formatPresentation={item.formatPresentation}
                   messages={messages.formats}
+                  helpLang={helpLang}
                   thumbnailUrl={item.thumbnailUrl}
                   openAria={openAriaLabels[item.id] ?? item.productName}
                   openLabel={messages.open}

@@ -154,6 +154,7 @@ export default async function DashboardPage() {
             count={campaign.ok ? campaign.data.count : 0}
             items={items}
             messages={messages.campaigns}
+            helpLang={lang}
             failure={!campaign.ok}
             dateLabels={dateLabels}
             openAriaLabels={openAriaLabels}

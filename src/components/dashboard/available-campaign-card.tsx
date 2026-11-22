@@ -16,6 +16,8 @@ interface AvailableCampaignCardProps {
   formatPresentation: CampaignFormatPresentation;
   /** F61 — catálogo COMPARTILHADO de textos dos formatos. */
   messages: CampaignFormatPresentationMessages;
+  /** F61 — idioma da ajuda flutuante (portal fora do wrapper da página). */
+  helpLang?: string;
   thumbnailUrl: string | null;
   openAria: string;
   openLabel: string;
@@ -39,6 +41,7 @@ export function AvailableCampaignCard({
   dateLabel,
   formatPresentation,
   messages,
+  helpLang,
   thumbnailUrl,
   openAria,
   openLabel,
@@ -96,6 +99,7 @@ export function AvailableCampaignCard({
             <CampaignFormatChips
               presentation={formatPresentation}
               messages={messages}
+              helpLang={helpLang}
             />
           </div>
         </div>

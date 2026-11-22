@@ -11,6 +11,7 @@ import {
   type CampaignFormatPresentation,
 } from "@/lib/campaign/format-presentation";
 import { ptBRCampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/pt-BR";
+import { es419CampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/es-419";
 
 import { AvailableCampaignCard } from "../available-campaign-card";
 
@@ -125,7 +126,9 @@ describe("AvailableCampaignCard", () => {
     expect(screen.getByText("Tênis Runner")).toHaveAttribute("lang", "");
     expect(screen.getByText("19 de out. de 2026")).not.toHaveAttribute("lang");
     expect(screen.getByText("Quadrado 1:1")).not.toHaveAttribute("lang");
-    expect(screen.getByText("Disponível")).not.toHaveAttribute("lang");
+    expect(
+      screen.getByRole("group", { name: "Quadrado 1:1: Disponível" }),
+    ).not.toHaveAttribute("lang");
   });
 
   it("expõe nome acessível e alvo de foco no link do cartão", () => {
@@ -165,8 +168,14 @@ describe("F61 — chips de formato no card do dashboard", () => {
     const group = formatGroup();
     expect(within(group).getAllByRole("listitem")).toHaveLength(2);
     expect(within(group).getByText("Quadrado 1:1")).toBeInTheDocument();
-    expect(within(group).getByText("Disponível")).toBeInTheDocument();
-    expect(within(group).getByText("Não incluído")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Quadrado 1:1: Disponível" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Vertical 9:16: Não incluído" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Disponível")).toBeNull();
+    expect(screen.queryByText("Não incluído")).toBeNull();
   });
 
   it("individual 9:16 pronta não é apresentada como parcial", () => {
@@ -174,10 +183,14 @@ describe("F61 — chips de formato no card do dashboard", () => {
 
     const group = formatGroup();
     expect(within(group).getByText("Vertical 9:16")).toBeInTheDocument();
-    expect(within(group).getByText("Disponível")).toBeInTheDocument();
-    expect(within(group).getByText("Não incluído")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Vertical 9:16: Disponível" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Quadrado 1:1: Não incluído" }),
+    ).toBeInTheDocument();
     // Campanha individual não tem indicador de entrega parcial no chip.
-    expect(within(group).queryByText("Não entregue")).toBeNull();
+    expect(screen.queryByText("Não entregue")).toBeNull();
   });
 
   it("legado quadrado mostra os dois chips", () => {
@@ -207,7 +220,10 @@ describe("F61 — chips de formato no card do dashboard", () => {
     );
 
     const group = formatGroup();
-    expect(within(group).getAllByText("Disponível")).toHaveLength(2);
+    expect(group.querySelectorAll("li")).toHaveLength(2);
+    expect(
+      screen.getAllByRole("group", { name: /Disponível$/ }),
+    ).toHaveLength(2);
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
       "/campanhas/c1?format=1:1",
@@ -235,9 +251,12 @@ describe("F61 — chips de formato no card do dashboard", () => {
       />,
     );
 
-    const group = formatGroup();
-    expect(within(group).getByText("Disponível")).toBeInTheDocument();
-    expect(within(group).getByText("Crédito devolvido")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /Disponível$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /Crédito devolvido$/ }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
       "/campanhas/c1?format=1:1",
@@ -247,7 +266,9 @@ describe("F61 — chips de formato no card do dashboard", () => {
   it("unknown e unavailable nunca exibem 'Não gerado'", () => {
     const { rerender } = renderCard(null, buildUnknownFormatPresentation());
 
-    expect(screen.getAllByText("Não foi possível confirmar")).toHaveLength(2);
+    expect(
+      screen.getAllByRole("group", { name: /Não foi possível confirmar$/ }),
+    ).toHaveLength(2);
     expect(screen.queryByText("Não gerado")).toBeNull();
 
     rerender(
@@ -263,7 +284,9 @@ describe("F61 — chips de formato no card do dashboard", () => {
       />,
     );
 
-    expect(screen.getAllByText("Indisponível")).toHaveLength(2);
+    expect(
+      screen.getAllByRole("group", { name: /Indisponível$/ }),
+    ).toHaveLength(2);
     expect(screen.queryByText("Não gerado")).toBeNull();
   });
 
@@ -285,5 +308,33 @@ describe("F61 — chips de formato no card do dashboard", () => {
     const group = formatGroup();
     expect(group.className).toContain("flex-wrap");
     expect(group.className).toContain("min-w-0");
+  });
+
+  it("F61 — ajuda flutuante herda helpLang es-419 e preserva a abertura", () => {
+    render(
+      <AvailableCampaignCard
+        id="c1"
+        productName="Tênis Runner"
+        dateLabel="19 de out. de 2026"
+        formatPresentation={SQUARE_DELIVERED}
+        messages={es419CampaignFormatMessages}
+        helpLang="es-419"
+        thumbnailUrl={null}
+        openAria="Abrir campanha Tênis Runner"
+        openLabel="Abrir campanha"
+      />,
+    );
+
+    const group = screen.getByRole("group", { name: /^Cuadrado 1:1/ });
+    fireEvent.click(within(group).getByRole("button"));
+
+    const note = screen.getByRole("note");
+    expect(note).toHaveAttribute("lang", "es-419");
+    expect(note.parentElement).toBe(document.body);
+    expect(within(group).queryByRole("note")).toBeNull();
+    expect(screen.getByRole("link", { name: /Abrir campanha/ })).toHaveAttribute(
+      "href",
+      "/campanhas/c1",
+    );
   });
 });

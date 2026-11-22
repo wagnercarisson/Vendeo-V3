@@ -107,13 +107,14 @@ function PageFormatChips({ props }: { readonly props: CampaignPageClientProps })
   const jointNote = jointNoteFor(props);
   return (
     <div
-      className="mt-4"
+      className="mt-4 mb-6"
       lang={props.locale === "es-419" ? "es-419" : undefined}
     >
       <CampaignFormatChips
         presentation={props.formatPresentation}
         messages={props.messages.formats}
         hrefs={props.formatHrefs}
+        helpLang={props.locale === "es-419" ? "es-419" : undefined}
       />
       {jointNote ? (
         <p className="mt-2 text-xs text-text-muted font-body">{jointNote}</p>

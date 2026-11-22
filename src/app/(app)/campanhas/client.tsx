@@ -323,6 +323,7 @@ export function CampaignCard({
           <CampaignFormatChips
             presentation={campaign.formatPresentation}
             messages={messages.formats}
+            helpLang={locale === "es-419" ? "es-419" : undefined}
           />
         </div>
         <span className={`text-sm font-medium font-heading ${status.className}`}>

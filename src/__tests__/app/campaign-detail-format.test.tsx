@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
 import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
 import { ptBRCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
+import { es419CampaignDetailMessages } from "@/lib/i18n/campaign-detail/catalogs/es-419";
 
 const VERTICAL_DELIVERED = buildIndividualFormatPresentation(
   {
@@ -105,8 +106,17 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
     ).toHaveLength(1);
     expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
     expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
-    expect(screen.getByText("Não incluído")).toBeInTheDocument();
-    expect(screen.getByText("Selecionado")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Quadrado 1:1: Não incluído" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", {
+        name: "Vertical 9:16: Disponível, Selecionado",
+      }),
+    ).toBeInTheDocument();
+    // Rótulos/estado não são texto visível.
+    expect(screen.queryByText("Não incluído")).toBeNull();
+    expect(screen.queryByText("Selecionado")).toBeNull();
     expect(screen.queryByText("Não gerado")).toBeNull();
     expect(screen.queryByText("+")).toBeNull();
   });
@@ -150,7 +160,7 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
     expect(
       screen.getByRole("list", { name: "Formatos da campanha" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Selecionado")).toBeNull();
+    expect(screen.queryAllByRole("group", { name: /Selecionado/ })).toHaveLength(0);
     expect(screen.queryByRole("button", { name: /baixar/i })).toBeNull();
     expect(
       screen.getByRole("button", { name: /aprovar arte/i }),
@@ -179,7 +189,29 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
       screen.getByRole("list", { name: "Formatos da campanha" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Corrigindo a arte...")).toBeInTheDocument();
-    expect(screen.queryByText("Selecionado")).toBeNull();
+    expect(screen.queryAllByRole("group", { name: /Selecionado/ })).toHaveLength(0);
     expect(screen.queryByRole("button", { name: /baixar/i })).toBeNull();
+  });
+
+  it("F61 — '?' abre ajuda flutuante fora do fluxo com lang es-419, sem navegar", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        messages={es419CampaignDetailMessages}
+        locale="es-419"
+      />,
+    );
+
+    const group = screen.getByRole("group", { name: /Vertical 9:16/ });
+    const button = within(group).getByRole("button");
+
+    fireEvent.click(button);
+
+    const note = screen.getByRole("note");
+    expect(note).toHaveAttribute("lang", "es-419");
+    expect(note.parentElement).toBe(document.body);
+    // O popover não entra no fluxo dos chips nem da arte.
+    expect(within(group).queryByRole("note")).toBeNull();
+    expect(button).toHaveAttribute("aria-expanded", "true");
   });
 });

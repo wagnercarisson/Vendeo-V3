@@ -224,8 +224,9 @@ describe("DashboardPage — estados operacionais", () => {
     expect(html.match(/aria-label="Formatos da campanha"/g)?.length).toBe(3);
     expect(html).toContain("Quadrado 1:1");
     expect(html).toContain("Vertical 9:16");
-    expect(html).toContain("Disponível");
-    expect(html).toContain("Não incluído");
+    // Estado completo no wrapper acessível; rótulos ficam fora do texto visível.
+    expect(html).toContain('aria-label="Quadrado 1:1: Disponível"');
+    expect(html).toContain('aria-label="Vertical 9:16: Não incluído"');
     // Nenhuma navegação por formato na listagem do dashboard.
     expect(html).not.toContain("?format=");
   });

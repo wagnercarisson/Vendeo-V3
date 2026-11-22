@@ -189,8 +189,15 @@ describe("CampaignListClient — display", () => {
 
     expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
     expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
-    expect(screen.getByText("Disponível")).toBeInTheDocument();
-    expect(screen.getByText("Não incluído")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Quadrado 1:1: Disponível" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Vertical 9:16: Não incluído" }),
+    ).toBeInTheDocument();
+    // Os rótulos não são texto visível; ficam no nome/descrição acessível.
+    expect(screen.queryByText("Disponível")).toBeNull();
+    expect(screen.queryByText("Não incluído")).toBeNull();
   });
 
   it("F61: formato indisponível exibe os dois chips como indisponíveis", () => {
@@ -198,7 +205,9 @@ describe("CampaignListClient — display", () => {
       <CampaignListClient items={[mockNewFlowClosedCampaign]} {...baseProps} total={1} />,
     );
 
-    expect(screen.getAllByText("Indisponível")).toHaveLength(2);
+    expect(
+      screen.getAllByRole("group", { name: /Indisponível$/ }),
+    ).toHaveLength(2);
     expect(screen.queryByText("1:1 quadrado")).not.toBeInTheDocument();
   });
 
@@ -214,9 +223,15 @@ describe("CampaignListClient — display", () => {
 
     expect(screen.getAllByText("Cuadrado 1:1")).toHaveLength(2);
     expect(screen.getAllByText("Vertical 9:16")).toHaveLength(2);
-    expect(screen.getByText("Disponible")).toBeInTheDocument();
-    expect(screen.getAllByText("No incluido")).toHaveLength(2);
-    expect(screen.getByText("No fue posible confirmar")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Cuadrado 1:1: Disponible" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("group", { name: /No incluido$/ }),
+    ).toHaveLength(2);
+    expect(
+      screen.getByRole("group", { name: /No fue posible confirmar$/ }),
+    ).toBeInTheDocument();
   });
 
   it("shows Baixar button only for ready campaigns", () => {
@@ -550,22 +565,30 @@ describe("F61 — chips informativos nos cards da listagem", () => {
     const chips = within(group).getAllByRole("listitem");
     expect(chips).toHaveLength(2);
     expect(within(group).getByText("Vertical 9:16")).toBeInTheDocument();
-    expect(within(group).getByText("Disponível")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Vertical 9:16: Disponível" }),
+    ).toBeInTheDocument();
     expect(within(group).getByText("Quadrado 1:1")).toBeInTheDocument();
-    expect(within(group).getByText("Não incluído")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Quadrado 1:1: Não incluído" }),
+    ).toBeInTheDocument();
   });
 
   it("campanha em geração mostra processamento sem entregar formato", () => {
     renderSingle(mockGeneratingCampaign);
 
-    expect(screen.getByText("Processando")).toBeInTheDocument();
-    expect(screen.queryByText("Disponível")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /Processando$/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole("group", { name: /Disponível$/ })).toHaveLength(0);
   });
 
   it("campanha com erro mostra estado indeterminado e nunca 'Não gerado'", () => {
     renderSingle(mockErrorCampaign);
 
-    expect(screen.getByText("Não foi possível confirmar")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /Não foi possível confirmar$/ }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Não gerado")).not.toBeInTheDocument();
     // O formato persistido não é apresentado como ausência/não entregue.
     expect(screen.queryByText("Não entregue")).not.toBeInTheDocument();
@@ -574,15 +597,21 @@ describe("F61 — chips informativos nos cards da listagem", () => {
   it("conjunta completa mostra os dois formatos disponíveis", () => {
     renderSingle(mockJointCompleteCampaign);
 
-    expect(screen.getAllByText("Disponível")).toHaveLength(2);
-    expect(screen.queryByText("Crédito devolvido")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("group", { name: /Disponível$/ })).toHaveLength(2);
+    expect(
+      screen.queryAllByRole("group", { name: /Crédito devolvido$/ }),
+    ).toHaveLength(0);
   });
 
   it("conjunta parcial estornada mostra o estorno e preserva o formato entregue", () => {
     renderSingle(mockJointPartialCampaign);
 
-    expect(screen.getByText("Disponível")).toBeInTheDocument();
-    expect(screen.getByText("Crédito devolvido")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /Disponível$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /Crédito devolvido$/ }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abrir" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Baixar" })).toBeInTheDocument();
   });
@@ -615,8 +644,14 @@ describe("F61 — chips informativos nos cards da listagem", () => {
     expect(within(group).queryAllByRole("link")).toHaveLength(0);
     expect(group.querySelectorAll("a")).toHaveLength(0);
 
-    fireEvent.click(within(group).getByText("Disponível"));
-    fireEvent.click(within(group).getByText("Crédito devolvido"));
+    // Acionar os “?” abre apenas a ajuda local; clicar nos nomes não navega.
+    const helpButtons = within(group).getAllByRole("button");
+    expect(helpButtons).toHaveLength(2);
+    for (const button of helpButtons) {
+      fireEvent.click(button);
+    }
+    fireEvent.click(within(group).getByText("Quadrado 1:1"));
+    fireEvent.click(within(group).getByText("Vertical 9:16"));
 
     expect(routerMock.push).not.toHaveBeenCalled();
     expect(routerMock.replace).not.toHaveBeenCalled();
@@ -645,5 +680,27 @@ describe("F61 — chips informativos nos cards da listagem", () => {
     for (const chip of within(group).getAllByRole("listitem")) {
       expect(chip.className).toContain("min-w-0");
     }
+  });
+
+  it("F61 — ajuda flutuante em es-419 (portal) não navega e não sai do fluxo", () => {
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign]}
+        {...baseProps}
+        total={1}
+        messages={es419CampaignListMessages}
+        locale="es-419"
+      />,
+    );
+
+    const group = screen.getByRole("group", { name: /^Cuadrado 1:1/ });
+    fireEvent.click(within(group).getByRole("button"));
+
+    const note = screen.getByRole("note");
+    expect(note).toHaveAttribute("lang", "es-419");
+    expect(note.parentElement).toBe(document.body);
+    expect(within(group).queryByRole("note")).toBeNull();
+    expect(routerMock.push).not.toHaveBeenCalled();
+    expect(routerMock.replace).not.toHaveBeenCalled();
   });
 });

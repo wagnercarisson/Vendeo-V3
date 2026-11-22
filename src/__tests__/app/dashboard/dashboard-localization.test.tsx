@@ -157,8 +157,8 @@ describe("DashboardPage — localização e lang", () => {
     expect(html).toContain("Ver novidades");
     expect(html).toContain("Fechar anúncio");
     expect(html).toContain("Quadrado 1:1");
-    expect(html).toContain("Disponível");
-    expect(html).toContain("Não incluído");
+    expect(html).toContain('aria-label="Quadrado 1:1: Disponível"');
+    expect(html).toContain('aria-label="Vertical 9:16: Não incluído"');
     expect(html).not.toContain('lang="es-419"');
   });
 
@@ -189,8 +189,8 @@ describe("DashboardPage — localização e lang", () => {
     expect(html).toContain('aria-label="Formatos de la campaña"');
     expect(html).toContain("Cuadrado 1:1");
     expect(html).toContain("Vertical 9:16");
-    expect(html).toContain("Disponible");
-    expect(html).toContain("No incluido");
+    expect(html).toContain('aria-label="Cuadrado 1:1: Disponible"');
+    expect(html).toContain('aria-label="Vertical 9:16: No incluido"');
     // Vocabulário compartilhado: nada hardcoded em português nos chips.
     expect(html).not.toContain("Quadrado 1:1");
     expect(html).not.toContain("Não incluído");

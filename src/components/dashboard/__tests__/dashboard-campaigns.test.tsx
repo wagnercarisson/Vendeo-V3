@@ -130,8 +130,10 @@ describe("DashboardCampaigns", () => {
 
     expect(html).toContain("Quadrado 1:1");
     expect(html).toContain("Vertical 9:16");
-    expect(html).toContain("Disponível");
-    expect(html).toContain("Não incluído");
+    // Estado completo no wrapper acessível; rótulos não são texto visível.
+    expect(html).toContain('aria-label="Quadrado 1:1: Disponível"');
+    expect(html).toContain('aria-label="Vertical 9:16: Não incluído"');
+    expect(html).toContain("hidden");
     // Dois chips por cartão: 4 itens de lista para 2 cartões.
     expect(html.match(/<li /g)?.length).toBe(4);
   });
@@ -148,7 +150,7 @@ describe("DashboardCampaigns", () => {
       ],
     });
 
-    expect(html).toContain("Indisponível");
+    expect(html).toContain('aria-label="Quadrado 1:1: Indisponível"');
     expect(html).not.toContain("1:1 quadrado");
     expect(html).not.toContain("Não gerado");
   });
@@ -181,8 +183,8 @@ describe("DashboardCampaigns", () => {
 
     expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(1);
     expect(html).toContain('href="/campanhas/c1?format=1:1"');
-    expect(html).toContain("Disponível");
-    expect(html).toContain("Crédito devolvido");
+    expect(html).toContain('aria-label="Quadrado 1:1: Disponível"');
+    expect(html).toContain('aria-label="Vertical 9:16: Crédito devolvido"');
     expect(html).toContain("1 campanha disponível");
   });
 
