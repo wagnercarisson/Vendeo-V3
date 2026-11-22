@@ -5,7 +5,7 @@
 **Executado em:** 2026-11-21
 **Branch:** `feat/campaign-format-chips`
 **Base da wave:** `c2886376` (aceite local do `61-02`)
-**HEAD da implementação:** `aed5db7e`
+**HEAD da implementação:** `0dfd2f65`
 **Duração:** ~17 min (20:41Z → 20:58Z)
 
 > Nenhum merge, push, deploy, sync ou archive. Nenhum acesso a banco, Storage,
@@ -40,6 +40,8 @@ recuperação:
 | Commit | Tipo | Conteúdo |
 |---|---|---|
 | `aed5db7e` | feat | DTO + mapeamento server-side + chips no nível da página + nota única + matriz de testes/fixtures |
+| `0dfd2f65` | fix | Estado conjunto `unknown` não exibe nota de processamento; teste dedicado |
+| `90a5fee3` | chore | Normalização de whitespace das evidências de build/baseline |
 
 > **Desvio de processo:** as Tasks 1 e 2 foram commitadas juntas. O campo
 > `formatPresentation` é OBRIGATÓRIO, então os fixtures da Task 2 são necessários
