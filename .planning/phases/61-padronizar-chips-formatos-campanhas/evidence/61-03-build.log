@@ -30,10 +30,10 @@ check:cnae OK — no contradictions in CNAE_SEGMENT_MAP
    Generating static pages (0/102) ...
 [seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
 [seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
-   Generating static pages (25/102) 
+   Generating static pages (25/102)
 [seo/layout] metadataBase sem origem de produção confirmada (status: valid) — [seo/origin] VERCEL_URL ausente fora de produção; usando FALLBACK_ORIGIN para URLs absolutas
-   Generating static pages (50/102) 
-   Generating static pages (76/102) 
+   Generating static pages (50/102)
+   Generating static pages (76/102)
  ✓ Generating static pages (102/102)
    Finalizing page optimization ...
    Collecting build traces ...
@@ -215,4 +215,3 @@ Route (app)                                                     Size  First Load
 
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
-
