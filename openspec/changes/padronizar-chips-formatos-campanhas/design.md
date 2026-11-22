@@ -130,20 +130,21 @@ interface CampaignFormatChipsProps {
   presentation: CampaignFormatPresentation;
   messages: CampaignFormatPresentationMessages;
   hrefs?: Partial<Record<CampaignFormatKey, string>>;
+  /** Idioma da região flutuante (ex.: "es-419"); o portal vive fora do wrapper. */
+  helpLang?: string;
 }
 ```
 
 - Renderiza sempre `1:1` e `9:16`, nesta ordem, em uma lista com nome acessível.
-- `delivered`: `Check` + “Disponível”, token verde de disponibilidade do design system (`text-accent-green`, `bg-accent-green/10`, borda suave). Se houver `href`, o chip vira link; sem `href`, permanece informativo.
-- `active`: borda/anel mais forte + ícone/`aria-current` + texto “Selecionado” (visível ou `sr-only`), nunca só cor.
-- `processing`: `Loader2`/indicador próprio + “Processando”, em âmbar/neutro, sem aparência de entregue.
-- `absent`: `Minus`/`CircleSlash`, cinza (`text-text-muted`, `bg-bg-elevated`), sem `+` e sem CTA. `not_requested` = “Não incluído”; `not_delivered` = “Não entregue”.
-- `refunded`: estado `absent` + texto “Crédito devolvido” e ícone próprio, visível no chip e na explicação.
-- `unknown`: “Não foi possível confirmar”, borda tracejada neutra.
-- `unavailable`: “Indisponível”, borda tracejada neutra.
+- Texto visível APENAS o nome do formato (“Quadrado 1:1”/“Vertical 9:16”). Rótulos “Disponível”/“Não incluído”/“Não entregue”/“Selecionado” e badge não aparecem no chip; estado completo permanece no nome/descrição acessível e na ajuda.
+- Cada chip tem um wrapper acessível (`role="group"`/`aria-label` com nome + estado completo) e uma descrição estável em nó `hidden` referenciada por `aria-describedby` para leitor de tela.
+- `delivered`: destaque discreto (`text-text-primary`, `bg-accent-green/10`, borda suave), sem ícone/rótulo visível. Se houver `href`, o chip vira link; sem `href`, permanece informativo.
+- `active`: borda/fundo distintos (`ring-1 ring-accent-green/40 bg-accent-green/15`) + `aria-current`/estado acessível; sem badge.
+- `processing`: `Loader2` pequeno; `absent`: cinza legível (`text-text-secondary`, `bg-bg-elevated`), sem ícone/rótulo visível; `refunded`: `Undo2` pequeno; `unknown`/`unavailable`: `CircleHelp` pequeno + borda tracejada.
 - Nunca usa o texto “Não gerado” para `unknown`/`unavailable`.
-- Explicação: botão de informação irmão do link (nunca aninhado), com `aria-expanded`, `aria-controls` e alvo mínimo de 44×44 px. Em desktop, hover/foco também revela a explicação; em toque, o botão alterna. Nenhum botão desabilitado como única via.
-- Responsivo: `flex flex-wrap`, `min-w-0`, textos que quebram; não empurra nome, ações ou miniaturas para fora do card.
+- Ajuda: botão “?” irmão do link (nunca aninhado), aparência compacta sem círculo/borda grande, hit area ≥44×44, `aria-expanded`; `aria-controls` somente quando o popover estiver montado. Popover em `createPortal` após mount, `position: fixed`, `lang={helpLang}`, fora do fluxo, clampado na viewport; abre por hover/foco/click; primeiro acionamento após hover/foco fixa, segundo/fora/`Escape` fecham; sem conteúdo focável quando fechado.
+- Sem portal no servidor: `mounted` via `useEffect`; SSR/renderToString não acessa `document`.
+- Responsivo: `flex flex-wrap`, `min-w-0`, textos que quebram; não empurra nome, ações ou miniaturas para fora do card; espaçamento consistente até a arte no detalhe.
 - Ícones somente `lucide-react`, sem emojis; tema dark do `openspec/design-system/MASTER.md`.
 - Os chips NÃO introduzem chamadas ou efeitos novos. A renderização existente do detalhe — incluindo leituras por RPC, recuperação legada e polling já condicionados — SHALL ser preservada; os chips apenas reutilizam dados já disponíveis. A única interação adicional é abrir/fechar a explicação local.
 
@@ -192,6 +193,26 @@ Textos de conteúdo persistido (nome do produto, copy) continuam com `lang=""`; 
 
 `refunded` é um modificador de `absent`, não um estado substituto. Isso preserva duas informações: “o formato não está disponível” e “houve devolução conhecida”. `unknown`/`unavailable` nunca viram `absent` e nunca exibem “Não gerado”.
 
+### 9. Refinamento visual compacto e ajuda flutuante (revisão 2026-11-21)
+
+A apresentação funcional foi implementada e aceita tecnicamente, mas **não foi aprovada visualmente**: os chips ficaram grandes, com rótulos redundantes, badge “Selecionado” e explicações em fluxo que deslocavam arte/cards. Esta revisão é aditiva e não altera o modelo de estados, builders, classificação, lifecycle, autoridades, financeiro ou consultas.
+
+Decisões:
+
+- **Conteúdo visível mínimo:** chips exibem apenas “Quadrado 1:1” e “Vertical 9:16”. “Disponível”, “Não incluído”, “Não entregue” e o badge “Selecionado” saem do texto visível; permanecem no modelo, `aria-label`/descrição acessível e ajuda.
+- **Sem ícones redundantes nos estados normais:** entregue/ausente usam tratamento visual discreto; `processing`/`unknown`/`refunded` podem usar um indicador pequeno, nunca frase longa.
+- **Ativo:** borda/fundo distintos no detalhe, sem badge; seleção acessível por `aria-current`/nome.
+- **Não depender só de cor:** forma (borda/fundo/indicador) + estado acessível completo.
+- **Ajuda fora do fluxo:** popover flutuante em portal para `document.body`, `position: fixed`; sem aumentar altura do card, quebrar linha, deslocar arte ou criar overflow horizontal.
+- **Posicionamento:** calcular a partir do âncora, preferir acima/abaixo conforme espaço, clampar na viewport e ignorar containers com `overflow` (portal).
+- **Interações:** hover/foco desktop abrem; “?” de toque alterna; primeiro acionamento após hover/foco **fixa** a ajuda, segundo fecha; fora e `Escape` fecham; foco retorna ao botão no `Escape`; conteúdo não focável quando fechado.
+- **Alvo:** aparência compacta, mas área acionável ≥44×44 px no “?” e no link de seleção (hit area/padding), sem nested button/link.
+- **Sem dependência nova:** `react-dom/createPortal`, `useId`, `useState`/`useEffect` já existentes; `ExpandableHelp` é in-flow e não atende ao contrato flutuante, então não será reutilizado como está.
+- **Espaçamento:** separação consistente entre bloco de chips e arte no detalhe; chips não empurram miniatura/ações na lista/dashboard.
+- **Validação visual:** jsdom não comprova layout; registrar evidência visual desktop/mobile separadamente antes de aprovar a UX.
+
+**Alternativa rejeitada:** tooltip nativo/`title`. Não cobre toque, foco consistente, viewport, overflow ou conteúdo acessível. **Alternativa rejeitada:** nova biblioteca de popover. Exigiria proposta/aprovação separada e não é necessária para o contrato local.
+
 ## Risks / Trade-offs
 
 - **Campanhas antigas com `input_snapshot = null`** passam a mostrar ambos os chips como `unavailable` em vez de nenhum rótulo. → Mitigação: contrato explícito, testes de snapshot nulo/malformado e nenhum fallback para `1:1`.
@@ -199,7 +220,7 @@ Textos de conteúdo persistido (nome do produto, copy) continuam com `lang=""`; 
 - **Chips de lista/dashboard versus gate de aprovação no detalhe.** O chip representa entrega persistida; o gate continua nas ações. → Mitigação: documentar a semântica, não adicionar links/download onde o gate bloqueia e manter os testes de aprovação existentes.
 - **Snapshot conjunto inconsistente** pode aparecer no dashboard porque a elegibilidade continua `status = ready`. → Mitigação: ambos `unavailable`/`unknown`, sem tratar como `1:1`; não alterar contagem/eligibility nesta fatia e cobrir com teste.
 - **Leitura conjunta falha** retorna `unknown`; não cair no individual. → Mitigação: classificação conjunta antes do resolvedor e teste de falha de leitura.
-- **Tooltip apenas em hover** exclui toque. → Mitigação: botão de informação com toggle, foco visível e alvo de 44 px; teste de teclado/toque.
+- **Ajuda apenas em hover** exclui toque; ajuda em fluxo desloca layout. → Mitigação: popover flutuante em portal, “?” ≥44 px, hover/foco/toque, Escape/fora, sem deslocamento; validação visual separada.
 - **Divergência de textos entre superfícies.** → Mitigação: catálogo compartilhado + teste de identidade/paridade.
 - **Regressão de performance.** → Mitigação: builders puros e prova de zero chamadas adicionais causadas pelos chips, comparando a mesma página antes/depois; a assinatura de miniaturas legadas permanece como está.
 

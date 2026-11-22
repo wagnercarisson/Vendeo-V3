@@ -1,6 +1,10 @@
 # Phase 61 — Contexto de planejamento (ponte compacta)
 
-**Status:** planos criados (`61-01`, `61-02`, `61-03`), aguardando revisão. Nenhum código, migration, banco, Storage, provider, homolog ou produção foi tocado nesta etapa.
+**Status:** `61-01` e `61-02` aceitos localmente/offline; `61-03` executado, **NÃO ACEITO**; UX **NÃO aprovada visualmente**. Plano complementar `61-04` criado para o refinamento compacto e ajuda flutuante. Nenhum código desta revisão foi implementado; sem migration, banco, Storage, provider, homolog ou produção.
+
+**Pendência visual:** os aceites técnicos de `61-01`/`61-02` e a execução técnica de `61-03` permanecem como histórico. A apresentação atual foi rejeitada visualmente (chips grandes, textos redundantes, ajuda deslocando arte/cards). O `61-04` trata apenas apresentação/interação local da ajuda, sem alterar builders, classificação, lifecycle, autoridades, financeiro ou consultas.
+
+**Plano complementar:** `61-04-PLAN.md` (wave 4, `autonomous: false`, Review Stop).
 
 **Fonte técnica (canônica):** `openspec/changes/padronizar-chips-formatos-campanhas/` — `proposal.md`, `design.md`, quatro delta specs e `tasks.md`. OpenSpec strict válido. GSD **não redesenha** decisões aprovadas; este arquivo apenas as traduz.
 
@@ -217,23 +221,25 @@ export interface CampaignFormatChipsProps {
   presentation: CampaignFormatPresentation;
   messages: CampaignFormatPresentationMessages;
   hrefs?: Partial<Record<CampaignFormatKey, string>>;
+  /** Idioma da região flutuante (ex.: "es-419"); o portal vive fora do wrapper. */
+  helpLang?: string;
 }
 ```
 
 Contrato visual/estrutural obrigatório:
 
 - Renderiza sempre `1:1` e `9:16`, nessa ordem, em `<ul aria-label={messages.groupLabel}>`; wrapper `flex min-w-0 flex-wrap items-center gap-2`; cada item `min-w-0`.
-- Chip: nome do formato + rótulo de estado + ícone `lucide-react` (`Check`, `Loader2`, `CircleSlash`, `Undo2`, `CircleHelp`) com `aria-hidden`; nunca só cor; nunca `+`.
-- `delivered`: `text-accent-green bg-accent-green/10 border-accent-green/30`.
-- `active`: `ring-2 ring-accent-green` + `aria-current="true"` no link + texto visível `messages.activeLabel`.
-- `processing`: `text-amber-400 bg-amber-400/10 border-amber-400/30` + `Loader2`.
-- `absent`: `text-text-muted bg-bg-elevated border-border`; rótulo por `reason` (`notRequested`/`notDelivered`), ou `labels.refunded` quando `refunded`, com `Undo2`.
-- `unknown`/`unavailable`: `border-dashed border-border text-text-muted`; rótulos distintos e honestos.
+- Chip compacto: texto visível APENAS o nome do formato. Rótulos “Disponível”/“Não incluído”/“Não entregue”/“Selecionado” NÃO são visíveis; permanecem no `aria-label`/descrição acessível e na ajuda. Sem ícones nos estados normais; `processing`/`unknown`/`refunded` podem usar um indicador pequeno (`Loader2`/`CircleHelp`/`Undo2`) sem frase longa.
+- `delivered`: destaque discreto (`text-text-primary`, `bg-accent-green/10`, `border-accent-green/30`), sem ícone/rótulo visível.
+- `active`: borda/fundo distintos (`ring-1 ring-accent-green/40`, `bg-accent-green/15`), sem badge; `aria-current="true"` no link e estado “Selecionado” no nome acessível.
+- `absent`: `text-text-secondary bg-bg-elevated border-border` (cinza legível), sem ícone/rótulo visível.
+- `refunded`: `absent` + indicador pequeno `Undo2`; crédito devolvido na descrição/ajuda.
+- `unknown`/`unavailable`: borda tracejada neutra + indicador pequeno de dúvida; estado completo na descrição/ajuda.
 - Link `<a href>` (sem `next/link`/prefetch) somente quando `hrefs?.[key]` existe **e** `state === "delivered"`; demais são `span` (sem ação, sem geração).
-- Controle de informação: `button type="button"`, `aria-expanded={visible}`, `aria-controls` apontando para o parágrafo de explicação (id gerado com `useId()`), `aria-label={`${messages.infoAria}: ${name}`}` (concatenação, sem placeholder no catálogo), classe `min-h-11 min-w-11` (44×44) e `focus-visible:ring-2`. Nunca `disabled`.
-- Explicação: `<p id={...} role="note" hidden={!visible}>`; `visible = open || (!dismissed && (hovered || focused))`. Clique abre, segundo clique fecha; hover/foco abrem; saída de ponteiro/foco fecha. Estado acessível e `hidden` reconciliados; sem `useEffect`, fetch ou storage.
-- Explicação escolhida: `deliveredActive` se `active`; `refunded` se `refunded`; senão por estado/reason.
-- Sem emojis; tema dark; sem light mode; sem `dangerouslySetInnerHTML`.
+- Controle “?”: `button type="button"` **irmão** do link/span (nunca aninhado), `aria-expanded`, `aria-controls` somente quando o popover estiver montado/aberto, `aria-describedby` para descrição `hidden` estável, `aria-label` com nome + estado, aparência compacta sem círculo/borda grande, hit area ≥44×44, `focus-visible:ring-2`; nunca `disabled`.
+- Ajuda: popover flutuante em `createPortal` para `document.body`, `position: fixed`, fora do fluxo. Abre por hover/foco (desktop) e “?” (toque); primeiro acionamento após hover/foco fixa, segundo/clique-fora/`Escape` fecham; posição clampada na viewport, sem overflow horizontal, sem deslocar card/arte. Sem conteúdo focável quando fechada; foco retorna ao “?” no `Escape`.
+- Explicação escolhida: `deliveredActive` se `active`; `refunded` se `refunded`; senão por estado/reason. Estado completo no `aria-label` do grupo e em descrição `hidden` referenciada por `aria-describedby`; a ajuda flutuante mostra o motivo.
+- Sem emojis; tema dark; sem light mode; sem `dangerouslySetInnerHTML`; sem dependência nova (portal React existente).
 
 ---
 

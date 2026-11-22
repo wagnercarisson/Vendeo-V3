@@ -60,66 +60,100 @@ O sistema SHALL construir a apresentação a partir de um modelo tipado que rece
 
 ### Requirement: Semântica visual dos estados de formato
 
-O componente compartilhado SHALL comunicar o estado por texto e forma, não apenas por cor. Formato entregue SHALL ter aparência de disponível. No detalhe, o formato ativo SHALL ter destaque distinto de um formato apenas disponível. Formato ausente SHALL aparecer em cinza, sem `+` e sem promessa de geração. Processamento SHALL ter indicador próprio e não SHALL parecer entregue. Estados `unknown`/`unavailable` SHALL indicar informação indisponível e NUNCA exibir “Não gerado”. Estorno conhecido SHALL permanecer visível, não escondido como ausência simples.
+O componente compartilhado SHALL exibir normalmente apenas o nome do formato — **Quadrado 1:1** ou **Vertical 9:16**. Rótulos visíveis de estado (“Disponível”, “Não incluído”, “Não entregue”) e o badge “Selecionado” NÃO SHALL aparecer dentro do chip. Ícones de estado normal NÃO SHALL ser exibidos; estados excepcionais (`processing`, `unknown`, `refunded`) PODEM usar um indicador pequeno, sem frase longa dentro do chip. Formato entregue SHALL ter destaque discreto; formato ausente SHALL permanecer em cinza legível; formato ativo no detalhe SHALL usar borda/fundo distintos, sem badge adicional. A distinção NÃO SHALL depender exclusivamente de cor. O estado completo SHALL permanecer no modelo e nos nomes/descrições acessíveis. Estados `unknown`/`unavailable` NUNCA SHALL exibir “Não gerado”; estorno conhecido SHALL permanecer distinguível de ausência simples e de indeterminação.
 
-#### Scenario: Formato entregue tem aparência de disponível
+#### Scenario: Formato entregue tem destaque discreto e nome compacto
 
 - **WHEN** um chip representa `delivered`
-- **THEN** SHALL exibir o nome do formato e o rótulo de disponibilidade
-- **AND** SHALL usar ícone e texto além do token de cor
+- **THEN** SHALL exibir apenas o nome do formato como texto visível
+- **AND** SHALL aplicar um destaque visual discreto de disponibilidade
+- **AND** o estado “Disponível” SHALL permanecer no nome/descrição acessível
+- **AND** SHALL NOT exibir o rótulo visível “Disponível” nem ícone redundante
 
-#### Scenario: Formato ativo é distinto no detalhe
+#### Scenario: Formato ativo é distinto sem badge
 
 - **WHEN** o detalhe exibe um formato entregue selecionado
-- **THEN** esse chip SHALL receber destaque visual e semântico de seleção
-- **AND** o destaque SHALL ser distinto de um chip apenas disponível
+- **THEN** esse chip SHALL receber borda/fundo distintos de um chip apenas disponível
+- **AND** SHALL NOT exibir o badge visível “Selecionado”
+- **AND** a seleção SHALL permanecer acessível por `aria-current`/nome acessível
 - **AND** SHALL NOT depender exclusivamente de cor
 
-#### Scenario: Formato ausente é cinza e sem promessa de geração
+#### Scenario: Formato ausente é cinza legível e sem frase longa
 
 - **WHEN** um chip representa `absent`
-- **THEN** SHALL aparecer em cinza, com ícone neutro e sem `+`
+- **THEN** SHALL aparecer em cinza legível, sem `+`
+- **AND** SHALL NOT exibir “Não incluído”/“Não entregue” como texto visível no chip
+- **AND** a ausência e seu motivo SHALL permanecer no nome/descrição acessível
 - **AND** SHALL NOT exibir CTA, modal ou promessa de geração
 
-#### Scenario: Processamento não parece entrega
+#### Scenario: Processamento usa indicador pequeno
 
 - **WHEN** um chip representa `processing`
-- **THEN** SHALL exibir um indicador próprio de processamento
-- **AND** SHALL NOT usar a aparência de disponível
+- **THEN** SHALL usar um indicador pequeno próprio de processamento
+- **AND** SHALL NOT parecer entregue
+- **AND** SHALL NOT exibir frase longa dentro do chip
 
-#### Scenario: Unknown e unavailable não são “Não gerado”
+#### Scenario: Unknown e unavailable usam dúvida discreta
 
 - **WHEN** um chip representa `unknown` ou `unavailable`
-- **THEN** SHALL indicar que a informação não está disponível
-- **AND** SHALL NOT exibir “Não gerado”
+- **THEN** SHALL usar indicador pequeno de dúvida/indisponibilidade
+- **AND** SHALL manter a informação completa no nome/descrição acessível
+- **AND** SHALL NOT exibir “Não gerado” nem frase longa
 
-#### Scenario: Estorno conhecido não é escondido
+#### Scenario: Estorno conhecido permanece distinguível
 
 - **WHEN** um formato ausente tem estorno conhecido
-- **THEN** o chip SHALL exibir o estado de ausência e a informação de crédito devolvido
-- **AND** a explicação SHALL mencionar o estorno
+- **THEN** o chip SHALL permanecer visualmente distinto de uma ausência simples
+- **AND** o crédito devolvido SHALL permanecer no nome/descrição acessível e na ajuda
+- **AND** SHALL NOT depender exclusivamente de cor
 
 ### Requirement: Explicações acessíveis por hover, foco e toque
 
-Cada chip SHALL oferecer uma explicação acessível do estado. A explicação SHALL estar disponível por hover e foco em desktop e por acionamento explícito em dispositivos de toque. O controle de explicação NÃO SHALL ser um botão desabilitado nem depender de um elemento não focável.
+Cada chip SHALL oferecer uma explicação acessível do estado. Em desktop, a explicação SHALL estar disponível por hover e foco de teclado. Em dispositivos de toque, SHALL haver um controle “?” discreto associado a cada formato. O controle NÃO SHALL ser um botão desabilitado, NÃO SHALL depender de um elemento não focável e NÃO SHALL ser aninhado dentro de link. O primeiro acionamento após hover/foco SHALL fixar a ajuda aberta, não fechá-la; o segundo acionamento SHALL fechar.
 
 #### Scenario: Explicação por teclado
 
-- **WHEN** o usuário navega por teclado até o controle de informação de um chip
-- **THEN** o controle SHALL ser focável e SHALL expor nome acessível
+- **WHEN** o usuário navega por teclado até o controle “?” de um chip
+- **THEN** o controle SHALL ser focável e SHALL expor nome acessível com formato e estado
 - **AND** a ativação SHALL revelar a explicação do estado
+- **AND** o primeiro acionamento após foco SHALL manter a ajuda aberta
 
 #### Scenario: Explicação por toque
 
-- **WHEN** o usuário toca no controle de informação em um dispositivo sem hover
+- **WHEN** o usuário toca no controle “?” em um dispositivo sem hover
 - **THEN** a explicação SHALL ser revelada
-- **AND** o alvo de toque SHALL ter no mínimo 44×44 px
+- **AND** a área acionável SHALL ter no mínimo 44×44 px, mesmo com aparência compacta
+- **AND** o segundo toque SHALL fechar
 
 #### Scenario: Explicação por hover e foco
 
-- **WHEN** o usuário posiciona o ponteiro ou o foco sobre um chip com explicação
+- **WHEN** o usuário posiciona o ponteiro ou o foco sobre um chip
 - **THEN** a explicação SHALL ficar acessível sem exigir clique
+- **AND** o primeiro clique/toque no “?” SHALL fixar a ajuda, sem fechá-la acidentalmente
 - **AND** o conteúdo SHALL permanecer legível no tema dark
+
+### Requirement: Ajuda flutuante sem deslocamento de layout
+
+A explicação SHALL ser exibida em uma camada flutuante fora do fluxo do layout, sem aumentar a altura do card, quebrar a linha dos chips, deslocar a arte ou criar overflow horizontal. O posicionamento SHALL respeitar a viewport e containers com `overflow`. A ajuda SHALL fechar por segundo acionamento, clique/toque fora e `Escape`, sem deixar conteúdo invisível focável nem foco perdido. Não SHALL haver dependência nova sem proposta e aprovação separadas; soluções existentes no projeto SHALL ser reutilizadas quando compatíveis.
+
+#### Scenario: Abrir ajuda não desloca o card nem a arte
+
+- **WHEN** a ajuda de qualquer chip é aberta
+- **THEN** a altura do card, a linha dos chips, a posição da arte e a largura do contêiner SHALL permanecer inalteradas
+- **AND** a ajuda SHALL aparecer fora do fluxo, sem criar overflow horizontal
+
+#### Scenario: Posicionamento respeita viewport e overflow
+
+- **WHEN** o chip está próximo da borda da viewport ou dentro de um container com `overflow`
+- **THEN** a ajuda SHALL permanecer visível e dentro da viewport
+- **AND** SHALL NOT ser cortada pelo container nem sobrepor ações de forma inutilizável
+
+#### Scenario: Fechamento consistente
+
+- **WHEN** a ajuda está aberta
+- **THEN** ela SHALL fechar no segundo acionamento do “?”, em clique/toque fora e em `Escape`
+- **AND** quando aberta por hover/foco, o primeiro acionamento do “?” SHALL apenas fixá-la
+- **AND** o foco SHALL permanecer previsível, sem elemento invisível focável
 
 ### Requirement: Lista e dashboard exibem chips informativos
 

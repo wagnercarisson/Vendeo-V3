@@ -91,3 +91,18 @@
 - [ ] 9.6 Rodar diff-check e revisar `git status`/`git diff` para confirmar escopo e ausência de artefatos indevidos.
 - [ ] 9.7 Resumir resultados reais, limites explícitos e pendências; parar para revisão antes de sync, archive, merge, push ou deploy.
 - [ ] 9.8 Confirmar que nenhum acesso a banco, Storage, homolog ou produção foi necessário nesta change.
+
+## 10. Refinamento visual compacto e ajuda flutuante (revisão 2026-11-21)
+
+> A implementação anterior (fase 61, `61-01`/`61-02`/`61-03`) permanece como histórico técnico. A UX **não** foi aprovada visualmente; este bloco é aditivo e não altera modelo/estados/financeiro.
+
+- [ ] 10.1 Reduzir o texto visível dos chips a “Quadrado 1:1”/“Vertical 9:16”; remover “Disponível”, “Não incluído”, “Não entregue” e o badge “Selecionado” do texto visível, mantendo estado completo em `aria-label`/descrição acessível.
+- [ ] 10.2 Aplicar tratamento compacto: entregue com destaque discreto; ausente em cinza legível; ativo com borda/fundo distintos e sem badge; `processing`/`unknown`/`refunded` apenas com indicador pequeno, sem frase longa.
+- [ ] 10.3 Implementar ajuda flutuante fora do fluxo (portal), com posicionamento que respeite viewport/overflow, sem aumentar altura do card, quebrar linha, deslocar arte ou criar overflow horizontal.
+- [ ] 10.4 Implementar hover/foco no desktop e “?” no toque; primeiro acionamento após hover/foco fixa a ajuda; segundo acionamento, clique/toque fora e `Escape` fecham; foco permanece previsível e não há conteúdo invisível focável.
+- [ ] 10.5 Preservar alvo acionável ≥44×44 px com aparência compacta; não aninhar botão dentro de link; “?” não navega nem alterna o formato.
+- [ ] 10.6 Preservar lista/dashboard informativos e detalhe com link de seleção; manter sem prefetch, `?format=` estrito, preview/download, polling, aprovação, recuperação, pt-BR/es-419 e espaçamento consistente entre chips e arte.
+- [ ] 10.7 Adicionar testes de componente para nomes compactos, estado acessível, hover→foco→clique, toque, segundo acionamento, Escape, clique fora, independência entre ajuda e seleção e ausência de deslocamento/overflow.
+- [ ] 10.8 Rodar regressões das três superfícies, baseline em leitura sem recaptura, typecheck, lint, build e suíte global; registrar diff-check do range completo.
+- [ ] 10.9 Registrar evidência visual real desktop/mobile (duas opções legíveis, ajuda sem deslocamento, sem cortes/sobreposição das ações); jsdom não comprova layout.
+- [ ] 10.10 Parar para revisão técnica e visual; não declarar a fase concluída nem a UX aprovada automaticamente.

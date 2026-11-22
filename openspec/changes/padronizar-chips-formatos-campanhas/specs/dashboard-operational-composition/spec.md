@@ -2,7 +2,7 @@
 
 ### Requirement: Campanha conjunta elegível no dashboard sem duplicar card
 
-O dashboard SHALL considerar elegível a campanha conjunta com pelo menos um formato entregue e `status = ready`. A campanha conjunta SHALL aparecer no máximo uma vez entre as campanhas recentes, sem criar uma linha por formato. Toda campanha disponível no dashboard — conjunta, individual ou legada — SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com os mesmos nomes, vocabulário e semântica de estados da listagem e do detalhe. O dashboard PODE ter menos evidência que o detalhe e exibir `unknown` onde o detalhe exibe `absent` + `refunded`, sem adicionar consulta. Os chips NÃO SHALL iniciar geração, abrir modal, produzir efeito financeiro ou navegar individualmente por formato nesta fatia. A contagem de campanhas disponíveis SHALL contar a campanha uma única vez. A miniatura SHALL ser derivada, com preferência para o quadrado quando entregue. A ação de abertura SHALL permanecer disponível mesmo quando apenas um formato estiver entregue ou a miniatura estiver indisponível. A apresentação dos chips SHALL usar somente os dados já carregados, sem nova consulta por card.
+O dashboard SHALL considerar elegível a campanha conjunta com pelo menos um formato entregue e `status = ready`. A campanha conjunta SHALL aparecer no máximo uma vez entre as campanhas recentes, sem criar uma linha por formato. Toda campanha disponível no dashboard — conjunta, individual ou legada — SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com os mesmos nomes, vocabulário e semântica de estados da listagem e do detalhe. Os chips SHALL ser compactos: texto visível apenas “Quadrado 1:1”/“Vertical 9:16”; rótulos de estado e badge “Selecionado” NÃO SHALL aparecer no chip. O estado completo SHALL permanecer no nome/descrição acessível. A ajuda SHALL ser flutuante, fora do fluxo, sem aumentar a altura da linha, deslocar miniatura/ações ou criar overflow horizontal. O dashboard PODE ter menos evidência que o detalhe e exibir `unknown` onde o detalhe exibe `absent` + `refunded`, sem adicionar consulta. Os chips NÃO SHALL iniciar geração, abrir modal, produzir efeito financeiro ou navegar individualmente por formato nesta fatia. A contagem de campanhas disponíveis SHALL contar a campanha uma única vez. A miniatura SHALL ser derivada, com preferência para o quadrado quando entregue. A ação de abertura SHALL permanecer disponível mesmo quando apenas um formato estiver entregue ou a miniatura estiver indisponível. A apresentação dos chips SHALL usar somente os dados já carregados, sem nova consulta por card.
 
 #### Scenario: Campanha conjunta parcial aparece uma vez
 
@@ -17,6 +17,14 @@ O dashboard SHALL considerar elegível a campanha conjunta com pelo menos um for
 - **THEN** a linha SHALL exibir chips para `1:1` e `9:16`
 - **AND** o formato não incluído SHALL aparecer em cinza, sem `+` e sem promessa de geração
 - **AND** a campanha individual pronta NÃO SHALL ser apresentada como parcial
+
+#### Scenario: Chips compactos e ajuda flutuante
+
+- **WHEN** a linha do dashboard exibe os chips
+- **THEN** o texto visível SHALL ser apenas o nome do formato
+- **AND** rótulos de estado/badge NÃO SHALL aparecer no chip
+- **AND** a ajuda SHALL abrir em camada flutuante sem alterar a altura da linha, a miniatura ou as ações
+- **AND** SHALL fechar no segundo acionamento, clique/toque fora ou `Escape`
 
 #### Scenario: Chips são informativos e não navegam
 

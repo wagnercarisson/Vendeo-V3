@@ -50,7 +50,7 @@ Nomes de produto, dados persistidos de campanha, textos comerciais e artes NÃO 
 
 ### Requirement: Card único com indicadores de formato para campanha conjunta
 
-A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive quando a campanha for conjunta. O card SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com estados independentes (`delivered`, `processing`, `absent`, `unknown` ou `unavailable`), usando o componente compartilhado e a mesma linguagem do dashboard e do detalhe. O formato entregue SHALL ter aparência de disponível. O formato em processamento SHALL ter indicador próprio, sem iniciar geração. O formato ausente SHALL aparecer em cinza, sem `+` e sem ação de geração nesta fatia. Estorno conhecido SHALL permanecer visível. Os chips NÃO SHALL ser links nem navegar individualmente por formato. A campanha conjunta com os dois formatos solicitados e apenas um entregue SHALL ser apresentada como parcial, sem duplicar o card. Campanha individual NÃO SHALL ser apresentada como parcial: o outro formato é não incluído. `status = error` NÃO SHALL ser convertido em ausência sem evidência explícita; nesse caso o formato SHALL ser `unknown`. As ações existentes de abrir campanha e baixar SHALL ser preservadas.
+A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive quando a campanha for conjunta. O card SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com estados independentes (`delivered`, `processing`, `absent`, `unknown` ou `unavailable`), usando o componente compartilhado e a mesma linguagem do dashboard e do detalhe. Os chips SHALL ser compactos: texto visível apenas “Quadrado 1:1”/“Vertical 9:16”; rótulos de estado e badge “Selecionado” NÃO SHALL aparecer no chip. O estado completo SHALL permanecer no nome/descrição acessível. Formato entregue SHALL ter destaque discreto; ausente SHALL permanecer em cinza legível; processamento e indeterminação PODEM usar indicador pequeno, sem frase longa. Estorno conhecido SHALL permanecer distinguível. A ajuda SHALL ser flutuante, fora do fluxo, sem aumentar a altura do card, quebrar a linha dos chips, deslocar a miniatura ou criar overflow horizontal. Os chips NÃO SHALL ser links nem navegar individualmente por formato. A campanha conjunta com os dois formatos solicitados e apenas um entregue SHALL ser apresentada como parcial, sem duplicar o card. Campanha individual NÃO SHALL ser apresentada como parcial: o outro formato é não incluído. `status = error` NÃO SHALL ser convertido em ausência sem evidência explícita; nesse caso o formato SHALL ser `unknown`. As ações existentes de abrir campanha e baixar SHALL ser preservadas.
 
 #### Scenario: Campanha aparece uma única vez
 
@@ -65,11 +65,20 @@ A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive 
 - **THEN** SHALL NOT haver navegação para `/campanhas/[id]?format=...`
 - **AND** SHALL NOT iniciar geração, reserva, modal ou chamada ao provider
 
-#### Scenario: Formato entregue tem aparência de disponível
+#### Scenario: Formato entregue tem destaque discreto e nome compacto
 
 - **WHEN** um formato da campanha está `delivered`
-- **THEN** o chip SHALL exibir o estado de disponibilidade
-- **AND** SHALL usar texto e forma além da cor
+- **THEN** o chip SHALL exibir apenas o nome do formato como texto visível
+- **AND** SHALL aplicar destaque visual discreto de disponibilidade
+- **AND** o estado “Disponível” SHALL permanecer no nome/descrição acessível
+- **AND** SHALL NOT exibir o rótulo visível “Disponível” nem ícone redundante
+
+#### Scenario: Ajuda flutuante não desloca o card
+
+- **WHEN** a ajuda de um chip é aberta por hover, foco ou toque
+- **THEN** a altura do card, a linha dos chips e a posição da miniatura SHALL permanecer inalteradas
+- **AND** a ajuda SHALL aparecer em camada flutuante, sem overflow horizontal
+- **AND** SHALL fechar no segundo acionamento, clique/toque fora ou `Escape`
 
 #### Scenario: Formato em processamento não inicia geração
 
@@ -77,16 +86,19 @@ A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive 
 - **THEN** o chip SHALL exibir o estado com indicador próprio
 - **AND** SHALL NOT iniciar nova geração, reserva ou chamada ao provider
 
-#### Scenario: Formato ausente informa sem ação
+#### Scenario: Formato ausente é compacto e sem ação
 
 - **WHEN** um formato está ausente
-- **THEN** o card SHALL exibir o chip em cinza, sem `+`
+- **THEN** o card SHALL exibir o chip compacto em cinza legível, sem `+`
+- **AND** SHALL NOT exibir “Não incluído”/“Não entregue” como texto visível no chip
+- **AND** a ausência e o motivo SHALL permanecer no nome/descrição acessível
 - **AND** SHALL NOT oferecer modal, confirmação, custo ou ação de geração nesta fatia
 
-#### Scenario: Estorno conhecido permanece visível
+#### Scenario: Estorno conhecido permanece distinguível
 
 - **WHEN** um formato ausente tem estorno conhecido
-- **THEN** o chip SHALL informar o crédito devolvido
+- **THEN** o chip SHALL permanecer visualmente distinto de uma ausência simples
+- **AND** o crédito devolvido SHALL permanecer no nome/descrição acessível e na ajuda
 - **AND** SHALL NOT esconder o estorno como ausência simples
 
 #### Scenario: Indeterminação não vira “Não gerado”

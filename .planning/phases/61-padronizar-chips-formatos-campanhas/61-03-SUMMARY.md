@@ -1,6 +1,8 @@
 # Phase 61 Plan 03: detalhe `/campanhas/[id]` com chips compartilhados
 
-**Status:** ⛔ **NÃO ACEITO / AGUARDANDO REVISÃO** — executado localmente/offline em 2026-11-21; parada obrigatória no `## Review Stop`. A fase 61 **NÃO** está concluída nem aceita como um todo.
+**Status:** ⛔ **NÃO ACEITO / AGUARDANDO REVISÃO TÉCNICA E VISUAL** — executado localmente/offline em 2026-11-21; **UX REPROVADA VISUALMENTE**. A fase 61 **NÃO** está concluída nem aceita como um todo. O ajuste complementar está em `61-04-PLAN.md`.
+
+**Pendência visual registrada:** chips grandes, textos redundantes e ajuda deslocando arte/cards. O refinamento compacto/ajuda flutuante é tratado no `61-04`, sem alterar builders, classificação, lifecycle, autoridades, financeiro ou consultas.
 
 **Executado em:** 2026-11-21
 **Branch:** `feat/campaign-format-chips`
