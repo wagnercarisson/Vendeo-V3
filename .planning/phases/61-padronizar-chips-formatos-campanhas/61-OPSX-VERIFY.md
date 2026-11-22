@@ -1,8 +1,8 @@
 # Phase 61 — OPSX Verify (implementation vs OpenSpec)
 
-**Change:** `padronizar-chips-formatos-campanhas`  
-**Data:** 2026-11-22  
-**Implementação final:** `61-05` (aceito técnico e visual/funcionalmente por declaração do responsável)  
+**Change:** `padronizar-chips-formatos-campanhas`
+**Data:** 2026-11-22
+**Implementação final:** `61-05` (aceito técnico e visual/funcionalmente por declaração do responsável)
 **Status:** **PASS COM RESSALVAS — nenhum blocker; pronto para sync/archive somente com autorização separada.**
 
 ## Summary
@@ -60,3 +60,4 @@
 ## Final assessment
 
 **Nenhum blocker OpenSpec.** Implementação coerente com specs/design e tasks 72/72. Pronto para sync/archive **somente após autorização separada**; nenhum sync/archive/merge/push/deploy foi executado.
+
