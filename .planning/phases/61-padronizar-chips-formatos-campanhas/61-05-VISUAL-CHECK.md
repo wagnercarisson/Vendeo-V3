@@ -1,11 +1,14 @@
-# Phase 61 — `61-05` Evidência visual (PENDENTE)
+# Phase 61 — `61-05` Evidência visual (ACEITA POR DECLARAÇÃO)
 
-**Status:** ⏳ **PENDENTE — AGUARDANDO INSPEÇÃO HUMANA REAL**
+**Status:** ✅ **ACEITE VISUAL/FUNCIONAL DECLARADO PELO RESPONSÁVEL EM 2026-11-22** — sem capturas, medições ou viewports fornecidos; nenhuma aprovação simulada.
 **Plano:** `61-05-PLAN.md` (remoção do “?” e chip como único controle)
 **Data de criação:** 2026-11-22
 **Branch:** `feat/campaign-format-chips`
 
-> Este arquivo registra SOMENTE o roteiro e os critérios de inspeção visual.
+> Este arquivo registra o roteiro e o aceite declarado. O responsável informou o
+> aceite visual/funcional da fatia em 2026-11-22. Não foram fornecidas capturas,
+> medições ou lista de viewports testadas; os itens individuais abaixo permanecem
+> como critérios de conferência, não como medições inventadas.
 > Nenhuma aprovação visual foi simulada. `jsdom` não comprova layout; a
 > confirmação abaixo é humana e posterior à revisão técnica. O `61-04` segue
 > **NÃO ACEITO** e este plano não o aceita retroativamente.
@@ -66,11 +69,12 @@ processando, estornado, indeterminado/indisponível):
 
 ## Evidência
 
-- Capturas de tela: **AUSENTES** (inspeção humana pendente).
-- Resultado: **NÃO APROVADO / NÃO REPROVADO** — aguardando revisão.
+- Capturas de tela: **NÃO FORNECIDAS**.
+- Medições/viewports: **NÃO FORNECIDOS** pelo responsável.
+- Resultado: **ACEITE VISUAL/FUNCIONAL DECLARADO EM 2026-11-22**; os critérios acima não foram convertidos em medições inventadas.
 
 ## Limite
 
-Aprovação visual de lista/dashboard/detalhe em desktop, celular e 320 px é
-HUMANA e posterior. Este documento não declara a fase 61 concluída nem a UX
-aprovada. Nenhuma aprovação foi simulada por `jsdom`.
+O aceite é uma declaração do responsável, não uma captura/medição reproduzida
+pelo executor. Este documento não declara a fase 61 arquivada, publicada ou
+implantada. Nenhuma aprovação foi simulada por `jsdom`.

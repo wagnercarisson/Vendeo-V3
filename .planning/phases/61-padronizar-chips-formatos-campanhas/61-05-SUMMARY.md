@@ -1,6 +1,6 @@
 # Phase 61 Plan 05: remoção do “?” e chip como único controle
 
-**Status:** ⛔ **NÃO ACEITO / AGUARDANDO REVISÃO TÉCNICA E VISUAL** — executado localmente/offline em 2026-11-22. A fase 61 **NÃO** está concluída; a UX **NÃO** está aprovada. A validação visual de lista/dashboard/detalhe (desktop, celular e 320 px) é humana e posterior. O `61-04` continua **NÃO ACEITO**; este plano não o aceita retroativamente.
+**Status:** ✅ **ACEITO TECNICAMENTE E VISUAL/FUNCIONALMENTE EM 2026-11-22** — sem bloqueadores remanescentes. A fase 61 ainda não está arquivada/publicada; `61-03` é aceito no resultado final e `61-04` permanece superseded, sem aprovação retroativa.
 
 **Executado em:** 2026-11-22
 **Branch:** `feat/campaign-format-chips`
@@ -115,7 +115,7 @@ link.
 
 ### Criados
 
-- `.planning/phases/61-padronizar-chips-formatos-campanhas/61-05-VISUAL-CHECK.md` — checklist **PENDENTE** de inspeção humana (1440×900, 390×844, 320 px).
+- `.planning/phases/61-padronizar-chips-formatos-campanhas/61-05-VISUAL-CHECK.md` — checklist com **aceite visual/funcional declarado pelo responsável em 2026-11-22**; sem capturas/medições/viewports fornecidos, não simulado.
 - `.planning/phases/61-padronizar-chips-formatos-campanhas/evidence/61-05-baseline-read-after.log`
 - `.planning/phases/61-padronizar-chips-formatos-campanhas/evidence/61-05-directed.log`
 - `.planning/phases/61-padronizar-chips-formatos-campanhas/evidence/61-05-typecheck.log`
@@ -273,8 +273,9 @@ financeiro.
 - Gates de integração (Postgres/homolog/local/app-env/Product 1:1/F60/F60.1)
   **NÃO EXECUTADOS** por ausência de ambiente (a saída da suíte global registra
   “GATE NÃO EXECUTADO — NÃO APROVADO”).
-- **Validação visual HUMANA PENDENTE:** `61-05-VISUAL-CHECK.md` está marcado como
-  **PENDENTE**; nenhuma captura foi gerada e nenhuma aprovação foi simulada.
+- **Validação visual ACEITA POR DECLARAÇÃO:** `61-05-VISUAL-CHECK.md` registra o
+  aceite visual/funcional do responsável em 2026-11-22; nenhuma captura,
+  medição ou viewport foi fornecida e nenhuma aprovação foi simulada.
   `jsdom` não comprova layout.
 - **Fase 61 NÃO concluída:** `61-03`/`61-04`/`61-05` não aceitos; sem
   sync/archive/merge/push/deploy. `.planning/STATE.md` e `.planning/ROADMAP.md`

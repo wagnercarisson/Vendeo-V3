@@ -110,7 +110,7 @@ O componente compartilhado SHALL exibir normalmente apenas o nome do formato —
 
 ### Requirement: Explicações acessíveis pelo próprio chip
 
-Cada chip SHALL oferecer uma explicação acessível do estado sem controle “?” separado. Em desktop, a explicação SHALL estar disponível por hover e foco de teclado no próprio chip. Em dispositivos de toque, a semântica do chip SHALL decidir a ação: no detalhe, chip entregue SHALL ser um link `<a>` cujo toque seleciona a arte; chip não entregue/excepcional SHALL ser um `<button type="button">` cujo toque abre/fecha apenas a explicação. Na lista/dashboard, o chip SHALL ser um `<button type="button">` que abre/fecha apenas a explicação. NÃO SHALL existir botão dentro de link, handler duplicado, controle invisível ou detecção de toque baseada apenas na largura da tela. O estado completo SHALL permanecer no nome/descrição acessível.
+Cada chip SHALL oferecer uma explicação acessível do estado sem controle “?” separado. Em desktop, a explicação SHALL estar disponível por hover e foco de teclado no próprio chip. Em dispositivos de toque, a semântica do chip SHALL decidir a ação: no detalhe, chip entregue **com `href`** SHALL ser um link `<a>` cujo toque seleciona a arte; chip entregue sem href e chip não entregue/excepcional SHALL ser um `<button type="button">` cujo toque abre/fecha apenas a explicação. Na lista/dashboard, o chip SHALL ser um `<button type="button">` que abre/fecha apenas a explicação. NÃO SHALL existir botão dentro de link, handler duplicado, controle invisível ou detecção de toque baseada apenas na largura da tela. O estado completo SHALL permanecer no nome/descrição acessível.
 
 #### Scenario: Explicação por teclado no próprio chip
 
