@@ -980,13 +980,13 @@ Plans:
 
 ### Phase 61: F61 - Padronizacao dos chips de formato 1:1 e 9:16
 
-**Status (2026-11-21):** **61-01 E 61-02 ACEITOS; 61-03 EXECUTADO, NÃO ACEITO; UX NÃO APROVADA VISUALMENTE; 61-04 PLANEJADO; FASE NÃO CONCLUÍDA.** Fonte tecnica: `openspec/changes/padronizar-chips-formatos-campanhas/` (`--strict` valido), com design/specs/tasks atualizados para o refinamento compacto e ajuda flutuante. Evidência 61-01: 13 arquivos/93 testes. Evidência 61-02: 38 arquivos/324 testes. Evidência 61-03: 63 arquivos/637 testes; build exit 0; global 843 arquivos/10467 testes PASS, 10 skipped; baseline em leitura sem drift; diff-check limpo. A apresentação atual foi reprovada visualmente (chips grandes, textos redundantes, ajuda deslocando arte/cards); o `61-04` é aditivo e não altera builders/classificação/lifecycle/autoridades/financeiro/consultas. Validação visual real continua pendente.
+**Status (2026-11-21):** **61-01 E 61-02 ACEITOS; 61-03 EXECUTADO, NÃO ACEITO; 61-04 EXECUTADO, NÃO ACEITO; UX NÃO APROVADA VISUALMENTE; FASE NÃO CONCLUÍDA.** Fonte tecnica: `openspec/changes/padronizar-chips-formatos-campanhas/` (`--strict` valido), com design/specs/tasks atualizados para chips compactos e ajuda flutuante. Evidência 61-01: 13 arquivos/93 testes. Evidência 61-02: 38 arquivos/324 testes. Evidência 61-03: 63 arquivos/637 testes; build/global atualizados. Evidência 61-04: 11 arquivos/164 testes; build exit 0; global 844 arquivos/10485 testes PASS, 10 skipped; baseline em leitura sem drift; diff-check limpo. `61-04-VISUAL-CHECK.md` permanece pendente de inspeção humana em desktop/mobile. Sem merge/push/deploy/sync/archive.
 
 **Planos:** 3 waves sequenciais, cada uma com `autonomous: false` e `## Review Stop`:
 - [x] 61-01-PLAN.md - Baseline medido + modelo puro + catalogo compartilhado + componente de chips; aceito localmente/offline.
 - [x] 61-02-PLAN.md - Integracao na listagem e no dashboard com dados ja carregados, chips informativos e zero consultas adicionais; aceito localmente/offline.
 - [ ] 61-03-PLAN.md - Integracao no detalhe, selecao conjunta/`?format=` estrito/gates, remocao da duplicacao e regressoes finais; executado, aguardando revisao e validacao visual.
-- [ ] 61-04-PLAN.md - Refinamento visual compacto e ajuda flutuante; plano criado e verificado, aguardando aprovacao antes de implementar.
+- [ ] 61-04-PLAN.md - Refinamento visual compacto e ajuda flutuante; executado, aguardando revisao tecnica e validacao visual.
 
 **Baseline:** `.planning/phases/61-padronizar-chips-formatos-campanhas/61-BASELINE.md` (HEAD `c971d631a190d426be21341f4616f6e4c7cb5135`, branch `feat/campaign-format-chips`); evidencia medida em `evidence/baseline-calls.test.ts`/`baseline-calls.json`.
 
