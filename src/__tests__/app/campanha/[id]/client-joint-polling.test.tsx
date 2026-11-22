@@ -307,7 +307,7 @@ describe("F60.7 C3 — cliente conjunto montado", () => {
       screen.getAllByText("Entrega parcial: um formato foi estornado."),
     ).toHaveLength(1);
     expect(
-      screen.getByRole("group", { name: /Crédito devolvido$/ }),
+      screen.getByRole("button", { name: /Crédito devolvido$/ }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Não gerado")).toBeNull();
   });
@@ -364,7 +364,7 @@ describe("F60.7 C3 — cliente conjunto montado", () => {
 
     expect(screen.queryByText("Processando formatos...")).toBeNull();
     expect(
-      screen.getAllByRole("group", { name: /Não foi possível confirmar$/ }),
+      screen.getAllByRole("button", { name: /Não foi possível confirmar$/ }),
     ).toHaveLength(2);
   });
 });

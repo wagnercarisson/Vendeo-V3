@@ -127,7 +127,7 @@ describe("AvailableCampaignCard", () => {
     expect(screen.getByText("19 de out. de 2026")).not.toHaveAttribute("lang");
     expect(screen.getByText("Quadrado 1:1")).not.toHaveAttribute("lang");
     expect(
-      screen.getByRole("group", { name: "Quadrado 1:1: Disponível" }),
+      screen.getByRole("button", { name: "Quadrado 1:1: Disponível" }),
     ).not.toHaveAttribute("lang");
   });
 
@@ -169,10 +169,10 @@ describe("F61 — chips de formato no card do dashboard", () => {
     expect(within(group).getAllByRole("listitem")).toHaveLength(2);
     expect(within(group).getByText("Quadrado 1:1")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Quadrado 1:1: Disponível" }),
+      screen.getByRole("button", { name: "Quadrado 1:1: Disponível" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Vertical 9:16: Não incluído" }),
+      screen.getByRole("button", { name: "Vertical 9:16: Não incluído" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Disponível")).toBeNull();
     expect(screen.queryByText("Não incluído")).toBeNull();
@@ -184,10 +184,10 @@ describe("F61 — chips de formato no card do dashboard", () => {
     const group = formatGroup();
     expect(within(group).getByText("Vertical 9:16")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Vertical 9:16: Disponível" }),
+      screen.getByRole("button", { name: "Vertical 9:16: Disponível" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Quadrado 1:1: Não incluído" }),
+      screen.getByRole("button", { name: "Quadrado 1:1: Não incluído" }),
     ).toBeInTheDocument();
     // Campanha individual não tem indicador de entrega parcial no chip.
     expect(screen.queryByText("Não entregue")).toBeNull();
@@ -222,7 +222,7 @@ describe("F61 — chips de formato no card do dashboard", () => {
     const group = formatGroup();
     expect(group.querySelectorAll("li")).toHaveLength(2);
     expect(
-      screen.getAllByRole("group", { name: /Disponível$/ }),
+      screen.getAllByRole("button", { name: /Disponível$/ }),
     ).toHaveLength(2);
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
@@ -252,10 +252,10 @@ describe("F61 — chips de formato no card do dashboard", () => {
     );
 
     expect(
-      screen.getByRole("group", { name: /Disponível$/ }),
+      screen.getByRole("button", { name: /Disponível$/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: /Crédito devolvido$/ }),
+      screen.getByRole("button", { name: /Crédito devolvido$/ }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
@@ -267,7 +267,7 @@ describe("F61 — chips de formato no card do dashboard", () => {
     const { rerender } = renderCard(null, buildUnknownFormatPresentation());
 
     expect(
-      screen.getAllByRole("group", { name: /Não foi possível confirmar$/ }),
+      screen.getAllByRole("button", { name: /Não foi possível confirmar$/ }),
     ).toHaveLength(2);
     expect(screen.queryByText("Não gerado")).toBeNull();
 
@@ -285,7 +285,7 @@ describe("F61 — chips de formato no card do dashboard", () => {
     );
 
     expect(
-      screen.getAllByRole("group", { name: /Indisponível$/ }),
+      screen.getAllByRole("button", { name: /Indisponível$/ }),
     ).toHaveLength(2);
     expect(screen.queryByText("Não gerado")).toBeNull();
   });
@@ -325,13 +325,13 @@ describe("F61 — chips de formato no card do dashboard", () => {
       />,
     );
 
-    const group = screen.getByRole("group", { name: /^Cuadrado 1:1/ });
-    fireEvent.click(within(group).getByRole("button"));
+    const chip = screen.getByRole("button", { name: /^Cuadrado 1:1/ });
+    fireEvent.click(chip);
 
     const note = screen.getByRole("note");
     expect(note).toHaveAttribute("lang", "es-419");
     expect(note.parentElement).toBe(document.body);
-    expect(within(group).queryByRole("note")).toBeNull();
+    expect(chip.closest("li")?.querySelector('[role="note"]')).toBeNull();
     expect(screen.getByRole("link", { name: /Abrir campanha/ })).toHaveAttribute(
       "href",
       "/campanhas/c1",

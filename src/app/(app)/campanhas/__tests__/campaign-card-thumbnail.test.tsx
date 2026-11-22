@@ -81,11 +81,11 @@ describe("listagem — card do consumidor (miniatura × placeholder)", () => {
 
     expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Vertical 9:16: Disponível" }),
+      screen.getByRole("button", { name: "Vertical 9:16: Disponível" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Quadrado 1:1: Não incluído" }),
+      screen.getByRole("button", { name: "Quadrado 1:1: Não incluído" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Pronta")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Cafeteira" })).toBeInTheDocument();

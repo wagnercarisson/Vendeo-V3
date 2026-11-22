@@ -190,10 +190,10 @@ describe("CampaignListClient — display", () => {
     expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
     expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Quadrado 1:1: Disponível" }),
+      screen.getByRole("button", { name: "Quadrado 1:1: Disponível" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Vertical 9:16: Não incluído" }),
+      screen.getByRole("button", { name: "Vertical 9:16: Não incluído" }),
     ).toBeInTheDocument();
     // Os rótulos não são texto visível; ficam no nome/descrição acessível.
     expect(screen.queryByText("Disponível")).toBeNull();
@@ -206,7 +206,7 @@ describe("CampaignListClient — display", () => {
     );
 
     expect(
-      screen.getAllByRole("group", { name: /Indisponível$/ }),
+      screen.getAllByRole("button", { name: /Indisponível$/ }),
     ).toHaveLength(2);
     expect(screen.queryByText("1:1 quadrado")).not.toBeInTheDocument();
   });
@@ -224,13 +224,13 @@ describe("CampaignListClient — display", () => {
     expect(screen.getAllByText("Cuadrado 1:1")).toHaveLength(2);
     expect(screen.getAllByText("Vertical 9:16")).toHaveLength(2);
     expect(
-      screen.getByRole("group", { name: "Cuadrado 1:1: Disponible" }),
+      screen.getByRole("button", { name: "Cuadrado 1:1: Disponible" }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole("group", { name: /No incluido$/ }),
+      screen.getAllByRole("button", { name: /No incluido$/ }),
     ).toHaveLength(2);
     expect(
-      screen.getByRole("group", { name: /No fue posible confirmar$/ }),
+      screen.getByRole("button", { name: /No fue posible confirmar$/ }),
     ).toBeInTheDocument();
   });
 
@@ -566,11 +566,11 @@ describe("F61 — chips informativos nos cards da listagem", () => {
     expect(chips).toHaveLength(2);
     expect(within(group).getByText("Vertical 9:16")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Vertical 9:16: Disponível" }),
+      screen.getByRole("button", { name: "Vertical 9:16: Disponível" }),
     ).toBeInTheDocument();
     expect(within(group).getByText("Quadrado 1:1")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Quadrado 1:1: Não incluído" }),
+      screen.getByRole("button", { name: "Quadrado 1:1: Não incluído" }),
     ).toBeInTheDocument();
   });
 
@@ -578,16 +578,16 @@ describe("F61 — chips informativos nos cards da listagem", () => {
     renderSingle(mockGeneratingCampaign);
 
     expect(
-      screen.getByRole("group", { name: /Processando$/ }),
+      screen.getByRole("button", { name: /Processando$/ }),
     ).toBeInTheDocument();
-    expect(screen.queryAllByRole("group", { name: /Disponível$/ })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: /Disponível$/ })).toHaveLength(0);
   });
 
   it("campanha com erro mostra estado indeterminado e nunca 'Não gerado'", () => {
     renderSingle(mockErrorCampaign);
 
     expect(
-      screen.getByRole("group", { name: /Não foi possível confirmar$/ }),
+      screen.getByRole("button", { name: /Não foi possível confirmar$/ }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Não gerado")).not.toBeInTheDocument();
     // O formato persistido não é apresentado como ausência/não entregue.
@@ -597,9 +597,9 @@ describe("F61 — chips informativos nos cards da listagem", () => {
   it("conjunta completa mostra os dois formatos disponíveis", () => {
     renderSingle(mockJointCompleteCampaign);
 
-    expect(screen.getAllByRole("group", { name: /Disponível$/ })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /Disponível$/ })).toHaveLength(2);
     expect(
-      screen.queryAllByRole("group", { name: /Crédito devolvido$/ }),
+      screen.queryAllByRole("button", { name: /Crédito devolvido$/ }),
     ).toHaveLength(0);
   });
 
@@ -607,10 +607,10 @@ describe("F61 — chips informativos nos cards da listagem", () => {
     renderSingle(mockJointPartialCampaign);
 
     expect(
-      screen.getByRole("group", { name: /Disponível$/ }),
+      screen.getByRole("button", { name: /Disponível$/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: /Crédito devolvido$/ }),
+      screen.getByRole("button", { name: /Crédito devolvido$/ }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abrir" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Baixar" })).toBeInTheDocument();
@@ -644,10 +644,10 @@ describe("F61 — chips informativos nos cards da listagem", () => {
     expect(within(group).queryAllByRole("link")).toHaveLength(0);
     expect(group.querySelectorAll("a")).toHaveLength(0);
 
-    // Acionar os “?” abre apenas a ajuda local; clicar nos nomes não navega.
-    const helpButtons = within(group).getAllByRole("button");
-    expect(helpButtons).toHaveLength(2);
-    for (const button of helpButtons) {
+    // Acionar os chips abre apenas a ajuda local; clicar nos nomes não navega.
+    const chipButtons = within(group).getAllByRole("button");
+    expect(chipButtons).toHaveLength(2);
+    for (const button of chipButtons) {
       fireEvent.click(button);
     }
     fireEvent.click(within(group).getByText("Quadrado 1:1"));
@@ -693,13 +693,13 @@ describe("F61 — chips informativos nos cards da listagem", () => {
       />,
     );
 
-    const group = screen.getByRole("group", { name: /^Cuadrado 1:1/ });
-    fireEvent.click(within(group).getByRole("button"));
+    const chip = screen.getByRole("button", { name: /^Cuadrado 1:1/ });
+    fireEvent.click(chip);
 
     const note = screen.getByRole("note");
     expect(note).toHaveAttribute("lang", "es-419");
     expect(note.parentElement).toBe(document.body);
-    expect(within(group).queryByRole("note")).toBeNull();
+    expect(chip.closest("li")?.querySelector('[role="note"]')).toBeNull();
     expect(routerMock.push).not.toHaveBeenCalled();
     expect(routerMock.replace).not.toHaveBeenCalled();
   });

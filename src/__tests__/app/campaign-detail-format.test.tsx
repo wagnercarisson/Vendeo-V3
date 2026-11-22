@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -107,10 +107,10 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
     expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
     expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Quadrado 1:1: Não incluído" }),
+      screen.getByRole("button", { name: "Quadrado 1:1: Não incluído" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", {
+      screen.getByRole("button", {
         name: "Vertical 9:16: Disponível, Selecionado",
       }),
     ).toBeInTheDocument();
@@ -160,7 +160,9 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
     expect(
       screen.getByRole("list", { name: "Formatos da campanha" }),
     ).toBeInTheDocument();
-    expect(screen.queryAllByRole("group", { name: /Selecionado/ })).toHaveLength(0);
+    expect(
+      screen.queryAllByRole("button", { name: /Selecionado/ }),
+    ).toHaveLength(0);
     expect(screen.queryByRole("button", { name: /baixar/i })).toBeNull();
     expect(
       screen.getByRole("button", { name: /aprovar arte/i }),
@@ -189,11 +191,13 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
       screen.getByRole("list", { name: "Formatos da campanha" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Corrigindo a arte...")).toBeInTheDocument();
-    expect(screen.queryAllByRole("group", { name: /Selecionado/ })).toHaveLength(0);
+    expect(
+      screen.queryAllByRole("button", { name: /Selecionado/ }),
+    ).toHaveLength(0);
     expect(screen.queryByRole("button", { name: /baixar/i })).toBeNull();
   });
 
-  it("F61 — '?' abre ajuda flutuante fora do fluxo com lang es-419, sem navegar", () => {
+  it("F61 — o próprio chip abre ajuda flutuante fora do fluxo com lang es-419, sem navegar", () => {
     render(
       <CampaignPageClient
         {...BASE_PROPS}
@@ -202,16 +206,15 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
       />,
     );
 
-    const group = screen.getByRole("group", { name: /Vertical 9:16/ });
-    const button = within(group).getByRole("button");
+    const chip = screen.getByRole("button", { name: /Vertical 9:16/ });
 
-    fireEvent.click(button);
+    fireEvent.click(chip);
 
     const note = screen.getByRole("note");
     expect(note).toHaveAttribute("lang", "es-419");
     expect(note.parentElement).toBe(document.body);
     // O popover não entra no fluxo dos chips nem da arte.
-    expect(within(group).queryByRole("note")).toBeNull();
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(chip.closest("li")?.querySelector('[role="note"]')).toBeNull();
+    expect(chip).toHaveAttribute("aria-expanded", "true");
   });
 });
