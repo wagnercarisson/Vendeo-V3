@@ -74,20 +74,28 @@ function individual(
   );
 }
 
-function groupByName(pattern: RegExp): HTMLElement {
-  return screen.getByRole("group", { name: pattern });
+/** O CHIP (link ou botão) é o único controle de cada item da lista. */
+function chipOf(item: HTMLElement): HTMLElement {
+  const control =
+    within(item).queryByRole("link") ?? within(item).queryByRole("button");
+  if (!control) throw new Error("controle do chip não encontrado");
+  return control;
 }
 
-function helpButtonOf(group: HTMLElement): HTMLElement {
-  return within(group).getByRole("button");
+function chipItems(): HTMLElement[] {
+  return screen.getAllByRole("listitem");
 }
 
-/** O elemento “chip” (link ou span) é o pai do nome visível dentro do grupo. */
-function chipElement(group: HTMLElement): HTMLElement {
-  const link = within(group).queryByRole("link");
-  if (link) return link;
-  const nameSpan = group.querySelector("span.break-words");
-  return (nameSpan?.parentElement as HTMLElement | null) ?? group;
+function allChips(): HTMLElement[] {
+  return chipItems().map(chipOf);
+}
+
+function chipByLabel(pattern: RegExp): HTMLElement {
+  const found = allChips().find((chip) =>
+    pattern.test(chip.getAttribute("aria-label") ?? ""),
+  );
+  if (!found) throw new Error(`chip não encontrado: ${pattern}`);
+  return found;
 }
 
 afterEach(() => {
@@ -95,16 +103,16 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("F61 — componente compartilhado de chips de formato (compacto)", () => {
+describe("F61 — chip único de formato (sem '?')", () => {
   it("renderiza sempre dois chips, na ordem 1:1 e 9:16, com texto visível apenas dos nomes", () => {
     renderChips(joint("delivered", "delivered"));
 
-    const items = screen.getAllByRole("listitem");
+    const items = chipItems();
     expect(items).toHaveLength(2);
-    const groups = screen.getAllByRole("group");
-    expect(groups).toHaveLength(2);
-    expect(groups[0].textContent).toBe("Quadrado 1:1");
-    expect(groups[1].textContent).toBe("Vertical 9:16");
+    expect(allChips()).toHaveLength(2);
+    const chips = allChips();
+    expect(chips[0].textContent).toBe("Quadrado 1:1");
+    expect(chips[1].textContent).toBe("Vertical 9:16");
     expect(
       screen.getByRole("list", { name: "Formatos da campanha" }),
     ).toBeInTheDocument();
@@ -117,21 +125,18 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
       HREFS,
     );
 
-    // Os rótulos existem apenas no nome acessível/descrição/ajuda, nunca como
-    // texto visível isolado.
     expect(screen.queryByText("Disponível")).toBeNull();
     expect(screen.queryByText("Selecionado")).toBeNull();
     expect(screen.queryByText("Não incluído")).toBeNull();
     expect(screen.queryByText("Não entregue")).toBeNull();
 
-    const vertical = groupByName(/Vertical 9:16/);
-    expect(vertical.textContent).toBe("Vertical 9:16");
+    expect(chipByLabel(/^Vertical 9:16/).textContent).toBe("Vertical 9:16");
   });
 
-  it("expõe o estado completo no group acessível e em descrição hidden estável", () => {
+  it("expõe o estado completo no aria-label e em descrição hidden estável", () => {
     renderChips(joint("delivered", "absent"));
 
-    const delivered = groupByName(/^Quadrado 1:1: Disponível$/);
+    const delivered = chipByLabel(/^Quadrado 1:1: Disponível$/);
     expect(delivered).toHaveAccessibleName("Quadrado 1:1: Disponível");
     expect(delivered).toHaveAccessibleDescription(
       "Disponível. Este formato está disponível nesta campanha.",
@@ -148,20 +153,145 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     );
   });
 
-  it("associa a descrição também ao link de seleção e marca apenas o ativo com aria-current", () => {
+  it("não existe '?' separado: o próprio chip é o único controle, sem nested ou grupo duplicando o nome", () => {
+    const { container } = renderChips(
+      joint("delivered", "absent"),
+      ptBRCampaignFormatMessages,
+      HREFS,
+    );
+
+    // Exatamente dois controles: o chip entregue (link) e o ausente (botão).
+    expect(container.querySelectorAll("a, button")).toHaveLength(2);
+    // Nenhum wrapper `role="group"` com nome acessível duplicando o chip.
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+    // Nenhum botão aninhado em link ou link dentro de botão.
+    expect(
+      container.querySelectorAll("a button, button a, a a, button button"),
+    ).toHaveLength(0);
+    // Nenhum foco órfão/invisível: os únicos focáveis são os chips.
+    expect(
+      container.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])'),
+    ).toHaveLength(2);
+    // O nome acessível não menciona a ação antiga do "?".
+    for (const chip of allChips()) {
+      expect(chip.getAttribute("aria-label")).not.toMatch(/Ver explicação/);
+    }
+  });
+
+  it("entregue x ausente não depende só de cor: borda espessa/preenchimento x borda simples", () => {
+    renderChips(individual("delivered"));
+
+    const deliveredChip = chipByLabel(/^Quadrado 1:1/);
+    expect(deliveredChip.className).toContain("border-2");
+    expect(deliveredChip.className).toContain("border-solid");
+    expect(deliveredChip.className).toContain("bg-accent-green/10");
+
+    const absentChip = chipByLabel(/^Vertical 9:16: Não incluído$/);
+    expect(absentChip.className).toContain("border-solid");
+    expect(absentChip.className).not.toContain("border-2");
+    expect(absentChip.className).toContain("bg-bg-elevated");
+    expect(absentChip.className).toContain("text-text-secondary");
+
+    for (const chip of allChips()) {
+      expect(chip.querySelector("svg")).toBeNull();
+    }
+  });
+
+  it("ativo usa borda/fundo distintos sem badge", () => {
+    renderChips(joint("delivered", "delivered", { activeFormat: "1:1" }));
+
+    const activeChip = chipByLabel(/Selecionado/);
+    expect(activeChip.className).toContain("ring-1");
+    expect(activeChip.className).toContain("ring-accent-green/40");
+    expect(activeChip.className).toContain("bg-accent-green/15");
+    expect(screen.queryByText("Selecionado")).toBeNull();
+  });
+
+  it("processing usa indicador pequeno de processamento", () => {
+    const { container } = renderChips(joint("processing", "delivered"));
+
+    expect(container.querySelector(".lucide-loader-circle")).not.toBeNull();
+    expect(chipByLabel(/^Quadrado 1:1: Processando$/)).toBeInTheDocument();
+  });
+
+  it("unknown/unavailable usam dúvida pequena + borda tracejada; refunded usa Undo2", () => {
+    renderChips(buildUnknownFormatPresentation());
+    for (const chip of allChips()) {
+      expect(chip.querySelector(".lucide-circle-question-mark")).not.toBeNull();
+      expect(chip.className).toContain("border-dashed");
+    }
+    expect(chipByLabel(/^Quadrado 1:1: Não foi possível confirmar$/)).toBeInTheDocument();
+    cleanup();
+
+    renderChips(buildUnavailableFormatPresentation());
+    for (const chip of allChips()) {
+      expect(chip.querySelector(".lucide-circle-question-mark")).not.toBeNull();
+      expect(chip.className).toContain("border-dashed");
+    }
+    cleanup();
+
+    renderChips(joint("delivered", "absent", { verticalRefunded: true }));
+    expect(
+      chipByLabel(/^Vertical 9:16: Crédito devolvido$/).querySelector(
+        ".lucide-undo-2",
+      ),
+    ).not.toBeNull();
+  });
+
+  it("não usa 'Não gerado', '+', emojis, frase longa nem botão desabilitado", () => {
+    const { container } = renderChips(buildUnavailableFormatPresentation());
+
+    expect(container.textContent).not.toContain("Não gerado");
+    expect(container.textContent).not.toContain("+");
+    expect(EMOJI.test(container.textContent ?? "")).toBe(false);
+    for (const chip of allChips()) {
+      expect(chip.textContent).not.toContain("Este formato");
+      expect(chip).not.toBeDisabled();
+    }
+    expect(container.querySelector("button[disabled]")).toBeNull();
+  });
+
+  it("link somente para delivered COM href; href é ignorado em estado não entregue", () => {
+    const { unmount } = renderChips(
+      joint("delivered", "absent"),
+      ptBRCampaignFormatMessages,
+      HREFS,
+    );
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "/campanhas/c1?format=1:1");
+    expect(links[0]).not.toHaveAttribute("prefetch");
+    // O chip ausente (mesmo com href configurado) é botão, nunca link.
+    expect(chipByLabel(/^Vertical 9:16/).tagName).toBe("BUTTON");
+    unmount();
+
+    renderChips(joint("delivered", "delivered"));
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("entregue SEM href (individual/legado) é botão explicativo, sem aria-current", () => {
+    renderChips(individual("delivered", "1:1"));
+
+    const chip = chipByLabel(/^Quadrado 1:1: Disponível, Selecionado$/);
+    expect(chip.tagName).toBe("BUTTON");
+    expect(chip).toHaveAttribute("type", "button");
+    expect(chip).not.toHaveAttribute("aria-current");
+    expect(chip).not.toHaveAttribute("href");
+  });
+
+  it("aria-current apenas no link ativo; aria-expanded/aria-controls apenas no chip-botão", () => {
     renderChips(
       joint("delivered", "delivered", { activeFormat: "9:16" }),
       ptBRCampaignFormatMessages,
       HREFS,
     );
 
-    const links = screen.getAllByRole("link");
-    const square = links.find(
-      (link) => link.getAttribute("href") === "/campanhas/c1?format=1:1",
-    );
-    const vertical = links.find(
-      (link) => link.getAttribute("href") === "/campanhas/c1?format=9:16",
-    );
+    const square = screen.getByRole("link", {
+      name: "Quadrado 1:1: Disponível",
+    });
+    const vertical = screen.getByRole("link", {
+      name: "Vertical 9:16: Disponível, Selecionado",
+    });
 
     expect(square).not.toHaveAttribute("aria-current");
     expect(vertical).toHaveAttribute("aria-current", "true");
@@ -171,130 +301,31 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     expect(square).toHaveAccessibleDescription(
       "Disponível. Este formato está disponível nesta campanha.",
     );
-
-    // O nome acessível do grupo ativo informa “Selecionado” sem badge visível.
     expect(
-      screen.getByRole("group", {
+      screen.getByRole("link", {
         name: "Vertical 9:16: Disponível, Selecionado",
       }),
     ).toBeInTheDocument();
-  });
 
-  it("o '?' tem nome + estado, é irmão do link/span e nunca fica aninhado", () => {
-    const { container } = renderChips(
-      joint("delivered", "absent"),
-      ptBRCampaignFormatMessages,
-      HREFS,
-    );
-
-    const delivered = groupByName(/^Quadrado 1:1/);
-    const button = helpButtonOf(delivered);
-    expect(button).toHaveAccessibleName(
-      "Ver explicação do formato: Quadrado 1:1, Disponível",
-    );
-    expect(button.closest("a")).toBeNull();
-    expect(container.querySelectorAll("a button, button a, a a, button button")).toHaveLength(
-      0,
-    );
-  });
-
-  it("entregue tem destaque discreto e nenhum ícone; ausente fica cinza legível sem ícone", () => {
-    renderChips(individual("delivered"));
-
-    const deliveredChip = chipElement(groupByName(/^Quadrado 1:1/));
-    expect(deliveredChip.className).toContain("bg-accent-green/10");
-    expect(deliveredChip.className).toContain("border-accent-green/30");
-
-    const absentGroup = groupByName(/^Vertical 9:16: Não incluído$/);
-    const absentChip = chipElement(absentGroup);
-    expect(absentChip.className).toContain("text-text-secondary");
-    expect(absentChip.className).toContain("bg-bg-elevated");
-
-    for (const group of screen.getAllByRole("group")) {
-      expect(chipElement(group).querySelector("svg")).toBeNull();
-    }
-  });
-
-  it("ativo usa borda/fundo distintos sem badge", () => {
-    renderChips(joint("delivered", "delivered", { activeFormat: "1:1" }));
-
-    const activeGroup = groupByName(/Selecionado/);
-    const chip = chipElement(activeGroup);
-    expect(chip.className).toContain("ring-1");
-    expect(chip.className).toContain("ring-accent-green/40");
-    expect(chip.className).toContain("bg-accent-green/15");
-    expect(within(activeGroup).queryByText("Selecionado")).toBeNull();
-  });
-
-  it("processing usa indicador pequeno de processamento", () => {
-    const { container } = renderChips(joint("processing", "delivered"));
-
-    expect(container.querySelector(".lucide-loader-circle")).not.toBeNull();
-    expect(groupByName(/^Quadrado 1:1: Processando$/)).toBeInTheDocument();
-  });
-
-  it("unknown/unavailable usam dúvida pequena; refunded usa Undo2", () => {
-    renderChips(buildUnknownFormatPresentation());
-    for (const group of screen.getAllByRole("group")) {
-      expect(
-        chipElement(group).querySelector(".lucide-circle-question-mark"),
-      ).not.toBeNull();
-    }
-    expect(groupByName(/^Quadrado 1:1: Não foi possível confirmar$/)).toBeInTheDocument();
-    cleanup();
-
-    renderChips(buildUnavailableFormatPresentation());
-    for (const group of screen.getAllByRole("group")) {
-      expect(
-        chipElement(group).querySelector(".lucide-circle-question-mark"),
-      ).not.toBeNull();
-    }
-    cleanup();
-
-    renderChips(joint("delivered", "absent", { verticalRefunded: true }));
-    expect(
-      chipElement(groupByName(/^Vertical 9:16: Crédito devolvido$/)).querySelector(
-        ".lucide-undo-2",
-      ),
-    ).not.toBeNull();
-  });
-
-  it("não usa 'Não gerado', '+', emojis nem frase longa dentro do chip", () => {
-    const { container } = renderChips(buildUnavailableFormatPresentation());
-
-    expect(container.textContent).not.toContain("Não gerado");
-    expect(container.textContent).not.toContain("+");
-    expect(EMOJI.test(container.textContent ?? "")).toBe(false);
-    for (const group of screen.getAllByRole("group")) {
-      expect(group.textContent).not.toContain("Este formato");
-    }
-    expect(container.querySelector("button[disabled]")).toBeNull();
-  });
-
-  it("link somente para delivered com href; href é ignorado em estado não entregue", () => {
-    const { unmount } = renderChips(joint("delivered", "absent"), ptBRCampaignFormatMessages, HREFS);
-    const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(1);
-    expect(links[0]).toHaveAttribute("href", "/campanhas/c1?format=1:1");
-    unmount();
-
-    renderChips(joint("delivered", "delivered"));
-    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    // Abrir a ajuda por hover no LINK não cria aria-expanded/aria-controls.
+    fireEvent.mouseEnter(vertical);
+    expect(screen.getByRole("note")).toBeInTheDocument();
+    expect(vertical).not.toHaveAttribute("aria-expanded");
+    expect(vertical).not.toHaveAttribute("aria-controls");
   });
 
   it("hover abre a ajuda em popover fora do fluxo (portal no body, position fixed)", () => {
     const { container } = renderChips(joint("delivered", "delivered"));
-    const group = groupByName(/^Quadrado 1:1/);
-    const button = helpButtonOf(group);
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    expect(button).toHaveAttribute("aria-expanded", "false");
-    expect(button).not.toHaveAttribute("aria-controls");
+    expect(chip).toHaveAttribute("aria-expanded", "false");
+    expect(chip).not.toHaveAttribute("aria-controls");
 
-    fireEvent.mouseEnter(group);
+    fireEvent.mouseEnter(chip);
 
     const note = screen.getByRole("note");
-    expect(button).toHaveAttribute("aria-expanded", "true");
-    expect(button).toHaveAttribute("aria-controls", note.id);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
+    expect(chip).toHaveAttribute("aria-controls", note.id);
     expect(note.parentElement).toBe(document.body);
     expect(note.style.position).toBe("fixed");
     expect(note.getAttribute("style")).toContain("min(20rem");
@@ -305,98 +336,138 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
   it("foco abre a ajuda; saída sem fixar fecha", () => {
     vi.useFakeTimers();
     renderChips(joint("delivered", "delivered"));
-    const group = groupByName(/^Quadrado 1:1/);
-    const button = helpButtonOf(group);
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    fireEvent.focus(button);
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    fireEvent.focus(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("note")).toBeInTheDocument();
 
-    fireEvent.blur(button, { relatedTarget: document.body });
+    fireEvent.blur(chip, { relatedTarget: document.body });
     act(() => {
       vi.advanceTimersByTime(200);
     });
-    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(chip).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("note")).toBeNull();
   });
 
   it("hover → clique FIXA a ajuda; segundo clique fecha", () => {
     vi.useFakeTimers();
     renderChips(joint("delivered", "delivered"));
-    const group = groupByName(/^Quadrado 1:1/);
-    const button = helpButtonOf(group);
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    fireEvent.mouseEnter(group);
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    fireEvent.mouseEnter(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
 
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
 
-    fireEvent.mouseLeave(group);
-    fireEvent.blur(button, { relatedTarget: document.body });
+    fireEvent.mouseLeave(chip);
+    fireEvent.blur(chip, { relatedTarget: document.body });
     act(() => {
       vi.advanceTimersByTime(200);
     });
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(chip).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("note")).toBeInTheDocument();
 
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("note")).toBeNull();
   });
 
   it("toque: primeiro acionamento abre, segundo fecha", () => {
     renderChips(joint("delivered", "delivered"));
-    const button = helpButtonOf(groupByName(/^Vertical 9:16/));
+    const chip = chipByLabel(/^Vertical 9:16/);
 
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("note")).toBeInTheDocument();
 
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("note")).toBeNull();
   });
 
-  it("Escape fecha, devolve o foco ao '?' e não reabre imediatamente", () => {
-    renderChips(joint("delivered", "delivered"));
-    const group = groupByName(/^Quadrado 1:1/);
-    const button = helpButtonOf(group);
+  it("link entregue: click seleciona (não intercepta) e NÃO abre a ajuda", () => {
+    renderChips(
+      joint("delivered", "delivered", { activeFormat: "1:1" }),
+      ptBRCampaignFormatMessages,
+      HREFS,
+    );
+    const link = screen.getByRole("link", {
+      name: "Quadrado 1:1: Disponível, Selecionado",
+    });
 
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    // Sem hover/foco prévio, o clique não abre ajuda e não é cancelado. O
+    // `href` é temporariamente trocado por um hash (mesmo documento) para o
+    // jsdom não tentar navegar; o elemento e a ausência de handler são os
+    // mesmos, e o `href` real é conferido logo abaixo.
+    const originalHref = link.getAttribute("href");
+    link.setAttribute("href", "#noop");
+    try {
+      expect(fireEvent.click(link)).toBe(true);
+    } finally {
+      link.setAttribute("href", originalHref ?? "");
+    }
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(link).toHaveAttribute("href", "/campanhas/c1?format=1:1");
+    expect(link).not.toHaveAttribute("aria-expanded");
+  });
+
+  it("Escape fecha, devolve o foco ao chip de origem e não reabre imediatamente", () => {
+    renderChips(joint("delivered", "delivered"));
+    const chip = chipByLabel(/^Quadrado 1:1/);
+
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.queryByRole("note")).toBeNull();
-    expect(button).toHaveAttribute("aria-expanded", "false");
-    expect(button).toHaveFocus();
-    // O foco devolvido não pode reabrir a ajuda.
-    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(chip).toHaveAttribute("aria-expanded", "false");
+    expect(chip).toHaveFocus();
+    expect(chip).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("Escape em ajuda de link devolve o foco ao link sem abrir aria-expanded", () => {
+    renderChips(
+      joint("delivered", "delivered"),
+      ptBRCampaignFormatMessages,
+      HREFS,
+    );
+    const link = screen.getByRole("link", { name: /^Quadrado 1:1/ });
+
+    fireEvent.focus(link);
+    expect(screen.getByRole("note")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(link).toHaveFocus();
+    expect(link).not.toHaveAttribute("aria-expanded");
   });
 
   it("clique/toque fora fecha; clique dentro do popover não fecha", () => {
     renderChips(joint("delivered", "delivered"));
-    const button = helpButtonOf(groupByName(/^Quadrado 1:1/));
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    fireEvent.click(button);
+    fireEvent.click(chip);
     const note = screen.getByRole("note");
     fireEvent.pointerDown(note);
     expect(screen.getByRole("note")).toBeInTheDocument();
 
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("note")).toBeNull();
-    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(chip).toHaveAttribute("aria-expanded", "false");
   });
 
   it("mover o ponteiro do chip para o popover mantém a ajuda aberta", () => {
     vi.useFakeTimers();
     renderChips(joint("delivered", "delivered"));
-    const group = groupByName(/^Quadrado 1:1/);
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    fireEvent.mouseEnter(group);
+    fireEvent.mouseEnter(chip);
     const note = screen.getByRole("note");
-    fireEvent.mouseLeave(group);
+    fireEvent.mouseLeave(chip);
     fireEvent.mouseEnter(note);
 
     act(() => {
@@ -409,25 +480,24 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
   it("reabre por hover após sair e voltar (sem fixar)", () => {
     vi.useFakeTimers();
     renderChips(joint("delivered", "delivered"));
-    const group = groupByName(/^Quadrado 1:1/);
-    const button = helpButtonOf(group);
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    fireEvent.mouseEnter(group);
-    fireEvent.mouseLeave(group);
+    fireEvent.mouseEnter(chip);
+    fireEvent.mouseLeave(chip);
     act(() => {
       vi.advanceTimersByTime(300);
     });
-    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(chip).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.mouseEnter(group);
-    expect(button).toHaveAttribute("aria-expanded", "true");
+    fireEvent.mouseEnter(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("note")).toBeInTheDocument();
   });
 
   it("somente um popover aberto por vez", () => {
     renderChips(joint("delivered", "delivered"));
-    const square = groupByName(/^Quadrado 1:1/);
-    const vertical = groupByName(/^Vertical 9:16/);
+    const square = chipByLabel(/^Quadrado 1:1/);
+    const vertical = chipByLabel(/^Vertical 9:16/);
 
     fireEvent.mouseEnter(square);
     expect(screen.getAllByRole("note")).toHaveLength(1);
@@ -438,15 +508,15 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     expect(notes[0].textContent).toContain("Vertical 9:16");
   });
 
-  it("aria-controls só existe quando a ajuda está montada/aberta", () => {
+  it("aria-controls só existe no chip-botão quando a ajuda está aberta", () => {
     renderChips(joint("delivered", "delivered"));
-    const button = helpButtonOf(groupByName(/^Quadrado 1:1/));
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    expect(button).not.toHaveAttribute("aria-controls");
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-controls");
-    fireEvent.click(button);
-    expect(button).not.toHaveAttribute("aria-controls");
+    expect(chip).not.toHaveAttribute("aria-controls");
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-controls");
+    fireEvent.click(chip);
+    expect(chip).not.toHaveAttribute("aria-controls");
   });
 
   it("remove listeners de fora/scroll/resize ao fechar e não reage após fechado", () => {
@@ -457,14 +527,13 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
 
     try {
       renderChips(joint("delivered", "delivered"));
-      const button = helpButtonOf(groupByName(/^Quadrado 1:1/));
+      const chip = chipByLabel(/^Quadrado 1:1/);
 
-      // Abre/fecha duas vezes para provar que não acumulam listeners.
       for (let cycle = 0; cycle < 2; cycle += 1) {
-        fireEvent.click(button);
-        expect(button).toHaveAttribute("aria-expanded", "true");
-        fireEvent.click(button);
-        expect(button).toHaveAttribute("aria-expanded", "false");
+        fireEvent.click(chip);
+        expect(chip).toHaveAttribute("aria-expanded", "true");
+        fireEvent.click(chip);
+        expect(chip).toHaveAttribute("aria-expanded", "false");
       }
 
       for (const type of ["pointerdown", "keydown"] as const) {
@@ -483,7 +552,6 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
         expect(removes).toBe(adds);
       }
 
-      // Já fechado: eventos externos não reabrem nem reagem.
       fireEvent.keyDown(document, { key: "Escape" });
       fireEvent.pointerDown(document.body);
       expect(screen.queryByRole("note")).toBeNull();
@@ -501,7 +569,7 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     expect(screen.queryByRole("note")).toBeNull();
     expect(container.querySelectorAll("input, textarea, select")).toHaveLength(0);
 
-    fireEvent.click(helpButtonOf(groupByName(/^Quadrado 1:1/)));
+    fireEvent.click(chipByLabel(/^Quadrado 1:1/));
     const note = screen.getByRole("note");
     expect(note.querySelectorAll("a, button, input, textarea, select")).toHaveLength(
       0,
@@ -509,48 +577,31 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     expect(note).not.toHaveAttribute("tabindex");
   });
 
-  it("preserva hit area ≥44×44 no '?' e no link, com '?' compacto sem círculo/borda", () => {
+  it("preserva hit area ≥44×44 e foco visível no próprio chip (botão e link)", () => {
     renderChips(
       joint("delivered", "delivered"),
       ptBRCampaignFormatMessages,
       HREFS,
     );
 
-    for (const button of screen.getAllByRole("button")) {
-      expect(button).not.toBeDisabled();
-      expect(button.className).toContain("min-h-11");
-      expect(button.className).toContain("min-w-11");
-      expect(button.className).toContain("focus-visible:ring-2");
-      expect(button.className).not.toContain("rounded-full");
-      expect(button.className).not.toContain("border-border");
-      expect(button.getAttribute("tabindex")).not.toBe("-1");
-    }
-
-    for (const link of screen.getAllByRole("link")) {
-      expect(link.className).toContain("min-h-11");
-      expect(link.className).toContain("focus-visible:ring-2");
+    for (const chip of allChips()) {
+      expect(chip.className).toContain("min-h-11");
+      expect(chip.className).toContain("min-w-11");
+      expect(chip.className).toContain("focus-visible:ring-2");
+      expect(chip.getAttribute("tabindex")).not.toBe("-1");
     }
   });
 
-  it("o '?' não navega nem alterna o formato", () => {
-    const { container } = renderChips(
-      joint("delivered", "delivered"),
-      ptBRCampaignFormatMessages,
-      HREFS,
-    );
-    const before = container.querySelectorAll('[aria-label^="Formatos"]').length;
-    const button = helpButtonOf(groupByName(/^Quadrado 1:1/));
+  it("chip de lista/dashboard não navega nem gera: só explica", () => {
+    const { container } = renderChips(joint("delivered", "delivered"));
+    const chip = chipByLabel(/^Quadrado 1:1/);
 
-    fireEvent.click(button);
+    fireEvent.click(chip);
 
-    expect(button.tagName).toBe("BUTTON");
-    expect(button).not.toHaveAttribute("href");
-    expect(screen.getAllByRole("group")).toHaveLength(2);
-    expect(screen.getByRole("group", { name: /^Quadrado 1:1/ })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: /^Vertical 9:16/ })).toBeInTheDocument();
-    expect(container.querySelectorAll('[aria-label^="Formatos"]').length).toBe(
-      before,
-    );
+    expect(chip.tagName).toBe("BUTTON");
+    // Sem `href` as duas entradas continuam com o mesmo nome/estado.
+    expect(chipByLabel(/^Vertical 9:16/)).toBeInTheDocument();
+    expect(container.querySelectorAll('[aria-label^="Formatos"]').length).toBe(1);
   });
 
   it("não dispara fetch ao renderizar ou abrir a ajuda", () => {
@@ -558,7 +609,7 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     vi.stubGlobal("fetch", fetchMock);
 
     renderChips(joint("delivered", "delivered"));
-    fireEvent.click(helpButtonOf(groupByName(/^Quadrado 1:1/)));
+    fireEvent.click(chipByLabel(/^Quadrado 1:1/));
 
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
@@ -576,12 +627,10 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
       screen.getByRole("list", { name: "Formatos de la campaña" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: "Cuadrado 1:1: Disponible" }),
+      chipByLabel(/^Cuadrado 1:1: Disponible$/),
     ).toBeInTheDocument();
 
-    fireEvent.click(
-      helpButtonOf(screen.getByRole("group", { name: /^Cuadrado 1:1/ })),
-    );
+    fireEvent.click(chipByLabel(/^Cuadrado 1:1/));
 
     const note = screen.getByRole("note");
     expect(note).toHaveAttribute("lang", "es-419");
@@ -597,16 +646,15 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     const list = screen.getByRole("list");
     expect(list.className).toContain("flex-wrap");
     expect(list.className).toContain("min-w-0");
-    for (const item of screen.getAllByRole("listitem")) {
+    for (const item of chipItems()) {
       expect(item.className).toContain("min-w-0");
-    }
-    for (const group of screen.getAllByRole("group")) {
-      expect(group.className).toContain("flex-wrap");
-      expect(group.className).toContain("min-w-0");
+      const chip = chipOf(item);
+      expect(chip.className).toContain("inline-flex");
+      expect(chip.querySelector("span.min-w-0")).not.toBeNull();
     }
   });
 
-  it("não importa Supabase, storage, fetch, server-only, next/link ou HTML cru", () => {
+  it("não importa Supabase, storage, fetch, server-only, next/link nem HTML cru", () => {
     const source = readFileSync(
       join(process.cwd(), "src/components/campaign/campaign-format-chips.tsx"),
       "utf8",
@@ -621,5 +669,9 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     expect(source).not.toMatch(/next\/link/);
     expect(source).not.toMatch(/prefetch=/);
     expect(source).not.toMatch(/dangerouslySetInnerHTML/);
+    // O controle “?” e o nome acessível antigo foram removidos do componente.
+    expect(source).not.toMatch(/HELP_BUTTON_CLASS/);
+    expect(source).not.toMatch(/infoAria/);
+    expect(source).not.toMatch(/role="group"\s+aria-label/);
   });
 });

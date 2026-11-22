@@ -1,10 +1,11 @@
 // @vitest-environment node
 /**
- * F61 (61-04) — prova SSR do componente de chips.
+ * F61 (61-05) — prova SSR do componente de chips.
  *
  * Em ambiente de servidor NÃO existe `document`. O componente só cria o portal
  * da ajuda depois do mount (`useEffect`); portanto `renderToString` deve
- * renderizar os chips e NUNCA acessar `document` nem produzir o popover.
+ * renderizar os chips (link/botão, nunca um “?” separado) e NUNCA acessar
+ * `document` nem produzir o popover.
  */
 
 import { describe, expect, it } from "vitest";
@@ -44,6 +45,9 @@ describe("F61 — chips em renderToString (SSR)", () => {
     expect(html).not.toContain('role="note"');
     expect(html).not.toContain("z-50");
     expect(html).not.toContain("position:fixed");
+    // O “?” separado não existe: nada com o nome acessível antigo.
+    expect(html).not.toContain("Ver explicação do formato");
+    expect(html).not.toContain('role="group"');
   });
 
   it("preserva o catálogo es-419 sem criar portal", () => {

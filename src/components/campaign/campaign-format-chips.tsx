@@ -5,17 +5,24 @@
  *
  * Sempre renderiza os dois formatos na ordem canônica. O texto VISÍVEL do chip é
  * apenas o nome do formato (“Quadrado 1:1”/“Vertical 9:16”); o estado completo
- * permanece no `role="group"` (nome acessível), na descrição estável `hidden`
+ * permanece no nome acessível (`aria-label`), na descrição estável `hidden`
  * (`aria-describedby`) e na ajuda flutuante.
  *
- * A ajuda vive em um popover `createPortal` para `document.body`, `position:
- * fixed`, criado somente após o mount (SSR/`renderToString` nunca acessa
- * `document`). Não altera altura do card, linha dos chips, posição da arte nem
- * largura do contêiner. A única interação local é abrir/fechar a explicação;
- * NÃO há fetch, Storage, server action, geração, reserva ou efeito mutável.
+ * O PRÓPRIO CHIP é o único controle — não existe botão “?” separado, espaço
+ * reservado, borda, foco ou área acionável independentes:
+ * - detalhe, formato `delivered` com `href`: `<a href>` (sem prefetch); o primeiro
+ *   toque/click seleciona e NÃO abre ajuda;
+ * - detalhe, `delivered` sem `href` e não entregue/excepcional:
+ *   `<button type="button">`; click/toque abre/fecha apenas a ajuda;
+ * - lista/dashboard (`hrefs` ausente): `<button type="button">` que abre/fecha
+ *   apenas a ajuda local, sem navegar/gerar.
  *
- * Lista/dashboard: sem `hrefs` ⇒ chips informativos. Detalhe: `href` SOMENTE
- * para formato `delivered`.
+ * A ajuda vive em um popover `createPortal` para `document.body`, `position:
+ * fixed`, ancorado no próprio chip, criado somente após o mount (SSR/
+ * `renderToString` nunca acessa `document`). Não altera altura do card, linha dos
+ * chips, posição da arte nem largura do contêiner. A única interação local é
+ * abrir/fechar a explicação; NÃO há fetch, Storage, server action, geração,
+ * reserva ou efeito mutável.
  */
 
 import {
@@ -47,15 +54,13 @@ export interface CampaignFormatChipsProps {
 
 const FORMAT_ORDER: readonly CampaignFormatKey[] = ["1:1", "9:16"];
 
-/** Altura mínima de 44 px (hit area) preservada mesmo com aparência compacta. */
+/**
+ * Hit area ≥44×44 px preservada com aparência compacta. Sem largura/estilo de
+ * borda aqui: o estado define a forma (borda espessa x simples x tracejada), que
+ * complementa a matiz e evita distinção exclusivamente cromática.
+ */
 const BASE_CHIP_CLASS =
-  "inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
-
-const ACTIVE_CLASS = "ring-1 ring-accent-green/40 bg-accent-green/15";
-
-/** “?” compacto (sem círculo/borda grande) com alvo 44×44 px. */
-const HELP_BUTTON_CLASS =
-  "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:bg-bg-elevated hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
+  "inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 
 const POPOVER_CLASS =
   "z-50 overflow-y-auto rounded-lg border border-border bg-bg-surface p-3 text-xs font-body text-text-secondary shadow-lg";
@@ -65,17 +70,25 @@ const VIEWPORT_MARGIN = 8;
 const ANCHOR_GAP = 8;
 const MAX_POPOVER_WIDTH = 320;
 
+/**
+ * Tratamento por estado. Entregue tem borda MAIS ESPESSA + preenchimento;
+ * ausente tem borda simples/cinza; indeterminado tem borda tracejada. Ativo usa
+ * anel/fundo distintos. A diferença nunca depende apenas de cor.
+ */
 function stateClasses(entry: CampaignFormatPresentationEntry): string {
+  if (entry.state === "delivered") {
+    return entry.active
+      ? "border-2 border-solid border-accent-green/50 bg-accent-green/15 text-text-primary ring-1 ring-accent-green/40"
+      : "border-2 border-solid border-accent-green/40 bg-accent-green/10 text-text-primary";
+  }
   switch (entry.state) {
-    case "delivered":
-      return "text-text-primary bg-accent-green/10 border-accent-green/30";
     case "processing":
-      return "text-amber-400 bg-amber-400/10 border-amber-400/30";
+      return "border border-solid border-amber-400/30 bg-amber-400/10 text-amber-400";
     case "absent":
-      return "text-text-secondary bg-bg-elevated border-border";
+      return "border border-solid border-border bg-bg-elevated text-text-secondary";
     case "unknown":
     case "unavailable":
-      return "border-dashed border-border text-text-secondary";
+      return "border border-dashed border-border bg-transparent text-text-secondary";
   }
 }
 
@@ -134,7 +147,7 @@ function descriptionText(
   return `${stateLabel(entry, messages)}. ${explanation(entry, messages)}`;
 }
 
-function groupAccessibleName(
+function accessibleName(
   entry: CampaignFormatPresentationEntry,
   name: string,
   messages: CampaignFormatPresentationMessages,
@@ -174,12 +187,10 @@ export function CampaignFormatChips({
   const [activeKey, setActiveKey] = useState<CampaignFormatKey | null>(null);
   const [pinnedKey, setPinnedKey] = useState<CampaignFormatKey | null>(null);
 
-  const groupRefs = useRef<Partial<Record<CampaignFormatKey, HTMLDivElement | null>>>(
+  /** Referência ao PRÓPRIO chip (link ou botão) que ancora a ajuda. */
+  const chipRefs = useRef<Partial<Record<CampaignFormatKey, HTMLElement | null>>>(
     {},
   );
-  const buttonRefs = useRef<
-    Partial<Record<CampaignFormatKey, HTMLButtonElement | null>>
-  >({});
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popoverHoveredRef = useRef(false);
@@ -268,14 +279,13 @@ export function CampaignFormatChips({
   );
 
   const handleBlur = useCallback(
-    (event: FocusEvent<HTMLDivElement>) => {
-      const next = event.relatedTarget as Node | null;
-      if (next && event.currentTarget.contains(next)) return;
+    (_event: FocusEvent<HTMLElement>) => {
       scheduleClose();
     },
     [scheduleClose],
   );
 
+  /** Somente o chip-botão alterna: abre/fecha a ajuda, sem navegar/gerar. */
   const handleToggle = useCallback(
     (key: CampaignFormatKey) => {
       clearCloseTimer();
@@ -305,7 +315,7 @@ export function CampaignFormatChips({
   const positionPopover = useCallback(() => {
     const key = activeKeyRef.current;
     if (!key) return;
-    const anchor = buttonRefs.current[key];
+    const anchor = chipRefs.current[key];
     const popover = popoverRef.current;
     if (!anchor || !popover) return;
 
@@ -324,8 +334,7 @@ export function CampaignFormatChips({
     const popoverRect = popover.getBoundingClientRect();
     const height = popoverRect.height || 0;
 
-    const spaceAbove =
-      anchorRect.top - VIEWPORT_MARGIN - ANCHOR_GAP;
+    const spaceAbove = anchorRect.top - VIEWPORT_MARGIN - ANCHOR_GAP;
     const spaceBelow =
       viewportHeight - anchorRect.bottom - VIEWPORT_MARGIN - ANCHOR_GAP;
     const openAbove = spaceAbove > spaceBelow && spaceAbove > 0;
@@ -365,8 +374,8 @@ export function CampaignFormatChips({
     };
   }, [mounted, activeKey, positionPopover]);
 
-  // `Escape` fecha e devolve o foco ao “?”. A guarda de supressão impede que o
-  // foco devolvido reabra a ajuda imediatamente.
+  // `Escape` fecha e devolve o foco ao CHIP de origem. A guarda de supressão
+  // impede que o foco devolvido reabra a ajuda imediatamente.
   useEffect(() => {
     if (!mounted || activeKey === null) return;
     const key = activeKey;
@@ -376,8 +385,8 @@ export function CampaignFormatChips({
       event.preventDefault();
       suppressFocusRef.current[key] = true;
       closeAll();
-      const button = buttonRefs.current[key];
-      if (button) button.focus();
+      const chip = chipRefs.current[key];
+      if (chip) chip.focus();
       window.setTimeout(() => {
         suppressFocusRef.current[key] = false;
       }, 0);
@@ -387,14 +396,14 @@ export function CampaignFormatChips({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [mounted, activeKey, closeAll]);
 
-  // Clique/toque fora fecha; clique dentro do chip ou do popover não fecha.
+  // Clique/toque fora fecha; clique no chip ou no popover não fecha.
   useEffect(() => {
     if (!mounted || activeKey === null) return;
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (!target) return;
-      if (FORMAT_ORDER.some((key) => groupRefs.current[key]?.contains(target))) {
+      if (FORMAT_ORDER.some((key) => chipRefs.current[key]?.contains(target))) {
         return;
       }
       if (popoverRef.current?.contains(target)) return;
@@ -419,19 +428,22 @@ export function CampaignFormatChips({
           const entry = presentation.formats[formatKey];
           const name = messages.formats[formatKey].name;
           const href = hrefs?.[formatKey];
+          // O nome acessível e a descrição vivem no PRÓPRIO chip. Sem
+          // `role="group"` no wrapper: nada duplica o nome do controle.
           const hasLink =
             typeof href === "string" &&
             href.length > 0 &&
             entry.state === "delivered";
           const isOpen = activeKey === formatKey;
           const descriptionId = descriptionIds[formatKey];
-          const chipClass = [
-            BASE_CHIP_CLASS,
-            stateClasses(entry),
-            entry.active ? ACTIVE_CLASS : "",
-          ]
+          const chipClass = [BASE_CHIP_CLASS, stateClasses(entry)]
             .filter(Boolean)
             .join(" ");
+          const label = accessibleName(entry, name, messages);
+
+          const setChipRef = (node: HTMLElement | null) => {
+            chipRefs.current[formatKey] = node;
+          };
 
           const chipContent = (
             <>
@@ -442,48 +454,43 @@ export function CampaignFormatChips({
 
           return (
             <li key={formatKey} className="min-w-0">
-              <div
-                ref={(node) => {
-                  groupRefs.current[formatKey] = node;
-                }}
-                role="group"
-                aria-label={groupAccessibleName(entry, name, messages)}
-                aria-describedby={descriptionId}
-                className="flex min-w-0 flex-wrap items-center gap-1"
-                onMouseEnter={() => handlePointerEnter(formatKey)}
-                onMouseLeave={handlePointerLeave}
-                onFocus={() => handleFocus(formatKey)}
-                onBlur={handleBlur}
-              >
-                {hasLink && href ? (
-                  <a
-                    href={href}
-                    aria-current={entry.active ? "true" : undefined}
-                    aria-describedby={descriptionId}
-                    className={chipClass}
-                  >
-                    {chipContent}
-                  </a>
-                ) : (
-                  <span aria-describedby={descriptionId} className={chipClass}>
-                    {chipContent}
-                  </span>
-                )}
-
+              {hasLink && href ? (
+                // Seleção em UM único toque: link puro (sem prefetch), sem
+                // `aria-expanded`/`aria-controls` e sem handler que abra ajuda.
+                <a
+                  ref={setChipRef}
+                  href={href}
+                  aria-current={entry.active ? "true" : undefined}
+                  aria-label={label}
+                  aria-describedby={descriptionId}
+                  className={chipClass}
+                  onMouseEnter={() => handlePointerEnter(formatKey)}
+                  onMouseLeave={handlePointerLeave}
+                  onFocus={() => handleFocus(formatKey)}
+                  onBlur={handleBlur}
+                >
+                  {chipContent}
+                </a>
+              ) : (
+                // Entregue sem href e não entregue/excepcional (inclui
+                // lista/dashboard): só explica o estado.
                 <button
+                  ref={setChipRef}
                   type="button"
-                  ref={(node) => {
-                    buttonRefs.current[formatKey] = node;
-                  }}
                   aria-expanded={isOpen}
                   aria-controls={isOpen ? popoverId : undefined}
-                  aria-label={`${messages.infoAria}: ${name}, ${stateLabel(entry, messages)}`}
+                  aria-label={label}
+                  aria-describedby={descriptionId}
+                  className={chipClass}
                   onClick={() => handleToggle(formatKey)}
-                  className={HELP_BUTTON_CLASS}
+                  onMouseEnter={() => handlePointerEnter(formatKey)}
+                  onMouseLeave={handlePointerLeave}
+                  onFocus={() => handleFocus(formatKey)}
+                  onBlur={handleBlur}
                 >
-                  <CircleHelp aria-hidden="true" className="h-4 w-4" />
+                  {chipContent}
                 </button>
-              </div>
+              )}
 
               <p
                 id={descriptionId}
