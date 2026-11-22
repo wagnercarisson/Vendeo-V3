@@ -1,6 +1,6 @@
 # Phase 61 Plan 03: detalhe `/campanhas/[id]` com chips compartilhados
 
-**Status:** ✅ **ACEITO NO RESULTADO FINAL EM 2026-11-22**, após os refinamentos `61-04`/`61-05`; o registro original abaixo permanece como histórico da execução. A fase 61 ainda não está arquivada/publicada.
+**Status:** ✅ **ACEITO NO RESULTADO FINAL EM 2026-11-22**, após os refinamentos `61-04`/`61-05`; o registro original abaixo permanece como histórico da execução. A fase 61 foi concluída, verificada, sincronizada e arquivada em 2026-11-22; publicação não executada.
 
 **Pendência visual registrada:** chips grandes, textos redundantes e ajuda deslocando arte/cards. O refinamento compacto/ajuda flutuante é tratado no `61-04`, sem alterar builders, classificação, lifecycle, autoridades, financeiro ou consultas.
 
@@ -292,7 +292,7 @@ Nenhum desvio de escopo. Nenhuma decisão arquitetural nova.
 4. **Build/lint/typecheck** verdes neste ambiente Windows/local. Gates de integração
    (Postgres/homolog/local/app-env/Product 1:1/F60/F60.1) **NÃO EXECUTADOS** por
    ausência de ambiente.
-5. **Fase 61 aguardando fechamento documental:** `61-03` aceito no resultado final; `61-04` superseded; `61-05` aceito; sem sync/archive/merge/push/deploy.
+5. **Fase 61 concluída, verificada, sincronizada e arquivada:** `61-03` aceito no resultado final; `61-04` superseded; `61-05` aceito; publicação não executada; sem merge/push/deploy.
 
 ---
 

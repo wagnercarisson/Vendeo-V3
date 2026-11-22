@@ -3,7 +3,7 @@
 **Change:** `padronizar-chips-formatos-campanhas`
 **Data:** 2026-11-22
 **Implementação final:** `61-05` (aceito técnico e visual/funcionalmente por declaração do responsável)
-**Status:** **PASS COM RESSALVAS — nenhum blocker; pronto para sync/archive somente com autorização separada.**
+**Status:** **PASS COM RESSALVAS — nenhum blocker; sync/archive executados em 2026-11-22; publicação não executada.**
 
 ## Summary
 
@@ -59,4 +59,4 @@
 
 ## Final assessment
 
-**Nenhum blocker OpenSpec.** Implementação coerente com specs/design e tasks 72/72. Pronto para sync/archive **somente após autorização separada**; nenhum sync/archive/merge/push/deploy foi executado.
+**Nenhum blocker OpenSpec.** Implementação coerente com specs/design e tasks 72/72. As quatro capabilities foram sincronizadas e validadas individualmente com `--strict`; a change foi arquivada em `openspec/changes/archive/2026-11-22-padronizar-chips-formatos-campanhas/` com `--skip-specs` (sync manual prévio). **Nenhum merge/push/deploy ou publicação foi executado.**

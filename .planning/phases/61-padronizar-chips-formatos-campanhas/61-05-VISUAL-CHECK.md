@@ -76,5 +76,6 @@ processando, estornado, indeterminado/indisponível):
 ## Limite
 
 O aceite é uma declaração do responsável, não uma captura/medição reproduzida
-pelo executor. Este documento não declara a fase 61 arquivada, publicada ou
-implantada. Nenhuma aprovação foi simulada por `jsdom`.
+pelo executor. Este documento não declara a fase publicada ou implantada; o
+arquivamento documental ocorreu em 2026-11-22 sem publicação. Nenhuma aprovação
+foi simulada por `jsdom`.

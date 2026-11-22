@@ -1,6 +1,6 @@
 # Phase 61 Plan 05: remoção do “?” e chip como único controle
 
-**Status:** ✅ **ACEITO TECNICAMENTE E VISUAL/FUNCIONALMENTE EM 2026-11-22** — sem bloqueadores remanescentes. A fase 61 ainda não está arquivada/publicada; `61-03` é aceito no resultado final e `61-04` permanece superseded, sem aprovação retroativa.
+**Status:** ✅ **ACEITO TECNICAMENTE E VISUAL/FUNCIONALMENTE EM 2026-11-22** — sem bloqueadores remanescentes. A fase 61 foi concluída, verificada, sincronizada e arquivada em 2026-11-22; publicação não executada. `61-03` é aceito no resultado final e `61-04` permanece superseded, sem aprovação retroativa.
 
 **Executado em:** 2026-11-22
 **Branch:** `feat/campaign-format-chips`
@@ -245,7 +245,8 @@ usado). Nenhum I/O real. As contagens de lista/dashboard/detalhe não mudaram
 
 - O `61-05` originalmente não incluiu `openspec/.../tasks.md` em `files_modified`.
 - No aceite/fechamento, as 72 tasks foram marcadas com evidência e `openspec list`
-  passou a **72/72 complete**. Nenhuma alegação de sync/archive.
+  passou a **72/72 complete**. O sync/archive documental ocorreu somente depois,
+  em 2026-11-22, com as quatro capabilities validadas individualmente.
 
 ### 7. [Rule 3 — gate de formatação] Whitespace do próprio plano
 
@@ -278,11 +279,11 @@ financeiro.
   aceite visual/funcional do responsável em 2026-11-22; nenhuma captura,
   medição ou viewport foi fornecida e nenhuma aprovação foi simulada.
   `jsdom` não comprova layout.
-- **Fase 61 aguardando fechamento documental:** `61-03` e `61-05` aceitos no
-  resultado final; `61-04` superseded sem aprovação retroativa; sem
-  sync/archive/merge/push/deploy. `.planning/STATE.md` e `.planning/ROADMAP.md`
-  registram o estado de aceite, não “arquivada/publicada”.
-- Próximo passo: verificações formais e fechamento documental autorizado separadamente.
+- **Fase 61 concluída, verificada, sincronizada e arquivada:** `61-03` e `61-05`
+  aceitos no resultado final; `61-04` superseded sem aprovação retroativa; sem
+  merge/push/deploy ou publicação. `.planning/STATE.md` e `.planning/ROADMAP.md`
+  registram o estado arquivado; a publication não foi executada.
+- Próximo passo: integração/publicação mediante autorização separada; depois, próxima fatia funcional.
 
 ---
 

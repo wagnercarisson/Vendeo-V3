@@ -7,7 +7,7 @@ score: 10/10 must-haves verificados (1 deles por aceite humano declarado, sem ca
 overrides_applied: 0
 head: 5f8f5119ad5cf8c160cda6741a5edd5a5ab131b9
 branch: feat/campaign-format-chips
-phase_state: aberta; não publicada; não arquivada; sem merge/push/deploy/sync/archive
+phase_state: concluída; verificada; sincronizada e arquivada; publicação não executada; sem merge/push/deploy
 gaps: []
 deferred: []
 limitations:
@@ -23,6 +23,7 @@ limitations:
 **HEAD:** `5f8f5119ad5cf8c160cda6741a5edd5a5ab131b9` (branch `feat/campaign-format-chips`, sem upstream; 43 commits à frente de `main`)
 **Status:** `passed` — **PASS COM RESSALVAS**
 **Re-verification:** Sim — atualização após a reconciliação pós-verificação commitada em `67a1d183`, `4876d37e` e `5f8f5119` (apenas docs/spec/tracking; nenhum arquivo de `src/`).
+**Fechamento documental (2026-11-22):** quatro capabilities sincronizadas e validadas com `--strict` individualmente; change arquivada em `openspec/changes/archive/2026-11-22-padronizar-chips-formatos-campanhas/` com `--skip-specs` (sync manual prévio). **Publicação, merge, push e deploy não executados.**
 
 ---
 
