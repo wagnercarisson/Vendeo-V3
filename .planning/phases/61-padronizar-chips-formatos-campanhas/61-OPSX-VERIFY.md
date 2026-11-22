@@ -60,4 +60,3 @@
 ## Final assessment
 
 **Nenhum blocker OpenSpec.** Implementação coerente com specs/design e tasks 72/72. Pronto para sync/archive **somente após autorização separada**; nenhum sync/archive/merge/push/deploy foi executado.
-
