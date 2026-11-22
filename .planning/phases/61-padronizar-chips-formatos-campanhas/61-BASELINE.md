@@ -146,9 +146,9 @@ Prova de lote: 1 vs 3 conjuntas mantém **1** chamada de `createSignedUrls`.
 | Lint | `npm.cmd run lint` | **0** | Sem erros/avisos |
 | Task 1 (página + matriz) | `npx vitest run .../format-presentation.test.tsx campaign-detail-joint.test.tsx` | **0** | 2 arquivos / **43 testes** (36 novos na matriz) |
 | Task 2 (cliente + fixtures) | `npx vitest run <9 arquivos dirigidos>` | **0** | 9 arquivos / **142 testes** |
-| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, lista, dashboard, detalhe, baseline>` | **0** | **63 arquivos / 636 testes PASS** |
+| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, lista, dashboard, detalhe, baseline>` | **0** | **63 arquivos / 637 testes PASS** |
 | Baseline em leitura (depois) | `npx vitest run .../evidence/baseline-calls.test.ts` | **0** | `toEqual`; JSON inalterado |
-| suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10466 testes PASS**, 10 skipped (10476) |
+| suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10467 testes PASS**, 10 skipped (10477) |
 | Build | `npm.cmd run build` | **0** | `check:cnae OK`; 102 páginas estáticas |
 | `git diff --check` | `git diff --check` | **0** | Limpo |
 | `git status --porcelain` | — | — | Apenas logs `61-03-*.log` untracked antes do commit documental |

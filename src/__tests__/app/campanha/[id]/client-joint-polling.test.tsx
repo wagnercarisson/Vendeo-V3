@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
 import {
   buildJointFormatPresentation,
+  buildUnknownFormatPresentation,
   type CampaignFormatKey,
 } from "@/lib/campaign/format-presentation";
 import type { CampaignPageProps } from "@/lib/campaign/display";
@@ -333,5 +334,33 @@ describe("F60.7 C3 — cliente conjunto montado", () => {
     expect(
       screen.queryByText("Entrega parcial: o outro formato está em processamento."),
     ).toBeNull();
+  });
+
+  it("F61 — estado unknown não exibe nota de processamento", () => {
+    vi.stubGlobal("fetch", vi.fn());
+
+    render(
+      <CampaignPageClient
+        {...baseProps}
+        imageUrl={null}
+        downloadDisabled
+        newFlow={{
+          ...baseProps.newFlow,
+          state: "unknown",
+          operationId: null,
+        }}
+        joint={joint({
+          formats: { "1:1": "unknown", "9:16": "unknown" },
+          preferredFormat: null,
+          previewFormat: null,
+          previewUrl: null,
+          state: "unknown",
+        })}
+        formatPresentation={buildUnknownFormatPresentation()}
+      />,
+    );
+
+    expect(screen.queryByText("Processando formatos...")).toBeNull();
+    expect(screen.getAllByText("Não foi possível confirmar")).toHaveLength(2);
   });
 });

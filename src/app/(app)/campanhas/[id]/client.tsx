@@ -88,8 +88,12 @@ function jointNoteFor(
       return props.messages.jointNotes.finalizationPending;
     case "refunded":
       return props.messages.jointNotes.refunded;
-    default:
+    case "processing":
       return props.messages.jointNotes.processing;
+    case "unknown":
+      return null;
+    default:
+      return null;
   }
 }
 

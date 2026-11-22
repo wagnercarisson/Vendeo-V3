@@ -109,9 +109,9 @@ recuperação:
 | Lint | `npm.cmd run lint` | **0** | Sem erros/avisos |
 | Task 1 | `npx vitest run .../format-presentation.test.tsx campaign-detail-joint.test.tsx` | **0** | 2 arquivos / **43 testes** |
 | Task 2 | `npx vitest run <9 arquivos dirigidos>` | **0** | 9 arquivos / **142 testes** |
-| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, lista, dashboard, detalhe, baseline>` | **0** | **63 arquivos / 636 testes PASS** |
+| Suítes dirigidas do plano | `npx vitest run <modelo, i18n, componente, lista, dashboard, detalhe, baseline>` | **0** | **63 arquivos / 637 testes PASS** |
 | Baseline em leitura (depois) | `npx vitest run .../evidence/baseline-calls.test.ts` | **0** | `toEqual`; JSON inalterado |
-| Suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10466 testes PASS**, 10 skipped (10476) |
+| Suíte global | `npm.cmd run test` | **0** | **843 arquivos PASS**, 2 skipped (845); **10467 testes PASS**, 10 skipped (10477) |
 | Build | `npm.cmd run build` | **0** | `check:cnae OK`; 102 páginas estáticas |
 | `git diff --check` | `git diff --check` | **0** | Limpo |
 | `git status --porcelain` | — | — | Apenas logs `61-03-*.log` untracked antes do commit documental |
@@ -149,7 +149,7 @@ a suíte global pós-commit passou integralmente (exit 0).
 | `src/__tests__/app/campanhas/campanhas-page.test.tsx` | 14 | 14 |
 | **Total dos arquivos tocados** | **139** | **181** (+42) |
 
-Suíte global: 61-01 registrou **10375 PASS / 10 skipped**; estado final **10466 PASS / 10 skipped** (+91). Nenhum teste removido.
+Suíte global: 61-01 registrou **10375 PASS / 10 skipped**; estado final **10467 PASS / 10 skipped** (+92). Nenhum teste removido.
 
 ---
 
@@ -233,6 +233,15 @@ existentes e assinatura de miniaturas permanecem intactos.
 - Justificado no topo (campo obrigatório → typecheck). Documentado como desvio
   consciente, sem perda de rastreabilidade.
 
+### 5. [Correção de coerência] Estado conjunto `unknown` sem nota de processamento
+
+- **Encontrado na revisão final:** a nota padrão do bloco conjunto exibia
+  “Processando formatos...” também para `joint.state === "unknown"`, contradizendo
+  os chips (`unknown`) e o `UnknownResultPanel`.
+- **Correção:** `jointNoteFor` agora mapeia `processing → processing` e
+  `unknown → null`; o painel de indeterminação comunica o estado. Teste dedicado
+  em `client-joint-polling.test.tsx` garante a ausência da nota de processamento.
+
 Nenhum desvio de escopo. Nenhuma decisão arquitetural nova.
 
 ---
@@ -288,4 +297,4 @@ Nenhum desvio de escopo. Nenhuma decisão arquitetural nova.
 - Nenhum caminho de `supabase/`, `src/lib/product-two-format/` ou
   `src/lib/campaign/format-resolution.ts` no commit.
 - Baseline em leitura antes/depois com `toEqual` (JSON inalterado).
-- Suíte global pós-commit: 843 arquivos / 10466 testes PASS, 10 skipped, 0 falhas.
+- Suíte global pós-commit: 843 arquivos / 10467 testes PASS, 10 skipped, 0 falhas.
