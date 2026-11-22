@@ -1,6 +1,6 @@
 # Phase 61 Plan 04: refinamento visual compacto + ajuda flutuante
 
-**Status:** ⛔ **NÃO ACEITO / AGUARDANDO REVISÃO TÉCNICA E VISUAL** — executado localmente/offline em 2026-11-21. A fase 61 **NÃO** está concluída; a UX **NÃO** está aprovada. A aprovação visual de lista/dashboard/detalhe (desktop e celular) é humana e posterior.
+**Status:** ⛔ **NÃO ACEITO / AGUARDANDO REVISÃO TÉCNICA E VISUAL** — executado localmente/offline em 2026-11-21. **SUPERSEDED pelo `61-05`** (remoção do controle “?” e chip como único controle), mantido como histórico. A fase 61 **NÃO** está concluída; a UX **NÃO** está aprovada. A aprovação visual de lista/dashboard/detalhe (desktop e celular) é humana e posterior.
 
 **Executado em:** 2026-11-21
 **Branch:** `feat/campaign-format-chips`

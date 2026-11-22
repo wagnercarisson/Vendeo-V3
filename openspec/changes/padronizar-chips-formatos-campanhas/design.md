@@ -137,12 +137,13 @@ interface CampaignFormatChipsProps {
 
 - Renderiza sempre `1:1` e `9:16`, nesta ordem, em uma lista com nome acessível.
 - Texto visível APENAS o nome do formato (“Quadrado 1:1”/“Vertical 9:16”). Rótulos “Disponível”/“Não incluído”/“Não entregue”/“Selecionado” e badge não aparecem no chip; estado completo permanece no nome/descrição acessível e na ajuda.
-- Cada chip tem um wrapper acessível (`role="group"`/`aria-label` com nome + estado completo) e uma descrição estável em nó `hidden` referenciada por `aria-describedby` para leitor de tela.
-- `delivered`: destaque discreto (`text-text-primary`, `bg-accent-green/10`, borda suave), sem ícone/rótulo visível. Se houver `href`, o chip vira link; sem `href`, permanece informativo.
+- Cada chip é o próprio controle: no detalhe, entregue com `href` é `<a>`; entregue sem `href` e não entregue/excepcional é `<button type="button">`; lista/dashboard usam `<button type="button">`. `aria-label` inclui nome + estado + “Selecionado”; descrição estável em nó `hidden`/`aria-describedby` no próprio link/botão.
+- `delivered`: destaque discreto (`text-text-primary`, `bg-accent-green/10`, borda suave), sem ícone/rótulo visível. Com `href`, é `<a>`; sem `href`, é `<button type="button">` de explicação.
 - `active`: borda/fundo distintos (`ring-1 ring-accent-green/40 bg-accent-green/15`) + `aria-current`/estado acessível; sem badge.
 - `processing`: `Loader2` pequeno; `absent`: cinza legível (`text-text-secondary`, `bg-bg-elevated`), sem ícone/rótulo visível; `refunded`: `Undo2` pequeno; `unknown`/`unavailable`: `CircleHelp` pequeno + borda tracejada.
 - Nunca usa o texto “Não gerado” para `unknown`/`unavailable`.
-- Ajuda: botão “?” irmão do link (nunca aninhado), aparência compacta sem círculo/borda grande, hit area ≥44×44, `aria-expanded`; `aria-controls` somente quando o popover estiver montado. Popover em `createPortal` após mount, `position: fixed`, `lang={helpLang}`, fora do fluxo, clampado na viewport; abre por hover/foco/click; primeiro acionamento após hover/foco fixa, segundo/fora/`Escape` fecham; sem conteúdo focável quando fechado.
+- Sem controle “?” separado: remover botão, espaço, borda, foco e área acionável independentes; sem botão invisível/foco órfão.
+- Ajuda: popover em `createPortal` após mount, `position: fixed`, `lang={helpLang}`, ancorado no próprio chip, fora do fluxo, clampado na viewport. Hover/foco desktop abrem; em toque, chip-botão abre/fecha ajuda, enquanto link entregue no detalhe seleciona em um único toque. `aria-expanded`/`aria-controls` apenas no chip-botão; `Escape`/fora fecham e devolvem foco ao chip, sem reabrir; link não intercepta primeiro toque.
 - Sem portal no servidor: `mounted` via `useEffect`; SSR/renderToString não acessa `document`.
 - Responsivo: `flex flex-wrap`, `min-w-0`, textos que quebram; não empurra nome, ações ou miniaturas para fora do card; espaçamento consistente até a arte no detalhe.
 - Ícones somente `lucide-react`, sem emojis; tema dark do `openspec/design-system/MASTER.md`.
@@ -205,8 +206,9 @@ Decisões:
 - **Não depender só de cor:** forma (borda/fundo/indicador) + estado acessível completo.
 - **Ajuda fora do fluxo:** popover flutuante em portal para `document.body`, `position: fixed`; sem aumentar altura do card, quebrar linha, deslocar arte ou criar overflow horizontal.
 - **Posicionamento:** calcular a partir do âncora, preferir acima/abaixo conforme espaço, clampar na viewport e ignorar containers com `overflow` (portal).
-- **Interações:** hover/foco desktop abrem; “?” de toque alterna; primeiro acionamento após hover/foco **fixa** a ajuda, segundo fecha; fora e `Escape` fecham; foco retorna ao botão no `Escape`; conteúdo não focável quando fechado.
-- **Alvo:** aparência compacta, mas área acionável ≥44×44 px no “?” e no link de seleção (hit area/padding), sem nested button/link.
+- **Interações:** hover/foco desktop abrem; em toque, chip-botão abre/fecha ajuda; link entregue no detalhe seleciona em um único toque; fora e `Escape` fecham; foco retorna ao chip no `Escape`; conteúdo não focável quando fechado; sem controle “?” separado.
+- **Alvo:** aparência compacta, mas área acionável ≥44×44 px no próprio chip (link ou botão), sem nested button/link e sem “? ”.
+- **Não depender só de cor:** entregue usa borda mais espessa/preenchimento; ausente usa borda simples/cinza; ativo usa anel/fundo; excepcionais usam indicador pequeno.
 - **Sem dependência nova:** `react-dom/createPortal`, `useId`, `useState`/`useEffect` já existentes; `ExpandableHelp` é in-flow e não atende ao contrato flutuante, então não será reutilizado como está.
 - **Espaçamento:** separação consistente entre bloco de chips e arte no detalhe; chips não empurram miniatura/ações na lista/dashboard.
 - **Validação visual:** jsdom não comprova layout; registrar evidência visual desktop/mobile separadamente antes de aprovar a UX.
@@ -220,7 +222,7 @@ Decisões:
 - **Chips de lista/dashboard versus gate de aprovação no detalhe.** O chip representa entrega persistida; o gate continua nas ações. → Mitigação: documentar a semântica, não adicionar links/download onde o gate bloqueia e manter os testes de aprovação existentes.
 - **Snapshot conjunto inconsistente** pode aparecer no dashboard porque a elegibilidade continua `status = ready`. → Mitigação: ambos `unavailable`/`unknown`, sem tratar como `1:1`; não alterar contagem/eligibility nesta fatia e cobrir com teste.
 - **Leitura conjunta falha** retorna `unknown`; não cair no individual. → Mitigação: classificação conjunta antes do resolvedor e teste de falha de leitura.
-- **Ajuda apenas em hover** exclui toque; ajuda em fluxo desloca layout. → Mitigação: popover flutuante em portal, “?” ≥44 px, hover/foco/toque, Escape/fora, sem deslocamento; validação visual separada.
+- **Ajuda apenas em hover** exclui toque; ajuda em fluxo desloca layout. → Mitigação: popover flutuante em portal ancorado no chip, chip com ≥44 px, hover/foco/toque, Escape/fora, sem deslocamento; validação visual separada.
 - **Divergência de textos entre superfícies.** → Mitigação: catálogo compartilhado + teste de identidade/paridade.
 - **Regressão de performance.** → Mitigação: builders puros e prova de zero chamadas adicionais causadas pelos chips, comparando a mesma página antes/depois; a assinatura de miniaturas legadas permanece como está.
 

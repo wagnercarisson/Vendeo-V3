@@ -235,10 +235,10 @@ Contrato visual/estrutural obrigatório:
 - `absent`: `text-text-secondary bg-bg-elevated border-border` (cinza legível), sem ícone/rótulo visível.
 - `refunded`: `absent` + indicador pequeno `Undo2`; crédito devolvido na descrição/ajuda.
 - `unknown`/`unavailable`: borda tracejada neutra + indicador pequeno de dúvida; estado completo na descrição/ajuda.
-- Link `<a href>` (sem `next/link`/prefetch) somente quando `hrefs?.[key]` existe **e** `state === "delivered"`; demais são `span` (sem ação, sem geração).
-- Controle “?”: `button type="button"` **irmão** do link/span (nunca aninhado), `aria-expanded`, `aria-controls` somente quando o popover estiver montado/aberto, `aria-describedby` para descrição `hidden` estável, `aria-label` com nome + estado, aparência compacta sem círculo/borda grande, hit area ≥44×44, `focus-visible:ring-2`; nunca `disabled`.
-- Ajuda: popover flutuante em `createPortal` para `document.body`, `position: fixed`, fora do fluxo. Abre por hover/foco (desktop) e “?” (toque); primeiro acionamento após hover/foco fixa, segundo/clique-fora/`Escape` fecham; posição clampada na viewport, sem overflow horizontal, sem deslocar card/arte. Sem conteúdo focável quando fechada; foco retorna ao “?” no `Escape`.
-- Explicação escolhida: `deliveredActive` se `active`; `refunded` se `refunded`; senão por estado/reason. Estado completo no `aria-label` do grupo e em descrição `hidden` referenciada por `aria-describedby`; a ajuda flutuante mostra o motivo.
+- Semântica do próprio chip: no detalhe, `delivered` com `href` é `<a href>` (sem prefetch) e o toque seleciona; `delivered` sem href e não entregue/excepcional é `<button type="button">`; lista/dashboard são `<button type="button">`. Nada de `span` clicável ou “?” separado.
+- Cada chip é o controle de ajuda: `aria-label` com nome + estado + “Selecionado”; `aria-describedby` para descrição `hidden` estável. `aria-expanded`/`aria-controls` apenas no chip-botão (quando aberto). Hit area ≥44×44, `focus-visible:ring-2`.
+- Ajuda: popover flutuante em `createPortal` para `document.body`, `position: fixed`, ancorado no próprio chip, fora do fluxo. Hover/foco (desktop) abrem; em toque, chip-botão abre/fecha; link entregue seleciona em um único toque. Fora/`Escape` fecham; foco retorna ao chip no `Escape`, sem reabrir. Posição clampada na viewport, sem overflow horizontal, sem deslocar card/arte. Um popover por vez.
+- Explicação escolhida: `deliveredActive` se `active`; `refunded` se `refunded`; senão por estado/reason. Estado completo no `aria-label` e em descrição `hidden`/`aria-describedby`; a ajuda flutuante mostra o motivo.
 - Sem emojis; tema dark; sem light mode; sem `dangerouslySetInnerHTML`; sem dependência nova (portal React existente).
 
 ---

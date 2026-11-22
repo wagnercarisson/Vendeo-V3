@@ -50,7 +50,7 @@ Nomes de produto, dados persistidos de campanha, textos comerciais e artes NÃO 
 
 ### Requirement: Card único com indicadores de formato para campanha conjunta
 
-A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive quando a campanha for conjunta. O card SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com estados independentes (`delivered`, `processing`, `absent`, `unknown` ou `unavailable`), usando o componente compartilhado e a mesma linguagem do dashboard e do detalhe. Os chips SHALL ser compactos: texto visível apenas “Quadrado 1:1”/“Vertical 9:16”; rótulos de estado e badge “Selecionado” NÃO SHALL aparecer no chip. O estado completo SHALL permanecer no nome/descrição acessível. Formato entregue SHALL ter destaque discreto; ausente SHALL permanecer em cinza legível; processamento e indeterminação PODEM usar indicador pequeno, sem frase longa. Estorno conhecido SHALL permanecer distinguível. A ajuda SHALL ser flutuante, fora do fluxo, sem aumentar a altura do card, quebrar a linha dos chips, deslocar a miniatura ou criar overflow horizontal. Os chips NÃO SHALL ser links nem navegar individualmente por formato. A campanha conjunta com os dois formatos solicitados e apenas um entregue SHALL ser apresentada como parcial, sem duplicar o card. Campanha individual NÃO SHALL ser apresentada como parcial: o outro formato é não incluído. `status = error` NÃO SHALL ser convertido em ausência sem evidência explícita; nesse caso o formato SHALL ser `unknown`. As ações existentes de abrir campanha e baixar SHALL ser preservadas.
+A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive quando a campanha for conjunta. O card SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com estados independentes (`delivered`, `processing`, `absent`, `unknown` ou `unavailable`), usando o componente compartilhado e a mesma linguagem do dashboard e do detalhe. Os chips SHALL ser compactos: texto visível apenas “Quadrado 1:1”/“Vertical 9:16”; rótulos de estado e badge “Selecionado” NÃO SHALL aparecer no chip. O estado completo SHALL permanecer no nome/descrição acessível. Formato entregue SHALL ter destaque discreto; ausente SHALL permanecer em cinza legível; processamento e indeterminação PODEM usar indicador pequeno, sem frase longa. Estorno conhecido SHALL permanecer distinguível. A ajuda SHALL ser flutuante, fora do fluxo, sem aumentar a altura do card, quebrar a linha dos chips, deslocar a miniatura ou criar overflow horizontal. Os chips NÃO SHALL ser links nem navegar individualmente por formato; cada chip SHALL ser um `<button type="button">` cujo toque abre/fecha apenas a explicação local. NÃO SHALL existir controle “?” separado. A campanha conjunta com os dois formatos solicitados e apenas um entregue SHALL ser apresentada como parcial, sem duplicar o card. Campanha individual NÃO SHALL ser apresentada como parcial: o outro formato é não incluído. `status = error` NÃO SHALL ser convertido em ausência sem evidência explícita; nesse caso o formato SHALL ser `unknown`. As ações existentes de abrir campanha e baixar SHALL ser preservadas.
 
 #### Scenario: Campanha aparece uma única vez
 
@@ -59,11 +59,13 @@ A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive 
 - **AND** o card SHALL exibir chips para `1:1` e `9:16`
 - **AND** SHALL NOT renderizar um card separado por formato
 
-#### Scenario: Chips são informativos e não navegam
+#### Scenario: Chips são botões de explicação e não navegam
 
-- **WHEN** o usuário aciona um chip de formato no card
-- **THEN** SHALL NOT haver navegação para `/campanhas/[id]?format=...`
+- **WHEN** o usuário toca ou aciona um chip de formato no card
+- **THEN** o chip `<button type="button">` SHALL abrir/fechar apenas a ajuda local
+- **AND** SHALL NOT haver navegação para `/campanhas/[id]?format=...`
 - **AND** SHALL NOT iniciar geração, reserva, modal ou chamada ao provider
+- **AND** NÃO SHALL existir controle “?” separado
 
 #### Scenario: Formato entregue tem destaque discreto e nome compacto
 
@@ -78,7 +80,8 @@ A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive 
 - **WHEN** a ajuda de um chip é aberta por hover, foco ou toque
 - **THEN** a altura do card, a linha dos chips e a posição da miniatura SHALL permanecer inalteradas
 - **AND** a ajuda SHALL aparecer em camada flutuante, sem overflow horizontal
-- **AND** SHALL fechar no segundo acionamento, clique/toque fora ou `Escape`
+- **AND** SHALL fechar no segundo acionamento do chip-botão, clique/toque fora ou `Escape`
+- **AND** NÃO SHALL existir controle “?” separado
 
 #### Scenario: Formato em processamento não inicia geração
 
