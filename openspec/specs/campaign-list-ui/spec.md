@@ -177,7 +177,7 @@ O layout SHALL ser responsivo:
 
 A listagem de campanhas SHALL exibir os textos fixos no idioma da interface resolvido no servidor pela fundação existente (`getUiRenderContext` + `SupportedUiLocale`), sem criar seletor, detector, preferência ou resolvedor paralelo. A página SHALL passar ao Client Component apenas o namespace de textos da listagem, e esse namespace NÃO SHALL ser incorporado ao catálogo global do shell nem ao payload de outras rotas.
 
-O namespace SHALL cobrir título, busca (placeholder e nome acessível), filtros de status e período (rótulos e nomes acessíveis), ordenação (rótulos e nome acessível), estados sem loja, sem campanhas e sem resultados de busca, rótulos de status do card, ações Abrir/Baixar, rótulos da paginação e formatação de datas.
+O namespace SHALL cobrir título, busca (placeholder e nome acessível), filtros de status e período (rótulos e nomes acessíveis), ordenação (rótulos e nome acessível), estados sem loja, sem campanhas e sem resultados de busca, rótulos de status do card, ações Abrir/Baixar, rótulos e explicações dos formatos `1:1` e `9:16`, rótulos da paginação e formatação de datas.
 
 Identificadores de status, valores de parâmetros de URL, critérios de filtragem, ordenação, contagens, debounce, redirect de página vazia e regras de elegibilidade NÃO SHALL ser traduzidos ou alterados. Apenas os rótulos apresentados são localizados.
 
@@ -186,14 +186,15 @@ Nomes de produto, dados persistidos de campanha, textos comerciais e artes NÃO 
 #### Scenario: Listagem em es-419 mantém as mesmas campanhas e ações
 
 - **WHEN** um usuário com `uiLocale = "es-419"` acessa `/campanhas`
-- **THEN** título, busca, filtros, ordenação, estados vazios, status, ações e paginação SHALL ser exibidos em `es-419`
+- **THEN** título, busca, filtros, ordenação, estados vazios, status, formatos, ações e paginação SHALL ser exibidos em `es-419`
 - **AND** a mesma loja SHALL ver as mesmas campanhas, na mesma ordem e com as mesmas contagens do que em `pt-BR`
 - **AND** os valores de URL, os filtros e o redirect de página vazia SHALL permanecer idênticos
 
 #### Scenario: Listagem em pt-BR preserva textos e comportamento
 
 - **WHEN** um usuário com `uiLocale = "pt-BR"` acessa `/campanhas`
-- **THEN** os textos fixos SHALL ser exatamente os anteriores à localização
+- **THEN** os textos fixos existentes SHALL permanecer exatamente como antes
+- **AND** os novos nomes e estados dos chips de formato SHALL seguir o catálogo aprovado desta change
 - **AND** nenhuma região SHALL declarar `lang="es-419"`
 
 #### Scenario: Status continuam distintos e com os mesmos critérios
@@ -201,6 +202,12 @@ Nomes de produto, dados persistidos de campanha, textos comerciais e artes NÃO 
 - **WHEN** a listagem é exibida em qualquer um dos idiomas
 - **THEN** `ready` SHALL exibir o rótulo de campanha pronta, campanha `error` do novo fluxo encerrada SHALL exibir o rótulo neutro de não concluída, e demais `error` SHALL exibir o rótulo de erro
 - **AND** as cores e a regra de exibição SHALL permanecer inalteradas
+
+#### Scenario: Chips de formato são localizados
+
+- **WHEN** a listagem é exibida em `es-419`
+- **THEN** os nomes dos formatos, rótulos de estado e explicações SHALL vir do catálogo compartilhado em espanhol neutro LATAM
+- **AND** os mesmos estados e regras SHALL permanecer idênticos aos de `pt-BR`
 
 #### Scenario: Nome do produto não herda o idioma da interface
 
@@ -226,38 +233,90 @@ A busca e os selects de período e ordenação SHALL expor nomes acessíveis tra
 
 ### Requirement: Card único com indicadores de formato para campanha conjunta
 
-A listagem `/campanhas` SHALL exibir no máximo um card por campanha conjunta. O card SHALL identificar os formatos `1:1` e `9:16` com indicadores de estado independentes (`entregue`, `em processamento`, `ausente` ou `indisponível`). O formato entregue SHALL ser clicável e SHALL abrir o detalhe no formato escolhido (`/campanhas/[id]?format=1:1|9:16`). O formato em processamento SHALL apenas indicar o estado, sem iniciar geração. O formato ausente SHALL informar a ausência, sem ação de geração nesta fatia. A campanha com um formato entregue e o outro não SHALL ser apresentada como parcial, sem duplicar o card.
+A listagem `/campanhas` SHALL exibir no máximo um card por campanha, inclusive quando a campanha for conjunta. O card SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com estados independentes (`delivered`, `processing`, `absent`, `unknown` ou `unavailable`), usando o componente compartilhado e a mesma linguagem do dashboard e do detalhe. Os chips SHALL ser compactos: texto visível apenas “Quadrado 1:1”/“Vertical 9:16”; rótulos de estado e badge “Selecionado” NÃO SHALL aparecer no chip. O estado completo SHALL permanecer no nome/descrição acessível. Formato entregue SHALL ter destaque discreto; ausente SHALL permanecer em cinza legível; processamento e indeterminação PODEM usar indicador pequeno, sem frase longa. Estorno conhecido SHALL permanecer distinguível. A ajuda SHALL ser flutuante, fora do fluxo, sem aumentar a altura do card, quebrar a linha dos chips, deslocar a miniatura ou criar overflow horizontal. Os chips NÃO SHALL ser links nem navegar individualmente por formato; cada chip SHALL ser um `<button type="button">` cujo toque abre/fecha apenas a explicação local. NÃO SHALL existir controle “?” separado. A campanha conjunta com os dois formatos solicitados e apenas um entregue SHALL ser apresentada como parcial, sem duplicar o card. Campanha individual NÃO SHALL ser apresentada como parcial: o outro formato é não incluído. `status = error` NÃO SHALL ser convertido em ausência sem evidência explícita; nesse caso o formato SHALL ser `unknown`. As ações existentes de abrir campanha e baixar SHALL ser preservadas.
 
-#### Scenario: Campanha conjunta aparece uma única vez
+#### Scenario: Campanha aparece uma única vez
 
-- **WHEN** a listagem contém uma campanha conjunta
+- **WHEN** a listagem contém uma campanha conjunta, individual ou legada
 - **THEN** exatamente um card SHALL ser renderizado
-- **AND** o card SHALL exibir indicadores para `1:1` e `9:16`
+- **AND** o card SHALL exibir chips para `1:1` e `9:16`
 - **AND** SHALL NOT renderizar um card separado por formato
 
-#### Scenario: Indicador entregue abre o formato escolhido
+#### Scenario: Chips são botões de explicação e não navegam
 
-- **WHEN** o usuário aciona o indicador `9:16` de um formato entregue
-- **THEN** a navegação SHALL abrir `/campanhas/[id]?format=9:16`
-- **AND** o detalhe SHALL pré-selecionar o vertical
+- **WHEN** o usuário toca ou aciona um chip de formato no card
+- **THEN** o chip `<button type="button">` SHALL abrir/fechar apenas a ajuda local
+- **AND** SHALL NOT haver navegação para `/campanhas/[id]?format=...`
+- **AND** SHALL NOT iniciar geração, reserva, modal ou chamada ao provider
+- **AND** NÃO SHALL existir controle “?” separado
 
-#### Scenario: Indicador em processamento não inicia geração
+#### Scenario: Formato entregue tem destaque discreto e nome compacto
+
+- **WHEN** um formato da campanha está `delivered`
+- **THEN** o chip SHALL exibir apenas o nome do formato como texto visível
+- **AND** SHALL aplicar destaque visual discreto de disponibilidade
+- **AND** o estado “Disponível” SHALL permanecer no nome/descrição acessível
+- **AND** SHALL NOT exibir o rótulo visível “Disponível” nem ícone redundante
+
+#### Scenario: Ajuda flutuante não desloca o card
+
+- **WHEN** a ajuda de um chip é aberta por hover, foco ou toque
+- **THEN** a altura do card, a linha dos chips e a posição da miniatura SHALL permanecer inalteradas
+- **AND** a ajuda SHALL aparecer em camada flutuante, sem overflow horizontal
+- **AND** SHALL fechar no segundo acionamento do chip-botão, clique/toque fora ou `Escape`
+- **AND** NÃO SHALL existir controle “?” separado
+
+#### Scenario: Formato em processamento não inicia geração
 
 - **WHEN** um formato está em processamento
-- **THEN** o indicador SHALL exibir o estado
+- **THEN** o chip SHALL exibir o estado com indicador próprio
 - **AND** SHALL NOT iniciar nova geração, reserva ou chamada ao provider
 
-#### Scenario: Indicador ausente informa sem ação
+#### Scenario: Formato ausente é compacto e sem ação
 
 - **WHEN** um formato está ausente
-- **THEN** o card SHALL informar a ausência
-- **AND** SHALL NOT oferecer modal, confirmação ou ação de geração nesta fatia
+- **THEN** o card SHALL exibir o chip compacto em cinza legível, sem `+`
+- **AND** SHALL NOT exibir “Não incluído”/“Não entregue” como texto visível no chip
+- **AND** a ausência e o motivo SHALL permanecer no nome/descrição acessível
+- **AND** SHALL NOT oferecer modal, confirmação, custo ou ação de geração nesta fatia
 
-#### Scenario: Entrega parcial é identificada
+#### Scenario: Estorno conhecido permanece distinguível
 
-- **WHEN** exatamente um dos formatos está entregue e o outro não
+- **WHEN** um formato ausente tem estorno conhecido
+- **THEN** o chip SHALL permanecer visualmente distinto de uma ausência simples
+- **AND** o crédito devolvido SHALL permanecer no nome/descrição acessível e na ajuda
+- **AND** SHALL NOT esconder o estorno como ausência simples
+
+#### Scenario: Indeterminação não vira “Não gerado”
+
+- **WHEN** o estado do formato é `unknown` ou `unavailable`
+- **THEN** o chip SHALL indicar informação indisponível
+- **AND** SHALL NOT exibir “Não gerado”
+
+#### Scenario: Entrega parcial é identificada sem esconder o entregue
+
+- **WHEN** uma campanha conjunta teve os dois formatos solicitados e exatamente um está entregue
 - **THEN** o card SHALL indicar a entrega parcial
-- **AND** o formato entregue SHALL permanecer acessível e baixável
+- **AND** o formato entregue SHALL permanecer acessível pelas ações existentes
+- **AND** as ações “Abrir” e “Baixar” SHALL permanecer disponíveis conforme o estado atual
+
+#### Scenario: Campanha individual não é parcial
+
+- **WHEN** uma campanha individual está pronta com seu formato persistido entregue
+- **THEN** o card SHALL exibir o formato entregue e o outro como não incluído
+- **AND** SHALL NOT indicar entrega parcial
+
+#### Scenario: Erro da campanha não vira ausência
+
+- **WHEN** uma campanha individual ou legada está com `status = error` e não há evidência explícita de estorno
+- **THEN** o chip do formato persistido SHALL exibir `unknown`
+- **AND** SHALL NOT exibir `absent/not_delivered` nem “Não gerado”
+
+#### Scenario: Mesmos nomes e vocabulário do dashboard e detalhe
+
+- **WHEN** a mesma campanha é exibida na listagem, no dashboard e no detalhe
+- **THEN** os nomes dos formatos e o vocabulário dos estados SHALL ser os mesmos nas três superfícies
+- **AND** um estado `unknown` causado por menor evidência SHALL usar o mesmo rótulo, mesmo que o detalhe tenha mais informação
 
 ### Requirement: Miniatura preferida e sempre derivada na listagem conjunta
 
