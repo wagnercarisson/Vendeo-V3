@@ -158,6 +158,8 @@ link.
 |---|---|---|
 | `987159d9` | feat | Chip único (link/botão), remoção total do “?”, ajuda ancorada no chip, estado acessível e diferenciação não-cromática; componente + testes de componente/SSR |
 | `04ccba09` | test | Adequação das suítes de detalhe/lista/dashboard ao chip único + `61-05-VISUAL-CHECK.md` pendente |
+| `6478cabb` | docs | Registro da execução **NÃO ACEITA**, plano/plan-check e logs de gate |
+| `97dfe067` | docs | Normalização de whitespace do plano (fecha `git diff --check`) |
 
 ---
 
@@ -243,6 +245,12 @@ usado). Nenhum I/O real. As contagens de lista/dashboard/detalhe não mudaram
 
 - O `61-05` não inclui `openspec/.../tasks.md` em `files_modified`; os checkboxes
   10.x permanecem desmarcados. Nenhuma alegação de change concluída/sincronizada.
+
+### 7. [Rule 3 — gate de formatação] Whitespace do próprio plano
+
+- O `61-05-PLAN.md` (untracked) tinha 5 linhas em branco com espaços; ao ser
+  versionado, `git diff --check c971d631..HEAD` passou a falhar. Normalizado em
+  commit exclusivo de documentação (`97dfe067`), sem alterar conteúdo/tarefas.
 
 Nenhuma decisão arquitetural nova. Nenhuma alteração de contrato de dados ou
 financeiro.
