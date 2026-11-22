@@ -292,7 +292,7 @@ Nenhum desvio de escopo. Nenhuma decisão arquitetural nova.
 4. **Build/lint/typecheck** verdes neste ambiente Windows/local. Gates de integração
    (Postgres/homolog/local/app-env/Product 1:1/F60/F60.1) **NÃO EXECUTADOS** por
    ausência de ambiente.
-5. **Fase 61 NÃO concluída:** `61-03` não aceito; sem sync/archive/merge/push/deploy.
+5. **Fase 61 aguardando fechamento documental:** `61-03` aceito no resultado final; `61-04` superseded; `61-05` aceito; sem sync/archive/merge/push/deploy.
 
 ---
 

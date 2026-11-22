@@ -241,10 +241,11 @@ usado). Nenhum I/O real. As contagens de lista/dashboard/detalhe não mudaram
   mas não é mais usada pelo componente. Não foi removida nesta fatia para não
   reabrir i18n/testes de catálogo. Registrado conforme I-01 do plan check.
 
-### 6. [Processo] `tasks.md` não ticado
+### 6. [Processo] `tasks.md` — reconciliação posterior
 
-- O `61-05` não inclui `openspec/.../tasks.md` em `files_modified`; os checkboxes
-  10.x permanecem desmarcados. Nenhuma alegação de change concluída/sincronizada.
+- O `61-05` originalmente não incluiu `openspec/.../tasks.md` em `files_modified`.
+- No aceite/fechamento, as 72 tasks foram marcadas com evidência e `openspec list`
+  passou a **72/72 complete**. Nenhuma alegação de sync/archive.
 
 ### 7. [Rule 3 — gate de formatação] Whitespace do próprio plano
 
@@ -277,10 +278,11 @@ financeiro.
   aceite visual/funcional do responsável em 2026-11-22; nenhuma captura,
   medição ou viewport foi fornecida e nenhuma aprovação foi simulada.
   `jsdom` não comprova layout.
-- **Fase 61 NÃO concluída:** `61-03`/`61-04`/`61-05` não aceitos; sem
+- **Fase 61 aguardando fechamento documental:** `61-03` e `61-05` aceitos no
+  resultado final; `61-04` superseded sem aprovação retroativa; sem
   sync/archive/merge/push/deploy. `.planning/STATE.md` e `.planning/ROADMAP.md`
-  **não** foram alterados para “fase concluída”.
-- Próximo passo: revisão técnica e visual humana no `## Review Stop`.
+  registram o estado de aceite, não “arquivada/publicada”.
+- Próximo passo: verificações formais e fechamento documental autorizado separadamente.
 
 ---
 
