@@ -206,14 +206,14 @@ Total reexecutado: **16 arquivos / 204 testes PASS**, incluindo os **12 arquivos
 
 **Coerente e commitado:**
 
-- `ROADMAP.md`: 61-01/02/03/05 aceitos no resultado final; 61-04 superseded; fase aguardando fechamento documental; sem publicação.
+- `ROADMAP.md`: 61-01/02/03/05 aceitos no resultado final; 61-04 superseded; fase arquivada em 2026-11-22; publicação não executada.
 - `STATE.md`: aceite F61-05 registrado; 61-03 aceito no resultado final; 61-04 superseded; sem banco/migration/merge/push.
 - `61-03-SUMMARY.md` e `61-05-SUMMARY.md`: cabeçalhos marcam aceite no resultado final.
 - `61-04-SUMMARY.md`: superseded, sem aprovação retroativa.
 - `61-05-VISUAL-CHECK.md`: aceite visual/funcional declarado, sem capturas/medições/viewports.
 - `tasks.md`: 72/72 commitado.
 - `61-OPSX-VERIFY.md`: commitado.
-- Árvore limpa no HEAD `5f8f5119`; `git diff --check` limpo.
+- Árvore limpa no HEAD `5f8f5119`; `git diff --check` limpo no fechamento (`9cf94e27`, `bd3fcce4`), com archive em `openspec/changes/archive/2026-11-22-padronizar-chips-formatos-campanhas/`.
 
 **Nota de rastreabilidade (resolvida):** os corpos de `61-05-SUMMARY.md` e `61-03-SUMMARY.md` foram reconciliados após a verificação; não restam frases “não aceito/fase não concluída” contradizendo os cabeçalhos. O desvio #6 do `61-05-SUMMARY.md` foi atualizado para `tasks.md` 72/72.
 
