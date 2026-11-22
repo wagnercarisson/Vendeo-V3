@@ -449,6 +449,52 @@ describe("F61 — componente compartilhado de chips de formato (compacto)", () =
     expect(button).not.toHaveAttribute("aria-controls");
   });
 
+  it("remove listeners de fora/scroll/resize ao fechar e não reage após fechado", () => {
+    const docAdd = vi.spyOn(document, "addEventListener");
+    const docRemove = vi.spyOn(document, "removeEventListener");
+    const winAdd = vi.spyOn(window, "addEventListener");
+    const winRemove = vi.spyOn(window, "removeEventListener");
+
+    try {
+      renderChips(joint("delivered", "delivered"));
+      const button = helpButtonOf(groupByName(/^Quadrado 1:1/));
+
+      // Abre/fecha duas vezes para provar que não acumulam listeners.
+      for (let cycle = 0; cycle < 2; cycle += 1) {
+        fireEvent.click(button);
+        expect(button).toHaveAttribute("aria-expanded", "true");
+        fireEvent.click(button);
+        expect(button).toHaveAttribute("aria-expanded", "false");
+      }
+
+      for (const type of ["pointerdown", "keydown"] as const) {
+        const adds = docAdd.mock.calls.filter(([event]) => event === type).length;
+        const removes = docRemove.mock.calls.filter(([event]) => event === type)
+          .length;
+        expect(adds).toBeGreaterThan(0);
+        expect(removes).toBe(adds);
+      }
+
+      for (const type of ["resize", "scroll"] as const) {
+        const adds = winAdd.mock.calls.filter(([event]) => event === type).length;
+        const removes = winRemove.mock.calls.filter(([event]) => event === type)
+          .length;
+        expect(adds).toBeGreaterThan(0);
+        expect(removes).toBe(adds);
+      }
+
+      // Já fechado: eventos externos não reabrem nem reagem.
+      fireEvent.keyDown(document, { key: "Escape" });
+      fireEvent.pointerDown(document.body);
+      expect(screen.queryByRole("note")).toBeNull();
+    } finally {
+      docAdd.mockRestore();
+      docRemove.mockRestore();
+      winAdd.mockRestore();
+      winRemove.mockRestore();
+    }
+  });
+
   it("não deixa conteúdo focável na ajuda fechada e o popover não é focável", () => {
     const { container } = renderChips(joint("delivered", "delivered"));
 
