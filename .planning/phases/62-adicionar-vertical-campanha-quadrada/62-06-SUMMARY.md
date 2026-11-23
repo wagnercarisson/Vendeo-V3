@@ -64,6 +64,19 @@ completed: 2026-11-23
 | Commit | Conteúdo |
 |---|---|
 | `c86be002` | leitura em lote, DTOs, download format-aware, pendência e testes |
+| `60ff6e22` | plano: correções C12–C14 |
+| `fe4e1d9d` | bloqueio na resolução direta, falha fechada e outcome unknown |
+| `a87a84b3` | fake de pendências compatível com a consulta de adições |
+
+## Correções C12–C14 (revisão final)
+
+- **C12 — resolução direta:** `findPendingOperation` bloqueia a adição antes de
+  probe/RPC/projeção; não apenas a fila.
+- **C13 — ausência × erro:** tabela comprovadamente ausente (`42P01`/`PGRST205`)
+  preserva compatibilidade; qualquer outra falha de classificação bloqueia a
+  consulta/resolução.
+- **C14 — outcome:** o lote consulta outcome e preserva terminais; reserva +
+  `unknown` ⇒ chip `unknown` em lista/dashboard. Quatro consultas fixas, sem N+1.
 
 ## Contrato implementado
 
@@ -90,11 +103,11 @@ completed: 2026-11-23
 
 | Gate | Resultado |
 |---|---|
-| Foco 62-06 (lista, dashboard, download, pendência, regressões, guards) | **8 arquivos / 92 testes PASS** |
+| Foco 62-06 (lista, dashboard, download, pendência, regressões, guards) | **10 arquivos / 110 testes PASS** |
 | `typecheck` | exit **0** |
 | `lint` | exit **0** |
 | `build` | exit **0** — 102/102 páginas |
-| Suíte global | **exit 0** — 863 arquivos + 2 skipped (865); **10.751 testes PASS** + 10 skipped |
+| Suíte global | **exit 0** — 863 arquivos + 2 skipped (865); **10.756 testes PASS** + 10 skipped |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
@@ -105,9 +118,10 @@ completed: 2026-11-23
   apresentação. Nenhum comportamento de geração foi adicionado.
 - **Fakes/offline:** sem prova de RLS, locks, concorrência PostgREST, Storage ou
   provider reais.
-- **Pendência legada:** a exclusão é best-effort se a tabela de adições ainda não
-  existir no ambiente (feature inativa); com a migration aplicada, a leitura
-  exclui as operações.
+- **Pendência legada:** a exclusão cobre fila e resolução direta; tabela
+  comprovadamente ausente preserva compatibilidade, demais erros falham fechado.
+- **Outcome:** a reserva não é promovida a `processing` quando o outcome é
+  `unknown`; terminais continuam prevalecendo.
 - **`62-07` não iniciado.** Nenhum ambiente ou segredo foi configurado.
 
 ## Next

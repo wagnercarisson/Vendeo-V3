@@ -7,7 +7,7 @@
 ## Aceite final (2026-11-23)
 
 - **Aprovado tecnicamente, local/offline.**
-- Reexecução do revisor: **9 arquivos / 158 testes PASS**, OpenSpec strict válido, diff-check limpo.
+- Reexecução final do revisor: **9 arquivos / 159 testes PASS**, OpenSpec strict válido, diff-check limpo. A contagem **9/158** permanece como evidência histórica anterior.
 - Gates do executor permanecem separados: foco 7/146, boundaries 2/13, afetados 23/414, global 10.738, build 0.
 - Histórico C6–C11 e limitações offline preservados.
 

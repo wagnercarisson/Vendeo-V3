@@ -60,8 +60,9 @@ completed: 2026-11-23
 ## Aceite final do revisor (2026-11-23)
 
 - **Veredito:** `62-05` **aprovado tecnicamente, local/offline**.
-- **Reexecução do revisor:** **9 arquivos / 158 testes PASS**, OpenSpec strict
-  válido e `git diff --check` limpo.
+- **Reexecução final do revisor:** **9 arquivos / 159 testes PASS**, OpenSpec
+  strict válido e `git diff --check` limpo. A contagem **9/158** permanece como
+  evidência histórica da reexecução anterior.
 - **Gates do executor (separados):** foco **7 arquivos / 146 testes**, boundaries
   **2 arquivos / 13 testes**, afetados **23 arquivos / 414 testes**, typecheck/lint
   **0**, build **0 (102/102)**, global **860 arquivos + 2 skipped / 10.738 testes
