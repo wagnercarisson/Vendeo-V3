@@ -66,6 +66,15 @@ completed: 2026-11-23
 |---|---|
 | `fd4b060f` | plano reconciliado: R7, contratos atuais, injeções reais e guard estreito |
 | `1c20029b` | rota/token/modal/detalhe + testes e reconciliação de guards |
+| `96bcec61` | plano: correções C6–C9 (retomada, polling, download, fonte) |
+| `c6c69bf9` | retomada idempotente, polling contínuo, download seguro e incerteza da fonte |
+
+## Correções C6–C9 (revisão final)
+
+- **C6 — retomada:** POST retoma `processing`/`unknown` via continuação com reserva/economia duráveis, sem nova cobrança; GET emite token de retomada pelo `requestId` original mesmo com flag desligada; replay R1 vem antes de R2 e não devolve R2; flag desligada bloqueia só novas aberturas.
+- **C7 — polling:** o modal reagenda a consulta após cada resposta `processing`/`unknown`, sem sobreposição, parando em terminal/fechar/desmontar; oferece ação de retomada quando há token.
+- **C8 — download:** preview vertical OK + falha da assinatura de download ⇒ `downloadDisabled=true` e nenhuma URL do quadrado, nos caminhos novo e legado.
+- **C9 — fonte:** ranking preserva `indeterminate`/leitura incerta sobre rejeição de path da outra origem.
 
 ## Contrato implementado
 
@@ -93,13 +102,13 @@ completed: 2026-11-23
 
 | Gate | Resultado |
 |---|---|
-| Foco 62-05 (rota/token/página/legado/modal/chip/guard) | **7 arquivos / 134 testes PASS** |
+| Foco 62-05 (rota/token/página/legado/modal/chip/guard) | **7 arquivos / 141 testes PASS** |
 | Boundaries reconciliados (square-base + joint) | **2 arquivos / 13 testes PASS** |
-| Diretórios afetados (rota, format-addition, detalhe, campanha, guards) | **23 arquivos / 406 testes PASS** |
+| Diretórios afetados (rota, format-addition, detalhe, campanha, guards) | **23 arquivos / 409 testes PASS** |
 | `typecheck` | exit **0** |
 | `lint` | exit **0** |
 | `build` | exit **0** — 102/102 páginas |
-| Suíte global | **exit 0** — 860 arquivos + 2 skipped (862); **10.726 testes PASS** + 10 skipped |
+| Suíte global | **exit 0** — 860 arquivos + 2 skipped (862); **10.733 testes PASS** + 10 skipped |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
@@ -116,6 +125,9 @@ completed: 2026-11-23
 - **Download vertical:** usa URL assinada com opção de download; a rota dedicada
   de download permanece para o `62-06`.
 - **`62-06` não iniciado.** O detalhe não recebe ação em lista/dashboard.
+- **Retomada:** o GET emite token de retomada para operações abertas; o POST usa a continuação durável. O modal pode ser reaberto/fechado sem cancelar ou estornar.
+- **Polling:** consultas consecutivas `processing` são reagendadas; sem prova de longa duração em produção.
+- **Download:** sem URL de download válida para o vertical, o botão fica indisponível; não herda a URL do quadrado.
 
 ## Next
 
