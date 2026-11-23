@@ -59,12 +59,12 @@ completed: 2026-11-23
 
 - **Veredito:** `62-06` **aprovado tecnicamente, local/offline**, após a
   reconciliação textual das consultas em lote.
-- **Reexecução do revisor:** **8 arquivos / 92 testes PASS**, OpenSpec strict
-  válido, árvore e diff-check limpos (registro da revisão; correções C12–C14
-  aplicadas e reapresentadas).
-- **Gates do executor (separados):** foco **10 arquivos / 110 testes**, typecheck
-  **0**, lint **0**, build **0 (102/102)**, global **863 arquivos + 2 skipped /
-  10.756 testes + 10 skipped**, OpenSpec **1/0** e diff-check limpo.
+- **Reexecução final do revisor:** **10 arquivos / 110 testes PASS**, OpenSpec
+  strict válido, árvore e diff-check limpos. A contagem **8/92** permanece como
+  evidência histórica da revisão anterior.
+- **Gates do executor (separados):** typecheck **0**, lint **0**, build
+  **0 (102/102)**, global **863 arquivos + 2 skipped / 10.756 testes + 10
+  skipped**, OpenSpec **1/0** e diff-check limpo.
 - **Reconciliação textual:** referências a “3 consultas” corrigidas para “até 4
   consultas em lote; retornos antecipados podem executar menos”.
 

@@ -52,6 +52,7 @@ completed: 2026-11-23
 | Commit | Conteúdo |
 |---|---|
 | `546f3be8` | runbook, gates offline, pacote de migration e checklist de release |
+| `9e519073` | reconciliação R3/R5/R6 e autorização estruturada do 62-08 |
 
 ## Entregas
 
@@ -59,6 +60,21 @@ completed: 2026-11-23
 - **Gates offline:** typecheck 0; lint 0; build 0 (102/102); **13 arquivos / 168 testes dirigidos**; global **863 arquivos + 2 skipped / 10.756 testes + 10 skipped**; OpenSpec 1/0; diff-check limpo; baseline `5572378b`.
 - **Pacote de migration:** caminho `20261123130252_campaign_format_addition.sql`, SHA-256 `61c727…f5b878`, ledger esperado baseline+1, backup/restore-list, schema pré/pós, RLS/grants, guards, cenários, critérios de parada e rollback. **Não aplicada.**
 - **Checklist de release:** versão/hash/ledger/schema/backup, flags, provas PostgreSQL/Storage/provider/visual pendentes, rollback, monitoramento e autorização de publicação; separa a declaração F60.7 da conferência técnica.
+
+## Ajustes documentais da revisão (2026-11-23)
+
+- **R3:** checklist fixa backup → migration autorizada → conferência de
+  ledger/hash/schema → deploy compatível → smoke → ativação separada. Código que
+  grava o novo CHECK não pode ir antes da migration verificada.
+- **Segredo:** `FORMAT_ADDITION_CONFIRMATION_SECRET` documentado como configuração
+  server-side no ambiente autorizado, com verificação de disponibilidade e sem
+  expor o valor; ausente ⇒ funcionalidade indisponível. Flags sozinhas não bastam.
+- **R5/R6:** verify do checkpoint sem `Select-String`, com falha explícita por
+  item; nota de decomposição adicionada.
+- **R1/R2:** `62-08-PLAN.md` passou a exigir autorização estruturada e arquivo
+  único `62-08-PROVIDER-AUTHORIZATION.md`; sentinelas de texto foram removidos.
+- **62-06:** reexecução final do revisor corrigida para **10/110**; **8/92**
+  permanece histórica.
 
 ## Separação de evidências
 

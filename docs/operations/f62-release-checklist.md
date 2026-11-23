@@ -4,6 +4,18 @@
 **Escopo:** preparação do release da F62 após validação offline. Não substitui os gates reais do `62-08`.
 **Regra:** declaração de produção não é conferência técnica; evidência offline não é prova real.
 
+## 0. Ordem obrigatória do release
+
+1. **Backup** verificável (banco + restore-list/objetos).
+2. **Migration autorizada** (somente `20261123130252`).
+3. **Conferência** de ledger/hash/schema/RLS/grants.
+4. **Deploy do código compatível** que grava o novo CHECK/valor.
+5. **Smoke** real.
+6. **Ativação separada** da flag dedicada.
+
+Nenhum código que dependa do novo CHECK/valor pode ser publicado antes da
+migration aplicada e verificada. Inverter a ordem é critério de parada.
+
 ## 1. Versão e hash
 
 | Item | Valor/estado |
@@ -37,10 +49,12 @@
 - [ ] Manifesto imutável e teste de restauração em ambiente isolado.
 - [ ] Sem backup/restore comprovado ⇒ **não aplicar**.
 
-## 4. Flags
+## 4. Flags e segredo de confirmação
 
 - [ ] `campaign_format_addition_enabled` desligada antes e durante a migration.
 - [ ] `product_9_16_two_stage_enabled` conferida separadamente; não usar como rollback da adição.
+- [ ] `FORMAT_ADDITION_CONFIRMATION_SECRET` configurado server-side no ambiente autorizado, com verificação de disponibilidade **sem expor o valor**.
+- [ ] Segredo ausente mantém a funcionalidade indisponível (GET/POST fail-closed); conferir apenas flags não basta.
 - [ ] Ativação funcional é gate posterior e explícito; não faz parte deste checklist.
 
 ## 5. Provas reais pendentes (62-08)
