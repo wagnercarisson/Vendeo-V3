@@ -47,6 +47,14 @@
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
+## Aceite
+
+- **Aprovado tecnicamente, local/offline, em 2026-11-23, sem bloqueadores.**
+- Revisor (antes da correção): **6 suítes/93 testes PASS**; guard **7 PASS/1 FAIL** pelos seis caminhos; OpenSpec strict válido; worktree limpo; suíte global não reexecutada pelo revisor.
+- Executor (após a correção): **6 suítes/93 PASS**; guard **8/8**; typecheck/lint/build **0**; global **exit 0** (852 arquivos + 2 skipped; 10.635 testes + 10 skipped); OpenSpec **1/0**; diff-check limpo.
+- Migration **autorada e NÃO aplicada**; nenhum banco, Storage, provider, flag em ambiente, merge, push, deploy, sync ou archive.
+- `62-04` autorizado somente para as Tasks 1–2; Tasks 3–4 e `62-05`+ bloqueados.
+
 ## Não executado
 
 PostgreSQL/homolog, PostgreSQL/local, f50-4, app-env, Produto 1:1, F60 e F60.1. Nenhuma conexão de banco, `psql`, Docker, Supabase CLI, Storage ou provider. A migration do 62-02 permanece autorada e **NÃO aplicada**.

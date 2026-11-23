@@ -66,14 +66,12 @@ completed: 2026-11-23
 
 **Opt-in legado 1024 default-preserving, ponte square_original estabilizada, seleção/pricing/economia congeladas sem fallback, cliente financeiro strict e leitor sanitizado**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE; CORREÇÕES DIRIGIDAS DA REVISÃO APLICADAS; AGUARDANDO NOVA REVISÃO; NÃO ACEITO.**
-> `62-04` **não iniciado**. A migration do 62-02 **não foi aplicada**. Nenhum
-> banco, Storage, provider, geração, flag em ambiente, merge, push, deploy,
-> sync ou archive.
->
-> **Correções dirigidas:** allowlist F60.4 atualizada somente com os seis
-> caminhos autorizados e `preflightFrozenExpansion` passou a comparar a seleção
-> completa (modelo, qualidade, `configVersionId`, origem) antes de delegar.
+> **Status: ACEITO TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.**
+> **Histórico:** executado localmente/offline, recebeu correções dirigidas
+> (allowlist F60.4 e comparação completa da seleção) e foi aprovado na revisão
+> seguinte, sem bloqueadores. `62-04` autorizado somente para as Tasks 1–2.
+> A migration do 62-02 **não foi aplicada**. Nenhum banco, Storage, provider,
+> geração, flag em ambiente, merge, push, deploy, sync ou archive.
 
 ## Performance
 
@@ -138,6 +136,15 @@ completed: 2026-11-23
 
 A suíte global passou após a autorização dirigida do guard e a comparação completa da seleção. Gates PostgreSQL/Storage/provider/app-env não executados; a migration não foi aplicada.
 
+### Aceite e reexecução do revisor (2026-11-23)
+
+- **Veredito:** `62-03` **aprovado tecnicamente, local/offline**, sem bloqueadores.
+- **Reexecução do revisor antes da correção dirigida:** seis suítes do plano **93 testes PASS**; guard **7 PASS / 1 FAIL**, exatamente pelos seis caminhos previstos; OpenSpec strict válido; worktree limpo. O revisor não reexecutou a suíte global.
+- **Correção dirigida:** os seis caminhos exatos foram allowlisted com autorização F62/62-03 e a seleção completa passou a ser comparada; o revisor aprovou o resultado.
+- **Reexecução do executor após a correção:** seis suítes **93 PASS**; guard **8/8 PASS**; typecheck/lint/build **0**; suíte global **exit 0** (852 arquivos + 2 skipped; 10.635 testes + 10 skipped); OpenSpec **1/0**; diff-check limpo.
+- **Separação:** os números do revisor e do executor são evidências distintas; a suíte global é evidência do executor.
+- **Escopo do aceite:** `62-03`. `62-04` autorizado somente para as Tasks 1–2; Tasks 3–4 e `62-05`+ permanecem não autorizados.
+
 ## Deviations from Plan
 
 ### Correção dirigida autorizada (F62/62-03)
@@ -188,9 +195,9 @@ A suíte global passou após a autorização dirigida do guard e a comparação 
 
 ## Next Phase Readiness
 
-- Ponte, economia congelada, cliente financeiro e leitor prontos para revisão.
-- **Review Stop do `62-03`:** aguardando revisão e decisão sobre o guard F60.4.
-- `62-04` permanece bloqueado.
+- Ponte, economia congelada, cliente financeiro e leitor **aceitos tecnicamente**.
+- `62-04` autorizado **somente para as Tasks 1–2**, com Review Stop intermediário de abertura/financeiro.
+- Tasks 3–4 e `62-05`+ permanecem bloqueados; nenhum merge, push, deploy, sync ou archive.
 
 ## Self-Check: PASSED
 
@@ -206,4 +213,4 @@ A suíte global passou após a autorização dirigida do guard e a comparação 
 ---
 
 *Phase: 62-adicionar-vertical-campanha-quadrada*
-*Completed: 2026-11-23 (execução local/offline; aceite pendente)*
+*Completed: 2026-11-23 (execução local/offline; aceite técnico local/offline em 2026-11-23)*
