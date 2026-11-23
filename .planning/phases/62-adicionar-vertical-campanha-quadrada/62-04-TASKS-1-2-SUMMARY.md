@@ -40,10 +40,11 @@ completed: 2026-11-23
 
 **Portas explícitas, composition root de produção, leitura prévia do vínculo, ponte/economia congelada antes da RPC e preparação direta com fonte/destino distintos**
 
-> **Status: PARCIAL — TASKS 1–2 EXECUTADAS LOCALMENTE/OFFLINE; AGUARDANDO REVISÃO NO REVIEW STOP INTERMEDIÁRIO; NÃO ACEITO.**
-> Tasks 3–4 (preparação/expansão/entrega/falha/unknown) **não iniciadas**.
-> A migration do 62-02 não foi aplicada. Nenhum banco, Storage, provider,
-> geração, flag em ambiente, merge, push, deploy, sync ou archive.
+> **Status: TASKS 1–2 ACEITAS TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.**
+> **Este aceite NÃO conclui o plano 62-04.** Tasks 3–4 permanecem autorizadas
+> separadamente e devem parar no Review Stop final. A migration do 62-02 não foi
+> aplicada. Nenhum banco, Storage, provider, geração, flag em ambiente, merge,
+> push, deploy, sync ou archive.
 
 ## Performance
 
@@ -92,6 +93,14 @@ completed: 2026-11-23
 | Suíte global | **exit 0**; **853 arquivos PASS + 2 skipped (855)**; **10.656 testes PASS + 10 skipped (10.666)** |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
+
+### Aceite intermediário e separação de evidências
+
+- **Veredito do revisor:** Tasks 1–2 do `62-04` **aprovadas tecnicamente, local/offline**.
+- **Reexecução do revisor (antes das correções dirigidas):** **2 arquivos / 18 testes PASS**, OpenSpec strict **1/0** e diff-check limpo.
+- **Correções dirigidas:** replay por request, checksum confirmado e `client` injetado; executor reexecutou **2 arquivos / 23 testes**, typecheck/lint/build 0, global 853 arquivos/10.656 testes exit 0, OpenSpec 1/0 e diff-check limpo.
+- **Separação:** a reexecução do revisor e os gates do executor permanecem evidências distintas.
+- **Escopo:** aceite intermediário das Tasks 1–2, **não** do plano 62-04 inteiro. Tasks 3–4 seguem autorizadas separadamente e param no Review Stop final.
 
 ### Observação de flakiness
 
