@@ -57,6 +57,8 @@ completed: 2026-11-23
 |---|---|
 | `d0291d24` | portas + composition root + abertura/replay + preparação direta + testes |
 | `73712ac7` | cobertura de saldo 1/zero e continuação sem saldo |
+| `210c44ea` | plano: correções de replay/checksum/client |
+| `0924adcf` | replay por request, checksum confirmado e client injetado |
 
 ## Contrato implementado (Tasks 1–2)
 
@@ -73,15 +75,21 @@ completed: 2026-11-23
 - **Preparação direta:** `prepareAdditionSource` chama `prepare` com `source.operationId = source_registration_operation_id` e `preparedOperationId = operationId` da adição. Não usa `runPreparationStep`; helper não é chamado na abertura nesta fatia.
 - **Defaults preservados:** `runPreparationStep` continua fonte=destino; teste de regressão dedicado.
 
+## Correções dirigidas (2026-11-23)
+
+- **Replay por request primeiro:** a abertura consulta `requestId` antes da operação ativa da campanha. R1 estornado → R2 estornado → replay de R1 retorna R1; replay de R1 com R2 ativo também retorna R1. Identidade durável incompleta (`operationId`/`requestId` nulos) falha fechado, sem substituir pelos valores de entrada.
+- **Checksum confirmado:** `OpenFormatAdditionInput` carrega `confirmedSourceChecksumSha256` (server-side; futuro token validado). A abertura compara com o checksum da ponte antes de capturar economia/reservar; divergência bloqueia sem RPC. A RPC continua recebendo somente o checksum da ponte.
+- **Client injetado:** `createProductionFormatAdditionDeps({client})` propaga o client para `readLink` e `readLinkByRequest`; teste do root usa um client fake e prova que a leitura não usa o global.
+
 ## Gates reais
 
 | Gate | Resultado |
 |---|---|
-| Tasks 1–2 (2 arquivos) | **18 testes PASS** |
+| Tasks 1–2 (2 arquivos) | **23 testes PASS** |
 | `typecheck` | exit **0** |
 | `lint` | exit **0** (não cobre TS — limitação preexistente) |
 | `build` | exit **0** — 102/102 páginas |
-| Suíte global | **exit 0**; **853 arquivos PASS + 2 skipped (855)**; **10.651 testes PASS + 10 skipped (10.661)** |
+| Suíte global | **exit 0**; **853 arquivos PASS + 2 skipped (855)**; **10.656 testes PASS + 10 skipped (10.666)** |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
@@ -100,6 +108,7 @@ A primeira execução global teve **1 falha** em `src/components/flow/__tests__/
 - Nenhum banco, Storage, provider, RPC real ou migration foi acessado/aplicado.
 - Concorrência de duas abas é simulada com fakes; não prova locks/reserva reais.
 - O composition root depende de `authorizeProductFlow` fornecido pela rota 62-05; sem ele, fail-closed.
+- `confirmedSourceChecksumSha256` é server-side e será extraído do token validado no 62-05; aqui ele é injetado e comparado, nunca lido do navegador.
 - Gates de saldo/legal/readiness/rate são produção no root, mas testes usam fakes declarados.
 - Tasks 3–4 e `62-05`+ não iniciadas; sem merge, push, deploy, sync ou archive.
 
