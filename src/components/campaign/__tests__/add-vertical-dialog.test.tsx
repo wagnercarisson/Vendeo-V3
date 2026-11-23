@@ -24,6 +24,16 @@ function jsonResponse(body: unknown, status = 200) {
   } as Response;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
 });
@@ -177,6 +187,170 @@ describe("F62-05 — modal de adição vertical", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(onDelivered).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("POST pendente após fechar não agenda nova consulta", async () => {
+    const post = deferred<Response>();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      )
+      .mockImplementationOnce(() => post.promise);
+
+    const view = render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+    await screen.findByRole("button", { name: messages.continue });
+    fireEvent.click(screen.getByRole("button", { name: messages.continue }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    view.rerender(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open={false}
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+    post.resolve(jsonResponse({ state: "processing" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("POST pendente após desmontar não navega nem chama callback", async () => {
+    const post = deferred<Response>();
+    const onDelivered = vi.fn();
+    const onClose = vi.fn();
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      )
+      .mockImplementationOnce(() => post.promise);
+
+    const view = render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={onDelivered}
+      />,
+    );
+    await screen.findByRole("button", { name: messages.continue });
+    fireEvent.click(screen.getByRole("button", { name: messages.continue }));
+    view.unmount();
+
+    post.resolve(jsonResponse({ state: "delivered" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(onDelivered).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("fechar e reabrir isola a resposta antiga da nova sessão", async () => {
+    const oldGet = deferred<Response>();
+    const newGet = deferred<Response>();
+    const onDelivered = vi.fn();
+    vi.spyOn(globalThis, "fetch")
+      .mockImplementationOnce(() => oldGet.promise)
+      .mockImplementationOnce(() => newGet.promise);
+
+    const view = render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={onDelivered}
+      />,
+    );
+    view.rerender(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open={false}
+        onClose={vi.fn()}
+        onDelivered={onDelivered}
+      />,
+    );
+    view.rerender(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={onDelivered}
+      />,
+    );
+
+    oldGet.resolve(jsonResponse({ state: "delivered" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(onDelivered).not.toHaveBeenCalled();
+
+    newGet.resolve(jsonResponse({ state: "eligible", confirmationToken: "t" }));
+    await screen.findByText(messages.cost);
+    expect(onDelivered).not.toHaveBeenCalled();
+  });
+
+  it("GET entregue antes do POST responder conclui uma única vez", async () => {
+    vi.useFakeTimers();
+    const post = deferred<Response>();
+    const onDelivered = vi.fn();
+    const onClose = vi.fn();
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      )
+      .mockImplementationOnce(() => post.promise)
+      .mockResolvedValueOnce(jsonResponse({ state: "delivered" }));
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={onDelivered}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(screen.getByRole("button", { name: messages.continue }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(onDelivered).toHaveBeenCalledTimes(1);
+
+    post.resolve(jsonResponse({ state: "processing" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(onDelivered).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 

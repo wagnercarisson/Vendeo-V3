@@ -90,10 +90,16 @@ export function AddVerticalDialog({
   const [submitting, setSubmitting] = useState(false);
   const [failed, setFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const postAbortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadRef = useRef<
     ((options?: { readonly silent?: boolean }) => Promise<void>) | null
   >(null);
+  const sessionRef = useRef(0);
+  const seqRef = useRef(0);
+  const appliedSeqRef = useRef(0);
+  const terminalRef = useRef(false);
+  const notifiedRef = useRef(false);
   const closeRef = useRef(onClose);
   const deliveredRef = useRef(onDelivered);
   const titleId = `format-addition-title-${campaignId}`;
@@ -115,13 +121,17 @@ export function AddVerticalDialog({
   const schedulePoll = useCallback(() => {
     clearTimer();
     if (!open) return;
+    const session = sessionRef.current;
     timerRef.current = setTimeout(() => {
+      if (sessionRef.current !== session) return;
       void loadRef.current?.({ silent: true });
     }, 3000);
   }, [clearTimer, open]);
 
   const load = useCallback(
     async (options: { readonly silent?: boolean } = {}) => {
+      const session = sessionRef.current;
+      const seq = ++seqRef.current;
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -138,7 +148,10 @@ export function AddVerticalDialog({
         const json = (await response.json().catch(() => null)) as
           | AdditionDto
           | null;
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || session !== sessionRef.current) return;
+        if (seq < appliedSeqRef.current) return;
+        if (terminalRef.current && json?.state !== "delivered") return;
+        appliedSeqRef.current = seq;
         if (!response.ok || json === null) {
           setFailed(true);
           setDto({ state: "unavailable" });
@@ -148,9 +161,13 @@ export function AddVerticalDialog({
         setFailed(false);
         setDto(json);
         if (json.state === "delivered") {
+          terminalRef.current = true;
           clearTimer();
-          deliveredRef.current();
-          closeRef.current();
+          if (!notifiedRef.current) {
+            notifiedRef.current = true;
+            deliveredRef.current();
+            closeRef.current();
+          }
           return;
         }
         if (json.state === "processing" || json.state === "unknown") {
@@ -159,12 +176,22 @@ export function AddVerticalDialog({
           clearTimer();
         }
       } catch (error) {
-        if ((error as { name?: string }).name === "AbortError") return;
+        if (
+          controller.signal.aborted ||
+          session !== sessionRef.current ||
+          (error as { name?: string }).name === "AbortError"
+        ) {
+          return;
+        }
+        if (seq < appliedSeqRef.current || terminalRef.current) return;
+        appliedSeqRef.current = seq;
         setFailed(true);
         setDto({ state: "unavailable" });
         clearTimer();
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted && session === sessionRef.current) {
+          setLoading(false);
+        }
       }
     },
     [campaignId, clearTimer, schedulePoll],
@@ -175,8 +202,15 @@ export function AddVerticalDialog({
   }, [load]);
 
   useEffect(() => {
+    sessionRef.current += 1;
+    const session = sessionRef.current;
+    seqRef.current = 0;
+    appliedSeqRef.current = 0;
+    terminalRef.current = false;
+    notifiedRef.current = false;
     if (!open) {
       abortRef.current?.abort();
+      postAbortRef.current?.abort();
       clearTimer();
       setDto(null);
       setLoading(false);
@@ -184,12 +218,14 @@ export function AddVerticalDialog({
       setFailed(false);
       return;
     }
-    void load();
+    void loadRef.current?.();
     return () => {
+      if (sessionRef.current === session) sessionRef.current += 1;
       abortRef.current?.abort();
+      postAbortRef.current?.abort();
       clearTimer();
     };
-  }, [open, load, clearTimer]);
+  }, [open, campaignId, clearTimer]);
 
   useEffect(() => {
     if (!open) return;
@@ -209,6 +245,11 @@ export function AddVerticalDialog({
 
   const submit = useCallback(async () => {
     if (!dto?.confirmationToken) return;
+    const session = sessionRef.current;
+    const seq = ++seqRef.current;
+    postAbortRef.current?.abort();
+    const controller = new AbortController();
+    postAbortRef.current = controller;
     setSubmitting(true);
     setFailed(false);
     try {
@@ -221,12 +262,19 @@ export function AddVerticalDialog({
             format: "9:16",
             confirmationToken: dto.confirmationToken,
           }),
+          signal: controller.signal,
         },
       );
       const json = (await response.json().catch(() => null)) as
         | AdditionDto
         | { error?: { code?: string } }
         | null;
+      if (controller.signal.aborted || session !== sessionRef.current) return;
+      if (seq < appliedSeqRef.current) return;
+      if (terminalRef.current && !(json && "state" in json && json.state === "delivered")) {
+        return;
+      }
+      appliedSeqRef.current = seq;
       if (!response.ok || json === null || !("state" in json)) {
         setFailed(true);
         setDto((prev) =>
@@ -234,27 +282,43 @@ export function AddVerticalDialog({
         );
         return;
       }
-      setDto(json as AdditionDto);
-      if (json.state === "delivered") {
+      const next = json as AdditionDto;
+      setDto(next);
+      if (next.state === "delivered") {
+        terminalRef.current = true;
         clearTimer();
-        deliveredRef.current();
-        closeRef.current();
-      } else if (json.state === "processing" || json.state === "unknown") {
+        if (!notifiedRef.current) {
+          notifiedRef.current = true;
+          deliveredRef.current();
+          closeRef.current();
+        }
+      } else if (next.state === "processing" || next.state === "unknown") {
         schedulePoll();
-      } else if (json.state === "eligible") {
+      } else if (next.state === "eligible") {
         clearTimer();
         void load({ silent: true });
       } else {
         clearTimer();
       }
-    } catch {
+    } catch (error) {
+      if (
+        controller.signal.aborted ||
+        session !== sessionRef.current ||
+        (error as { name?: string }).name === "AbortError"
+      ) {
+        return;
+      }
+      if (seq < appliedSeqRef.current || terminalRef.current) return;
+      appliedSeqRef.current = seq;
       setFailed(true);
       setDto((prev) =>
         prev ? { ...prev, state: "unavailable", reason: "failed" } : prev,
       );
       clearTimer();
     } finally {
-      setSubmitting(false);
+      if (session === sessionRef.current && seq >= appliedSeqRef.current) {
+        setSubmitting(false);
+      }
     }
   }, [
     campaignId,
