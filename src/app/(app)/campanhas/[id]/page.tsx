@@ -564,7 +564,8 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
         if (urls.previewUrl !== null) {
           props.imageUrl = urls.previewUrl;
           props.newFlowFormat = "9:16";
-          if (urls.downloadUrl !== null) props.downloadUrl = urls.downloadUrl;
+          props.downloadUrl = urls.downloadUrl ?? "";
+          props.downloadDisabled = urls.downloadUrl === null;
           verticalSelected = true;
         }
       } catch {
@@ -735,7 +736,8 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       if (urls.previewUrl !== null) {
         props.imageUrl = urls.previewUrl;
         props.newFlowFormat = "9:16";
-        if (urls.downloadUrl !== null) props.downloadUrl = urls.downloadUrl;
+        props.downloadUrl = urls.downloadUrl ?? "";
+        props.downloadDisabled = urls.downloadUrl === null;
         legacyVerticalSelected = true;
       }
     } catch {

@@ -13,7 +13,7 @@ import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import {
   deriveFormatAdditionEligibility,
 } from "@/lib/campaign/format-addition/eligibility";
-import { readFormatAdditionByCampaign } from "@/lib/campaign/format-addition/delivery-reader";
+import { readFormatAdditionByCampaign, readFormatAdditionByIdentity } from "@/lib/campaign/format-addition/delivery-reader";
 import {
   createFormatAdditionConfirmationToken,
   verifyFormatAdditionConfirmationToken,
@@ -30,6 +30,7 @@ import {
   createProductionFormatAdditionDeps,
 } from "@/lib/campaign/format-addition/orchestration/deps";
 import { runFormatAddition } from "@/lib/campaign/format-addition/orchestration/run-addition";
+import { continueFormatAddition } from "@/lib/campaign/format-addition/orchestration/resume-addition";
 import type { FormatAdditionRunResult } from "@/lib/campaign/format-addition/orchestration/types";
 import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
 import {
@@ -138,6 +139,8 @@ function sourceReadFromFailure(
 /**
  * Resolve a fonte reutilizável sem persistir nada. Tenta a origem conhecida ou,
  * quando ainda não há vínculo, novo fluxo e legado opt-in 1024 (somente leitura).
+ * C9: preserva a MAIOR incerteza entre as tentativas; uma rejeição de path da
+ * outra origem não pode transformar leitura indeterminada em incompatibilidade.
  */
 async function resolveAdditionSource(
   campaignId: string,
@@ -148,10 +151,10 @@ async function resolveAdditionSource(
   const origins: FormatAdditionSourceOrigin[] = knownOrigin
     ? [knownOrigin]
     : ["new_flow_1_1", "legacy_campaign"];
-  let last: {
+  const failures: Array<{
     origin: FormatAdditionSourceOrigin;
     reason: ResolveSquareSourceReason;
-  } | null = null;
+  }> = [];
 
   for (const origin of origins) {
     const result = await resolveReusableSquareSource(
@@ -175,16 +178,80 @@ async function resolveAdditionSource(
         }),
       };
     }
-    last = { origin, reason: result.reason };
+    failures.push({ origin, reason: result.reason });
   }
 
+  const selected = pickSourceFailure(failures);
   return {
-    origin: last?.origin ?? null,
+    origin: selected?.origin ?? null,
     checksum: null,
-    read: last
-      ? sourceReadFromFailure(last.reason, last.origin)
+    read: selected
+      ? sourceReadFromFailure(selected.reason, selected.origin)
       : { kind: "read_failed" },
   };
+}
+
+const UNCERTAIN_SOURCE_REASONS: ReadonlySet<ResolveSquareSourceReason> = new Set([
+  "artifact_indeterminate",
+  "metadata_conflict",
+  "not_owner",
+  "store_mismatch",
+  "identity_conflict",
+]);
+
+const ARTIFACT_SOURCE_REASONS: ReadonlySet<ResolveSquareSourceReason> = new Set([
+  "artifact_absent",
+  "artifact_invalid",
+  "unsupported_dimensions",
+  "unsupported_mime",
+]);
+
+function sourceFailureRank(reason: ResolveSquareSourceReason): number {
+  if (UNCERTAIN_SOURCE_REASONS.has(reason)) return 0;
+  if (ARTIFACT_SOURCE_REASONS.has(reason)) return 1;
+  return 2;
+}
+
+function pickSourceFailure(
+  failures: ReadonlyArray<{
+    origin: FormatAdditionSourceOrigin;
+    reason: ResolveSquareSourceReason;
+  }>,
+): { origin: FormatAdditionSourceOrigin; reason: ResolveSquareSourceReason } | null {
+  let selected: {
+    origin: FormatAdditionSourceOrigin;
+    reason: ResolveSquareSourceReason;
+  } | null = null;
+  for (const failure of failures) {
+    if (
+      selected === null ||
+      sourceFailureRank(failure.reason) < sourceFailureRank(selected.reason)
+    ) {
+      selected = failure;
+    }
+  }
+  return selected;
+}
+
+async function readDurableChecksum(
+  storeId: string,
+  campaignId: string,
+  requestId: string,
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("campaign_format_additions")
+      .select("source_checksum_sha256")
+      .eq("store_id", storeId.toLowerCase())
+      .eq("campaign_id", campaignId.toLowerCase())
+      .eq("request_id", requestId.toLowerCase())
+      .maybeSingle();
+    if (error || data === null || typeof data !== "object") return null;
+    const checksum = (data as Record<string, unknown>).source_checksum_sha256;
+    return typeof checksum === "string" ? checksum : null;
+  } catch {
+    return null;
+  }
 }
 
 function stateFromEligibility(
@@ -306,8 +373,12 @@ export const GET = apiHandler(
       );
     }
 
+    const resumable =
+      mapped.state === "processing" || mapped.state === "unknown";
     const actionable =
-      mapped.state === "eligible" || mapped.state === "refunded";
+      mapped.state === "eligible" ||
+      mapped.state === "refunded" ||
+      resumable;
     if (!actionable) {
       return NextResponse.json(
         additionDto(mapped.state, source.origin, {
@@ -317,19 +388,41 @@ export const GET = apiHandler(
       );
     }
 
-    if (source.checksum === null || source.origin === null) {
-      return NextResponse.json(
-        additionDto("unavailable", source.origin, {
-          reason: "source_unavailable",
-        }),
-      );
+    let requestId: string;
+    let checksum: string | null;
+    let intent: "start" | "retry";
+
+    if (resumable) {
+      requestId = addition?.requestId ?? "";
+      checksum =
+        source.checksum ??
+        (requestId.length > 0
+          ? await readDurableChecksum(campaign.store_id, id, requestId)
+          : null);
+      intent = "start";
+      if (requestId.length === 0 || checksum === null) {
+        return NextResponse.json(
+          additionDto(mapped.state, source.origin, {
+            reason: "operation_unavailable",
+          }),
+        );
+      }
+    } else {
+      if (source.checksum === null || source.origin === null) {
+        return NextResponse.json(
+          additionDto("unavailable", source.origin, {
+            reason: "source_unavailable",
+          }),
+        );
+      }
+      requestId = randomUUID();
+      checksum = source.checksum;
+      intent = mapped.state === "refunded" ? "retry" : "start";
     }
 
-    const requestId = randomUUID();
-    const intent = mapped.state === "refunded" ? "retry" : "start";
     const token = createFormatAdditionConfirmationToken({
       campaignId: id,
-      sourceChecksum: source.checksum,
+      sourceChecksum: checksum,
       requestId,
       intent,
     });
@@ -455,34 +548,128 @@ export const POST = apiHandler(
       );
     }
 
-    const read = await readFormatAdditionByCampaign(
-      { storeId: campaign.store_id, campaignId: id },
+    const byRequest = await readFormatAdditionByIdentity(
+      {
+        storeId: campaign.store_id,
+        campaignId: id,
+        requestId: token.requestId,
+      },
       { client: supabaseAdmin },
     );
-    if (read.kind === "read_failed") {
+    if (byRequest.kind === "read_failed") {
       return NextResponse.json(
         { error: { code: "operation_unavailable", message: "Adição indisponível." } },
         { status: 503 },
       );
     }
 
-    const currentState =
-      read.kind === "found" ? read.addition.state : "none";
-    if (token.intent === "start") {
-      if (currentState === "delivered") {
+    let engineEnabled = false;
+    try {
+      engineEnabled = await isProduct9_16TwoStageEnabled();
+    } catch {
+      engineEnabled = false;
+    }
+
+    let decision: Awaited<ReturnType<typeof resolveProductFlowAuthorization>>;
+    try {
+      decision = await resolveProductFlowAuthorization(
+        resolveEligibilityContext(store),
+      );
+    } catch {
+      decision = { allowed: false, code: "read_failure" };
+    }
+
+    const deps = createProductionFormatAdditionDeps({
+      client: supabaseAdmin,
+      authorizeProductFlow: async () =>
+        decision.allowed
+          ? { allowed: true }
+          : {
+              allowed: false,
+              code: String(decision.code ?? "product_flow_ineligible"),
+              reason: String(decision.code ?? "product_flow_ineligible"),
+            },
+      pilotSpendResolver: async () => {
+        try {
+          const resolution = await resolvePilotSpendGate({
+            store,
+            decision,
+          });
+          if (resolution.kind === "armed") {
+            return { kind: "armed", gate: resolution.gate };
+          }
+          if (resolution.kind === "inactive") return { kind: "inactive" };
+          return { kind: "blocked", reason: resolution.reason };
+        } catch {
+          return { kind: "blocked", reason: "pilot_gate_read_failed" };
+        }
+      },
+    });
+    const deadlineAtMs = computeInvocationDeadline(Date.now());
+    const authorization = { kind: "owner" as const, userId: user.userId };
+
+    // C6 — replay pelo request ORIGINAL antes da operação ativa.
+    if (byRequest.kind === "found") {
+      const found = byRequest.addition;
+      if (found.state === "delivered") {
         return NextResponse.json({ state: "delivered", idempotent: true });
       }
-      if (currentState === "processing" || currentState === "unknown") {
-        return NextResponse.json({ state: currentState }, { status: 202 });
-      }
-      if (currentState === "refunded") {
+      if (found.state === "refunded") {
         return NextResponse.json({ state: "refunded", refunded: true });
       }
-    } else if (currentState !== "refunded") {
-      return NextResponse.json(
-        { error: { code: "retry_not_allowed", message: "Nova tentativa não permitida." } },
-        { status: 409 },
+      if (found.operationId === null) {
+        return NextResponse.json(
+          { error: { code: "operation_unavailable", message: "Adição indisponível." } },
+          { status: 503 },
+        );
+      }
+      // processing/unknown: RETOMA a operação existente, sem nova cobrança.
+      // A flag desligada NÃO impede finalizar/retomar operações abertas.
+      const result = await continueFormatAddition(
+        {
+          storeId: campaign.store_id,
+          campaignId: id,
+          operationId: found.operationId,
+          requestId: token.requestId,
+          authorization,
+          deadlineAtMs,
+          allowNewPaidStep: engineEnabled,
+          signal: request.signal,
+        },
+        deps,
       );
+      return NextResponse.json(runDto(result), { status: statusForRun(result) });
+    }
+
+    const activeRead = await readFormatAdditionByCampaign(
+      { storeId: campaign.store_id, campaignId: id },
+      { client: supabaseAdmin },
+    );
+    if (activeRead.kind === "read_failed") {
+      return NextResponse.json(
+        { error: { code: "operation_unavailable", message: "Adição indisponível." } },
+        { status: 503 },
+      );
+    }
+    if (activeRead.kind === "found") {
+      if (token.intent === "start") {
+        // Token antigo de OUTRO request não pode devolver/assumir a operação atual.
+        return NextResponse.json(
+          {
+            error: {
+              code: "operation_exists",
+              message: "Já existe uma adição para esta campanha.",
+            },
+          },
+          { status: 409 },
+        );
+      }
+      if (activeRead.addition.state !== "refunded") {
+        return NextResponse.json(
+          { error: { code: "retry_not_allowed", message: "Nova tentativa não permitida." } },
+          { status: 409 },
+        );
+      }
     }
 
     if (!(await readFlag())) {
@@ -491,7 +678,7 @@ export const POST = apiHandler(
         { status: 403 },
       );
     }
-    if (!(await isProduct9_16TwoStageEnabled())) {
+    if (!engineEnabled) {
       return NextResponse.json(
         { error: { code: "engine_disabled", message: "Motor indisponível." } },
         { status: 503 },
@@ -502,7 +689,7 @@ export const POST = apiHandler(
       id,
       campaign.store_id,
       user.userId,
-      read.kind === "found" ? read.addition.sourceOrigin : null,
+      activeRead.kind === "found" ? activeRead.addition.sourceOrigin : null,
     );
     const formatResolution = resolveCampaignFormat(campaign.input_snapshot);
     const eligibility = deriveFormatAdditionEligibility({
@@ -553,42 +740,6 @@ export const POST = apiHandler(
       );
     }
 
-    let decision: Awaited<ReturnType<typeof resolveProductFlowAuthorization>>;
-    try {
-      decision = await resolveProductFlowAuthorization(
-        resolveEligibilityContext(store),
-      );
-    } catch {
-      decision = { allowed: false, code: "read_failure" };
-    }
-
-    const deps = createProductionFormatAdditionDeps({
-      client: supabaseAdmin,
-      authorizeProductFlow: async () =>
-        decision.allowed
-          ? { allowed: true }
-          : {
-              allowed: false,
-              code: String(decision.code ?? "product_flow_ineligible"),
-              reason: String(decision.code ?? "product_flow_ineligible"),
-            },
-      pilotSpendResolver: async () => {
-        try {
-          const resolution = await resolvePilotSpendGate({
-            store,
-            decision,
-          });
-          if (resolution.kind === "armed") {
-            return { kind: "armed", gate: resolution.gate };
-          }
-          if (resolution.kind === "inactive") return { kind: "inactive" };
-          return { kind: "blocked", reason: resolution.reason };
-        } catch {
-          return { kind: "blocked", reason: "pilot_gate_read_failed" };
-        }
-      },
-    });
-
     const result = await runFormatAddition(
       {
         storeId: campaign.store_id,
@@ -596,10 +747,10 @@ export const POST = apiHandler(
         operationId: randomUUID(),
         requestId: token.requestId,
         sourceOrigin: origin,
-        authorization: { kind: "owner", userId: user.userId },
+        authorization,
         selection: config.selection,
         confirmedSourceChecksumSha256: token.sourceChecksum,
-        deadlineAtMs: computeInvocationDeadline(Date.now()),
+        deadlineAtMs,
         allowNewPaidStep: true,
         signal: request.signal,
       },

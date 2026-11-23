@@ -53,6 +53,7 @@ export const es419CampaignDetailMessages = Object.freeze({
     processing: "Creando el formato vertical...",
     tracking: "Puedes seguir el avance en esta página.",
     retry: "Intentar de nuevo",
+    continue: "Continuar seguimiento",
     delivered: "Formato vertical listo.",
     refunded: "La adición se deshizo y el crédito se devolvió.",
     unknown:

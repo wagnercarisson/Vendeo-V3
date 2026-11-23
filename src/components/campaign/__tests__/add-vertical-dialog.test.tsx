@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AddVerticalDialog } from "../add-vertical-dialog";
@@ -23,6 +30,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 describe("F62-05 — modal de adição vertical", () => {
@@ -125,6 +133,51 @@ describe("F62-05 — modal de adição vertical", () => {
     expect(fetchMock.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(
       true,
     );
+  });
+
+  it("reconsulta processing consecutivos até a entrega e oferece retomada", async () => {
+    vi.useFakeTimers();
+    const onDelivered = vi.fn();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ state: "delivered" }));
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={onDelivered}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("button", { name: messages.continue }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(onDelivered).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 
   it("incompatível mostra explicação sem prometer confirmação", async () => {

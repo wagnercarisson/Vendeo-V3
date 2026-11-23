@@ -91,6 +91,9 @@ export function AddVerticalDialog({
   const [failed, setFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadRef = useRef<
+    ((options?: { readonly silent?: boolean }) => Promise<void>) | null
+  >(null);
   const closeRef = useRef(onClose);
   const deliveredRef = useRef(onDelivered);
   const titleId = `format-addition-title-${campaignId}`;
@@ -108,6 +111,14 @@ export function AddVerticalDialog({
       timerRef.current = null;
     }
   }, []);
+
+  const schedulePoll = useCallback(() => {
+    clearTimer();
+    if (!open) return;
+    timerRef.current = setTimeout(() => {
+      void loadRef.current?.({ silent: true });
+    }, 3000);
+  }, [clearTimer, open]);
 
   const load = useCallback(
     async (options: { readonly silent?: boolean } = {}) => {
@@ -131,24 +142,37 @@ export function AddVerticalDialog({
         if (!response.ok || json === null) {
           setFailed(true);
           setDto({ state: "unavailable" });
+          clearTimer();
           return;
         }
         setFailed(false);
         setDto(json);
         if (json.state === "delivered") {
+          clearTimer();
           deliveredRef.current();
           closeRef.current();
+          return;
+        }
+        if (json.state === "processing" || json.state === "unknown") {
+          schedulePoll();
+        } else {
+          clearTimer();
         }
       } catch (error) {
         if ((error as { name?: string }).name === "AbortError") return;
         setFailed(true);
         setDto({ state: "unavailable" });
+        clearTimer();
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
     },
-    [campaignId],
+    [campaignId, clearTimer, schedulePoll],
   );
+
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     if (!open) {
@@ -183,16 +207,6 @@ export function AddVerticalDialog({
     if (open) cancelRef.current?.focus();
   }, [open]);
 
-  useEffect(() => {
-    clearTimer();
-    if (!open) return;
-    if (dto?.state !== "processing" && dto?.state !== "unknown") return;
-    timerRef.current = setTimeout(() => {
-      void load({ silent: true });
-    }, 3000);
-    return clearTimer;
-  }, [open, dto?.state, load, clearTimer]);
-
   const submit = useCallback(async () => {
     if (!dto?.confirmationToken) return;
     setSubmitting(true);
@@ -222,20 +236,33 @@ export function AddVerticalDialog({
       }
       setDto(json as AdditionDto);
       if (json.state === "delivered") {
+        clearTimer();
         deliveredRef.current();
         closeRef.current();
+      } else if (json.state === "processing" || json.state === "unknown") {
+        schedulePoll();
       } else if (json.state === "eligible") {
+        clearTimer();
         void load({ silent: true });
+      } else {
+        clearTimer();
       }
     } catch {
       setFailed(true);
       setDto((prev) =>
         prev ? { ...prev, state: "unavailable", reason: "failed" } : prev,
       );
+      clearTimer();
     } finally {
       setSubmitting(false);
     }
-  }, [campaignId, dto?.confirmationToken, load]);
+  }, [
+    campaignId,
+    dto?.confirmationToken,
+    load,
+    schedulePoll,
+    clearTimer,
+  ]);
 
   if (!open) return null;
 
@@ -245,6 +272,10 @@ export function AddVerticalDialog({
     typeof dto.confirmationToken === "string" &&
     dto.confirmationToken.length > 0 &&
     dto.reason !== "addition_disabled";
+  const resumable =
+    (dto?.state === "processing" || dto?.state === "unknown") &&
+    typeof dto.confirmationToken === "string" &&
+    dto.confirmationToken.length > 0;
   const canConfirm =
     dto?.state === "eligible" &&
     typeof dto.confirmationToken === "string" &&
@@ -322,6 +353,10 @@ export function AddVerticalDialog({
           ) : retryable ? (
             <Button type="button" onClick={submit} disabled={submitting}>
               {submitting ? messages.processing : messages.retry}
+            </Button>
+          ) : resumable ? (
+            <Button type="button" onClick={submit} disabled={submitting}>
+              {submitting ? messages.processing : messages.continue}
             </Button>
           ) : null}
         </div>

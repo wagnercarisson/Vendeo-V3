@@ -78,6 +78,7 @@ export interface CampaignDetailFormatAdditionMessages {
   readonly processing: string;
   readonly tracking: string;
   readonly retry: string;
+  readonly continue: string;
   readonly delivered: string;
   readonly refunded: string;
   readonly unknown: string;

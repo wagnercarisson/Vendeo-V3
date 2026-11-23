@@ -12,6 +12,8 @@ const h = vi.hoisted(() => ({
   addition: { kind: "none" } as Record<string, unknown>,
   probe: "integral" as "integral" | "absent",
   storagePath: "vertical/path.jpg",
+  downloadNull: false,
+  operation: null as Record<string, unknown> | null,
 }));
 
 vi.mock("server-only", () => ({}));
@@ -52,7 +54,7 @@ vi.mock("@/lib/product-1-1/snapshot/persist-snapshot", () => ({
 vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
   ProductOneToOneAttemptStartClient: class {
     async getCampaignOperation() {
-      return null;
+      return h.operation;
     }
   },
 }));
@@ -89,9 +91,12 @@ vi.mock("@/lib/supabase/server", () => ({
     storage: {
       from: () => ({
         createSignedUrl: async (_path: string, _ttl: number, options?: unknown) => ({
-          data: {
-            signedUrl: options ? VERTICAL_DOWNLOAD : VERTICAL_URL,
-          },
+          data:
+            options && h.downloadNull
+              ? null
+              : {
+                  signedUrl: options ? VERTICAL_DOWNLOAD : VERTICAL_URL,
+                },
         }),
       }),
     },
@@ -168,6 +173,8 @@ beforeEach(() => {
   h.addition = { kind: "none" };
   h.probe = "integral";
   h.storagePath = "vertical/path.jpg";
+  h.downloadNull = false;
+  h.operation = null;
 });
 
 describe("F62-05 — detalhe seleciona a adição vertical", () => {
@@ -228,5 +235,35 @@ describe("F62-05 — detalhe seleciona a adição vertical", () => {
     const value = await props("9:16");
     expect(value.imageUrl).not.toBe(VERTICAL_URL);
     expect(presentation(value).formats["9:16"].active).toBe(false);
+  });
+
+  it("preview vertical OK com download falhando desabilita download no legado", async () => {
+    h.addition = addition("delivered");
+    h.downloadNull = true;
+    const value = await props("9:16");
+
+    expect(value.imageUrl).toBe(VERTICAL_URL);
+    expect(value.newFlowFormat).toBe("9:16");
+    expect(value.downloadUrl).toBe("");
+    expect(value.downloadDisabled).toBe(true);
+  });
+
+  it("preview vertical OK com download falhando desabilita download no novo fluxo", async () => {
+    h.campaign = campaignRecord({ storage_path: "square/path.jpg" });
+    h.operation = {
+      status: "delivered",
+      unknown: false,
+      outcome: null,
+      operationId: ADDITION_OPERATION,
+      supportReference: null,
+    };
+    h.addition = addition("delivered");
+    h.downloadNull = true;
+    const value = await props("9:16");
+
+    expect(value.imageUrl).toBe(VERTICAL_URL);
+    expect(value.newFlowFormat).toBe("9:16");
+    expect(value.downloadUrl).toBe("");
+    expect(value.downloadDisabled).toBe(true);
   });
 });

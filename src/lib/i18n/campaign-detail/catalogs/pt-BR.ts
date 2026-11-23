@@ -53,6 +53,7 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
     processing: "Criando o formato vertical...",
     tracking: "Você pode acompanhar o andamento nesta página.",
     retry: "Tentar novamente",
+    continue: "Continuar acompanhamento",
     delivered: "Formato vertical pronto.",
     refunded: "A adição foi desfeita e o crédito foi devolvido.",
     unknown:

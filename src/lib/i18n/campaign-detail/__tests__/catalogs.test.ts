@@ -41,6 +41,7 @@ const EXPECTED_PT_KEYS = [
   "formatAddition.action",
   "formatAddition.cancel",
   "formatAddition.confirm",
+  "formatAddition.continue",
   "formatAddition.cost",
   "formatAddition.delivered",
   "formatAddition.description",
