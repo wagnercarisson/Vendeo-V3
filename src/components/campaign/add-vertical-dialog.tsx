@@ -100,6 +100,11 @@ export function AddVerticalDialog({
   const appliedSeqRef = useRef(0);
   const terminalRef = useRef(false);
   const notifiedRef = useRef(false);
+  const postIdRef = useRef(0);
+  const activePostRef = useRef<{
+    readonly session: number;
+    readonly id: number;
+  } | null>(null);
   const closeRef = useRef(onClose);
   const deliveredRef = useRef(onDelivered);
   const titleId = `format-addition-title-${campaignId}`;
@@ -208,6 +213,7 @@ export function AddVerticalDialog({
     appliedSeqRef.current = 0;
     terminalRef.current = false;
     notifiedRef.current = false;
+    activePostRef.current = null;
     if (!open) {
       abortRef.current?.abort();
       postAbortRef.current?.abort();
@@ -246,6 +252,8 @@ export function AddVerticalDialog({
   const submit = useCallback(async () => {
     if (!dto?.confirmationToken) return;
     const session = sessionRef.current;
+    const postId = ++postIdRef.current;
+    activePostRef.current = { session, id: postId };
     const seq = ++seqRef.current;
     postAbortRef.current?.abort();
     const controller = new AbortController();
@@ -316,7 +324,13 @@ export function AddVerticalDialog({
       );
       clearTimer();
     } finally {
-      if (session === sessionRef.current && seq >= appliedSeqRef.current) {
+      const active = activePostRef.current;
+      if (
+        active !== null &&
+        active.session === session &&
+        active.id === postId
+      ) {
+        activePostRef.current = null;
         setSubmitting(false);
       }
     }

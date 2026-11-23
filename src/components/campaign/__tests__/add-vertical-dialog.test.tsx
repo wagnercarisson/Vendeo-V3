@@ -191,6 +191,7 @@ describe("F62-05 — modal de adição vertical", () => {
   });
 
   it("POST pendente após fechar não agenda nova consulta", async () => {
+    vi.useFakeTimers();
     const post = deferred<Response>();
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -209,7 +210,9 @@ describe("F62-05 — modal de adição vertical", () => {
         onDelivered={vi.fn()}
       />,
     );
-    await screen.findByRole("button", { name: messages.continue });
+    await act(async () => {
+      await Promise.resolve();
+    });
     fireEvent.click(screen.getByRole("button", { name: messages.continue }));
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
@@ -227,8 +230,56 @@ describe("F62-05 — modal de adição vertical", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3500);
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("GET posterior não deixa o botão de retomada preso após o POST terminar", async () => {
+    vi.useFakeTimers();
+    const post = deferred<Response>();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      )
+      .mockImplementationOnce(() => post.promise)
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(screen.getByRole("button", { name: messages.continue }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    post.resolve(jsonResponse({ state: "processing" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(
+      screen.getByRole("button", { name: messages.continue }),
+    ).not.toBeDisabled();
+    vi.useRealTimers();
   });
 
   it("POST pendente após desmontar não navega nem chama callback", async () => {
