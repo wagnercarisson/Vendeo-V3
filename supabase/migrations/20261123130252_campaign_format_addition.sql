@@ -549,24 +549,6 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', 'operation_identity_conflict');
   END IF;
 
-  -- Vertical canônico 1080×1920 JPEG da PRÓPRIA operação da adição.
-  SELECT * INTO v_artifact
-  FROM public.campaign_composition_artifacts
-  WHERE store_id = p_store_id
-    AND campaign_id = p_campaign_id
-    AND operation_id = p_operation_id
-    AND role = 'vertical';
-
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('success', false, 'reason', 'vertical_artifact_missing');
-  END IF;
-  IF v_artifact.format <> '9:16'
-     OR v_artifact.width <> 1080
-     OR v_artifact.height <> 1920
-     OR v_artifact.mime_type <> 'image/jpeg' THEN
-    RETURN jsonb_build_object('success', false, 'reason', 'vertical_artifact_invalid');
-  END IF;
-
   SELECT * INTO v_credit
   FROM public.product_1_1_campaign_credit_operations
   WHERE campaign_id = p_campaign_id AND operation_id = p_operation_id
@@ -612,6 +594,24 @@ BEGIN
 
   IF v_credit.status NOT IN ('reserved', 'art_uploaded') THEN
     RETURN jsonb_build_object('success', false, 'reason', 'invalid_transition');
+  END IF;
+
+  -- Vertical canônico 1080×1920 JPEG da PRÓPRIA operação da adição.
+  SELECT * INTO v_artifact
+  FROM public.campaign_composition_artifacts
+  WHERE store_id = p_store_id
+    AND campaign_id = p_campaign_id
+    AND operation_id = p_operation_id
+    AND role = 'vertical';
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'vertical_artifact_missing');
+  END IF;
+  IF v_artifact.format <> '9:16'
+     OR v_artifact.width <> 1080
+     OR v_artifact.height <> 1920
+     OR v_artifact.mime_type <> 'image/jpeg' THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'vertical_artifact_invalid');
   END IF;
 
   -- Token de publicação = dono atual do fence (nunca inventado aqui).
