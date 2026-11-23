@@ -41,10 +41,10 @@ completed: 2026-11-23
 **Portas explícitas, composition root de produção, leitura prévia do vínculo, ponte/economia congelada antes da RPC e preparação direta com fonte/destino distintos**
 
 > **Status: TASKS 1–2 ACEITAS TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.**
-> **Este aceite NÃO conclui o plano 62-04.** Tasks 3–4 permanecem autorizadas
-> separadamente e devem parar no Review Stop final. A migration do 62-02 não foi
-> aplicada. Nenhum banco, Storage, provider, geração, flag em ambiente, merge,
-> push, deploy, sync ou archive.
+> **Este aceite NÃO conclui o plano 62-04.** Tasks 3–4 foram executadas depois,
+> em 2026-11-23, e aguardam o Review Stop final em `62-04-SUMMARY.md`; não foram
+> aceitas. A migration do 62-02 não foi aplicada. Nenhum banco, Storage, provider,
+> geração, flag em ambiente, merge, push, deploy, sync ou archive.
 
 ## Performance
 
@@ -123,7 +123,7 @@ A primeira execução global teve **1 falha** em `src/components/flow/__tests__/
 
 ## Next
 
-Revisão do Review Stop intermediário de abertura/financeiro. Não iniciar Tasks 3–4.
+Histórico: revisão do Review Stop intermediário de abertura/financeiro. Tasks 3–4 foram executadas depois e aguardam o Review Stop final em `62-04-SUMMARY.md`.
 
 ## Self-Check: PASSED (parcial)
 
@@ -132,7 +132,7 @@ Revisão do Review Stop intermediário de abertura/financeiro. Não iniciar Task
 - [x] Fonte/destino distintos na preparação direta; defaults existentes preservados.
 - [x] Adaptadores reais no root; testes offline com fakes.
 - [x] Typecheck/lint/build/global/OpenSpec/diff-check verdes.
-- [x] Tasks 3–4 não iniciadas.
+- [x] Tasks 3–4 não iniciadas nesta fatia (executadas depois, em `62-04-SUMMARY.md`).
 
 ---
 
