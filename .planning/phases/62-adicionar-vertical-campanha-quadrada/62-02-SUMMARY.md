@@ -62,11 +62,13 @@ completed: 2026-11-23
 
 **Migration autorada e não aplicada para vínculo/1 crédito/entrega/estorno da adição 9:16, com filtro da operação primária e flag dedicada fail-closed no painel existente**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE; CORREÇÕES DIRIGIDAS DA REVISÃO APLICADAS; AGUARDANDO NOVA REVISÃO; NÃO ACEITO.**
-> Review Stop de persistência/financeiro mantido. `62-03` **não iniciado**.
-> **A migration NÃO foi aplicada em nenhum banco, inclusive local.** Nenhum
-> Storage, provider, geração, alteração de flag em ambiente, merge, push,
-> deploy, sync ou archive.
+> **Status: ACEITO TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.**
+> **Histórico:** executado localmente/offline, recebeu correções dirigidas
+> (fonte corrente/proveniência, caminho canônico na entrega e REVERT não
+> destrutivo) e foi aprovado na revisão seguinte, sem bloqueadores.
+> **A migration permanece autorada e NÃO aplicada em nenhum banco, inclusive
+> local.** Nenhum Storage, provider, geração, alteração de flag em ambiente,
+> merge, push, deploy, sync ou archive.
 
 ## Performance
 
@@ -137,7 +139,7 @@ completed: 2026-11-23
 
 **Seleção em campanha legada (reconciliado):** `legacy_campaign` é origem da fonte/campanha, não da seleção. A abertura nova usa `selectionOrigin = "configured"` com versão válida; `legacy`/`legacy_sunburst_low` não é aceito e o CHECK do F60.6 não foi ampliado. Contrato atualizado em `62-CONTEXT.md`, `design.md` e na delta spec; teste estático adicionado. R8 registrado em `62-REVIEW-RESIDUALS.md`.
 
-## Gates reais
+## Gates reais — evidência do executor
 
 | Gate | Resultado |
 |---|---|
@@ -152,6 +154,14 @@ completed: 2026-11-23
 | `git diff --check` | limpo |
 
 Gates de PostgreSQL, Storage, provider e app-env **não executados** por exigirem autorização/ambiente. A migration **não foi aplicada**.
+
+### Aceite e reexecução do revisor (2026-11-23)
+
+- **Veredito:** `62-02` **aprovado tecnicamente, local/offline**, sem bloqueadores.
+- **Reexecução do revisor:** **5 arquivos / 89 testes PASS**, OpenSpec strict **1/0** e diff-check do range **limpo**.
+- **Separação de evidências:** a tabela acima permanece como **evidência do executor** (typecheck, lint, build, suíte global, OpenSpec e diff-check executados no HEAD de código). A reexecução do revisor é atribuída separadamente e não substitui os números originais.
+- **Migration:** autorada e **NÃO aplicada**; nenhum banco, Storage, provider, flag em ambiente, merge, push, deploy, sync ou archive.
+- **Escopo do aceite:** somente `62-02`. `62-03` depende de reconciliação do plano (R4/R8/motivos fechados) antes da execução; `62-04`+ permanecem não autorizados.
 
 ## Deviations from Plan
 
@@ -197,9 +207,9 @@ None — nenhum serviço externo, banco, migration aplicada ou configuração de
 
 ## Next Phase Readiness
 
-- Persistência/RPCs/flag **autoradas e estáticas**; prontas para revisão.
-- **Review Stop de persistência/financeiro:** aguardando aprovação explícita.
-- `62-03` **não iniciado**; nenhum merge, push, deploy, sync ou archive.
+- Persistência/RPCs/flag **autoradas, estáticas e aceitas tecnicamente**.
+- `62-03` autorizado após reconciliar o plano com R4, R8 e os motivos fechados das RPCs corrigidas; `62-04`+ não autorizados.
+- Nenhum merge, push, deploy, sync ou archive.
 
 ## Self-Check: PASSED
 
@@ -214,4 +224,4 @@ None — nenhum serviço externo, banco, migration aplicada ou configuração de
 ---
 
 *Phase: 62-adicionar-vertical-campanha-quadrada*
-*Completed: 2026-11-23 (execução local/offline; aceite pendente)*
+*Completed: 2026-11-23 (execução local/offline; aceite técnico local/offline em 2026-11-23)*

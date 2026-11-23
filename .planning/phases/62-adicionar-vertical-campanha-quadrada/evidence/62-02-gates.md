@@ -63,6 +63,12 @@
 
 A primeira execução da suíte global (antes dos commits obrigatórios) acusou **3 falhas em 2 suítes de fronteira** (`square-base/boundaries.contract.test.ts` e `product-two-format/orchestration/joint-boundaries.contract.test.ts`). As falhas eram causadas apenas pelo **working tree sujo com a migration e o painel autorizados** (`git status`), não por regressão funcional. Nenhum guard foi alterado. Após os commits obrigatórios, as duas suítes passaram (**13/13**) e a suíte global passou integralmente na reexecução.
 
+## Aceite
+
+- **Aprovado tecnicamente, local/offline, em 2026-11-23, sem bloqueadores.**
+- Reexecução do revisor: **5 arquivos / 89 testes PASS**, OpenSpec strict **1/0** e diff-check do range **limpo**. Separada da evidência do executor registrada acima.
+- Migration **autorada e NÃO aplicada**; nenhum banco, Storage, provider, flag em ambiente, merge, push, deploy, sync ou archive.
+
 ## Gates NÃO executados (por escopo)
 
 PostgreSQL/homolog, PostgreSQL/local, f50-4, app-env, Produto 1:1, F60 e F60.1 **não foram executados**. Não houve conexão de banco, `psql`, Docker, Supabase CLI, Storage ou provider. Portanto:
