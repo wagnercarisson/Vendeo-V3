@@ -438,6 +438,7 @@ describe("F60.4 boundaries — migrations, rotas e UI intocadas", () => {
       "src/app/api/campaign/[id]/format-additions/",
       "src/app/api/campaign/[id]/format-additions/route.ts",
       "src/app/api/campaign/[id]/format-additions/__tests__/route.test.ts",
+      "src/app/api/campaign/[id]/download/__tests__/route.addition.test.ts",
     ]);
     const changed = status.stdout
       .split(/\r?\n/)

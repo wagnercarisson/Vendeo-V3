@@ -378,7 +378,26 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
       .order("updated_at", { ascending: true });
     if (error) throw new Error(`pending_operations_read_failed:${error.message}`);
 
-    const rows = (data ?? []) as CreditRow[];
+    const operationIds = (data ?? []).map((row) => row.operation_id);
+    let rows = (data ?? []) as CreditRow[];
+    if (operationIds.length > 0) {
+      // F62 — adições verticais têm crédito/fila próprios; nunca aparecem como
+      // pendência 1:1 legada. Leitura best-effort: se a tabela ainda não existir
+      // (feature inativa), o comportamento anterior é preservado.
+      const additions = await this.client
+        .from("campaign_format_additions")
+        .select("operation_id")
+        .in("operation_id", operationIds);
+      if (!additions.error) {
+        const excluded = new Set(
+          (additions.data ?? [])
+            .map((row) => row.operation_id)
+            .filter((value): value is string => typeof value === "string"),
+        );
+        rows = rows.filter((row) => !excluded.has(row.operation_id));
+      }
+    }
+
     const views: PendingOperationView[] = [];
     for (const row of rows) {
       const state = await this.findPendingOperation(row.campaign_id, row.operation_id);

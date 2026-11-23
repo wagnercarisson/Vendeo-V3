@@ -17,6 +17,14 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
+vi.mock("@/lib/campaign/format-addition/list-summary", () => ({
+  readFormatAdditionListSummaries: async () => new Map(),
+  formatAdditionPresentation: (summary: {
+    state: string;
+    refunded: boolean;
+  }) => ({ format: "9:16", state: summary.state, refunded: summary.refunded }),
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
 });

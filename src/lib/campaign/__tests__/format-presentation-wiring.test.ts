@@ -158,6 +158,14 @@ vi.mock("@/lib/product-two-format/list-summary", () => ({
   },
 }));
 
+vi.mock("@/lib/campaign/format-addition/list-summary", () => ({
+  readFormatAdditionListSummaries: async () => new Map(),
+  formatAdditionPresentation: (summary: {
+    state: string;
+    refunded: boolean;
+  }) => ({ format: "9:16", state: summary.state, refunded: summary.refunded }),
+}));
+
 vi.mock("@/lib/campaign/metrics", () => ({
   countReadyCampaigns: async () => 0,
 }));

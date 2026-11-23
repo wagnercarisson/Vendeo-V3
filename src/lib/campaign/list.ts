@@ -14,6 +14,11 @@ import {
   readTwoFormatListSummaries,
   type TwoFormatListSummary,
 } from "@/lib/product-two-format/list-summary";
+import {
+  formatAdditionPresentation,
+  readFormatAdditionListSummaries,
+  type FormatAdditionListSummary,
+} from "@/lib/campaign/format-addition/list-summary";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
 import {
@@ -23,6 +28,7 @@ import {
   buildUnknownFormatPresentation,
   individualLifecycleFromStatus,
   type CampaignFormatPresentation,
+  type FormatAdditionPresentationInput,
 } from "./format-presentation";
 
 /** Classificação PERSISTIDA do fluxo (novo fluxo × legado) para exibição. */
@@ -58,6 +64,8 @@ export interface CampaignListItem {
    * Somente estados/booleanos: nenhum snapshot, path ou URL cruza a fronteira.
    */
   readonly formatPresentation: CampaignFormatPresentation;
+  /** F62 — estado sanitizado da adição vertical; sem operationId/path. */
+  readonly formatAddition?: FormatAdditionPresentationInput | null;
 }
 
 /** Base interna: a apresentação só existe depois da leitura em lote. */
@@ -120,6 +128,7 @@ function buildListFormatPresentation(input: {
   readonly inputSnapshot: Record<string, unknown> | null;
   readonly status: CampaignStatus;
   readonly summary: TwoFormatListSummary | undefined;
+  readonly additionSummary: FormatAdditionListSummary | undefined;
 }): CampaignFormatPresentation {
   const classification = classifyTwoFormatCampaign(input.inputSnapshot);
 
@@ -155,6 +164,9 @@ function buildListFormatPresentation(input: {
   return buildIndividualFormatPresentation({
     resolution: resolveCampaignFormat(input.inputSnapshot),
     lifecycle: individualLifecycleFromStatus(input.status),
+    ...(input.additionSummary === undefined
+      ? {}
+      : { addition: formatAdditionPresentation(input.additionSummary) }),
   });
 }
 
@@ -222,6 +234,14 @@ export async function listCampaigns(
       input_snapshot: row.input_snapshot,
     })),
   });
+  const additionSummaries = await readFormatAdditionListSummaries({
+    client: supabaseAdmin,
+    storeId,
+    campaigns: rows.map((row) => ({
+      id: row.id,
+      input_snapshot: row.input_snapshot,
+    })),
+  });
   const preferredThumbnails = await generateBatchPreferredThumbnailUrls(
     [...summaries.values()].map((summary) => ({
       id: summary.campaignId,
@@ -235,10 +255,12 @@ export async function listCampaigns(
   );
   const itemsWithThumbnails = items.map((item) => {
     const summary = summaries.get(item.id);
+    const additionSummary = additionSummaries.get(item.id);
     const formatPresentation = buildListFormatPresentation({
       inputSnapshot: rowsById.get(item.id)?.input_snapshot ?? null,
       status: item.status,
       summary,
+      additionSummary,
     });
     if (summary) {
       return {
@@ -254,6 +276,9 @@ export async function listCampaigns(
       ...item,
       thumbnailUrl: legacyThumbnails[item.id] ?? null,
       formatPresentation,
+      ...(additionSummary === undefined
+        ? {}
+        : { formatAddition: formatAdditionPresentation(additionSummary) }),
     };
   });
 

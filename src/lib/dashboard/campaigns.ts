@@ -6,6 +6,12 @@ import {
   readTwoFormatListSummaries,
   type TwoFormatListSummary,
 } from "@/lib/product-two-format/list-summary";
+import {
+  formatAdditionPresentation,
+  readFormatAdditionListSummaries,
+  type FormatAdditionListSummary,
+} from "@/lib/campaign/format-addition/list-summary";
+import type { FormatAdditionPresentationInput } from "@/lib/campaign/format-presentation";
 import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
 import { countReadyCampaigns } from "@/lib/campaign/metrics";
 import {
@@ -43,6 +49,8 @@ export interface EligibleCampaignCard {
    * individual). Somente estados/booleanos: nenhum snapshot/path/URL.
    */
   readonly formatPresentation: CampaignFormatPresentation;
+  /** F62 — estado sanitizado da adição vertical; sem operationId/path. */
+  readonly formatAddition?: FormatAdditionPresentationInput | null;
 }
 
 export interface EligibleCampaignOverview {
@@ -71,6 +79,7 @@ interface EligibleCampaignRow {
 function buildDashboardFormatPresentation(input: {
   readonly inputSnapshot: Record<string, unknown> | null;
   readonly summary: TwoFormatListSummary | undefined;
+  readonly additionSummary: FormatAdditionListSummary | undefined;
 }): CampaignFormatPresentation {
   const classification = classifyTwoFormatCampaign(input.inputSnapshot);
 
@@ -104,6 +113,9 @@ function buildDashboardFormatPresentation(input: {
   return buildIndividualFormatPresentation({
     resolution: resolveCampaignFormat(input.inputSnapshot),
     lifecycle: "delivered",
+    ...(input.additionSummary === undefined
+      ? {}
+      : { addition: formatAdditionPresentation(input.additionSummary) }),
   });
 }
 
@@ -141,6 +153,14 @@ export async function queryEligibleCampaigns(
       input_snapshot: row.input_snapshot,
     })),
   });
+  const additionSummaries = await readFormatAdditionListSummaries({
+    client: supabaseAdmin,
+    storeId,
+    campaigns: rows.map((row) => ({
+      id: row.id,
+      input_snapshot: row.input_snapshot,
+    })),
+  });
   const preferredThumbnails = await generateBatchPreferredThumbnailUrls(
     [...summaries.values()].map((summary) => ({
       id: summary.campaignId,
@@ -159,9 +179,11 @@ export async function queryEligibleCampaigns(
 
   return rows.map((row) => {
     const summary = summaries.get(row.id);
+    const additionSummary = additionSummaries.get(row.id);
     const formatPresentation = buildDashboardFormatPresentation({
       inputSnapshot: row.input_snapshot,
       summary,
+      additionSummary,
     });
     if (summary) {
       return {
@@ -185,6 +207,9 @@ export async function queryEligibleCampaigns(
       format:
         formatResolution.kind === "unavailable" ? null : formatResolution.kind,
       formatPresentation,
+      ...(additionSummary === undefined
+        ? {}
+        : { formatAddition: formatAdditionPresentation(additionSummary) }),
     };
   });
 }

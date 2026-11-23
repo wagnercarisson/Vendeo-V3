@@ -87,6 +87,43 @@ describe("sonda de arte por origem canônica", () => {
     expect(direct.probeArtifact).not.toHaveBeenCalled();
   });
 
+  it("exclui adições verticais da fila de pendências 1:1", async () => {
+    const prober = { probeArtifact: vi.fn(async () => integral) };
+    const repository = new SupabasePendingOperationsRepository(
+      clientFrom({
+        product_1_1_campaign_credit_operations: [
+          {
+            campaign_id: "c",
+            operation_id: "addition",
+            store_id: "s",
+            amount: 1,
+            status: "reserved",
+            state_epoch: 1,
+            publication_state: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          {
+            campaign_id: "c",
+            operation_id: "normal",
+            store_id: "s",
+            amount: 1,
+            status: "reserved",
+            state_epoch: 1,
+            publication_state: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+        campaign_format_additions: [{ operation_id: "addition" }],
+      }),
+      prober,
+    );
+
+    const result = await repository.listPendingOperations();
+    expect(result.map((item) => item.operationId)).toEqual(["normal"]);
+  });
+
   it("origem legada preserva a sonda por formato (1:1 e 9:16 direto)", async () => {
     const square = { probeArtifact: vi.fn(async () => integral) };
     const vertical = { probeArtifact: vi.fn(async () => integral) };

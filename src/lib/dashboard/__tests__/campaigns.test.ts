@@ -8,6 +8,7 @@ const mockAdmin = {};
 const mockGenerateBatchThumbnailUrls = vi.fn();
 const mockGenerateBatchPreferredThumbnailUrls = vi.fn(async () => ({}));
 const mockReadTwoFormatListSummaries = vi.fn(async () => new Map());
+const mockReadFormatAdditionListSummaries = vi.fn(async () => new Map());
 const mockCountReadyCampaigns = vi.fn();
 
 vi.mock("server-only", () => ({}));
@@ -24,6 +25,17 @@ vi.mock("@/lib/campaign/list", () => ({
 
 vi.mock("@/lib/product-two-format/list-summary", () => ({
   readTwoFormatListSummaries: mockReadTwoFormatListSummaries,
+}));
+
+vi.mock("@/lib/campaign/format-addition/list-summary", () => ({
+  readFormatAdditionListSummaries: mockReadFormatAdditionListSummaries,
+  formatAdditionPresentation: (summary: {
+    state: string;
+    refunded: boolean;
+  }) =>
+    summary.state === "absent"
+      ? { format: "9:16", state: "absent", refunded: summary.refunded }
+      : { format: "9:16", state: summary.state },
 }));
 
 vi.mock("@/lib/campaign/metrics", () => ({
@@ -68,6 +80,7 @@ beforeEach(() => {
   mockGenerateBatchThumbnailUrls.mockResolvedValue({});
   mockGenerateBatchPreferredThumbnailUrls.mockResolvedValue({});
   mockReadTwoFormatListSummaries.mockResolvedValue(new Map());
+  mockReadFormatAdditionListSummaries.mockResolvedValue(new Map());
 });
 
 const rows: Row[] = [
@@ -161,6 +174,43 @@ describe("queryEligibleCampaigns", () => {
     expect(result[0]).not.toHaveProperty("status");
     expect(result[0]).not.toHaveProperty("input_snapshot");
     expect(result[0]).not.toHaveProperty("error_message");
+  });
+
+  it("F62 — adição aparece no card único com miniatura quadrada e chip vertical", async () => {
+    buildChain([rows[0]]);
+    mockGenerateBatchThumbnailUrls.mockResolvedValue({
+      "campaign-1": "https://signed/square.jpg",
+    });
+    mockReadFormatAdditionListSummaries.mockResolvedValue(
+      new Map([
+        [
+          "campaign-1",
+          {
+            campaignId: "campaign-1",
+            operationId: "op-1",
+            state: "delivered",
+            sourceOrigin: "legacy_campaign",
+            refunded: false,
+            preferredThumbnailPath: null,
+          },
+        ],
+      ]),
+    );
+
+    const { queryEligibleCampaigns } = await import(
+      "@/lib/dashboard/campaigns"
+    );
+    const result = await queryEligibleCampaigns("store-1");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].thumbnailUrl).toBe("https://signed/square.jpg");
+    expect(result[0]).not.toHaveProperty("operationId");
+    expect(result[0].formatPresentation.formats["9:16"].state).toBe(
+      "delivered",
+    );
+    expect(result[0].formatPresentation.formats["1:1"].state).toBe(
+      "delivered",
+    );
   });
 
   it("Quick 261106-qxn: formato indisponível permanece null, sem fallback para 1:1", async () => {

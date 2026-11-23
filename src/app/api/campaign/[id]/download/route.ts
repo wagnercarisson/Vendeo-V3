@@ -21,6 +21,8 @@ import { readTwoFormatDelivery } from "@/lib/product-two-format/delivery-reader"
 import { resolveTwoFormatControlOperation } from "@/lib/product-two-format/control-reader";
 import { resolveTwoFormatAccess } from "@/lib/product-two-format/access";
 import { COMPOSITION_ARTIFACT_BUCKET } from "@/lib/campaign/composition-artifacts/artifact-path";
+import { readFormatAdditionByCampaign } from "@/lib/campaign/format-addition/delivery-reader";
+import { CompositionVerticalProbe } from "@/lib/product-9-16-two-stage/orchestration/vertical-probe";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -142,6 +144,119 @@ export const GET = apiHandler(async (
         "Cache-Control": "private, no-store",
       },
     });
+  }
+
+  // F62/62-06 — download por formato da campanha 1:1 com adição. `?format` é
+  // estrito para o ramo da adição: inválido/duplicado falha antes de qualquer
+  // leitura/assinatura; 9:16 NUNCA cai no quadrado.
+  const additionFormatValues = new URL(_request.url).searchParams.getAll("format");
+  const requestedAdditionFormat =
+    additionFormatValues.length === 1 ? additionFormatValues[0] : undefined;
+  const formatResolutionForAddition = resolveCampaignFormat(
+    campaign.input_snapshot,
+  );
+  if (
+    formatResolutionForAddition.kind === "1:1" ||
+    (requestedAdditionFormat === "9:16" &&
+      formatResolutionForAddition.kind !== "9:16")
+  ) {
+    if (
+      additionFormatValues.length > 1 ||
+      (requestedAdditionFormat !== undefined &&
+        requestedAdditionFormat !== "1:1" &&
+        requestedAdditionFormat !== "9:16")
+    ) {
+      return NextResponse.json(
+        { error: { code: "unsupported_format", message: "Formato inválido." } },
+        { status: 400 },
+      );
+    }
+
+    if (
+      formatResolutionForAddition.kind === "1:1" &&
+      requestedAdditionFormat === "9:16"
+    ) {
+      const additionRead = await readFormatAdditionByCampaign(
+        { storeId: campaign.store_id, campaignId: id },
+        { client: supabaseAdmin },
+      );
+      if (additionRead.kind === "read_failed") {
+        return NextResponse.json(
+          {
+            error: {
+              code: "operation_unavailable",
+              message: "Adição indisponível.",
+            },
+          },
+          { status: 503 },
+        );
+      }
+      const addition =
+        additionRead.kind === "found" ? additionRead.addition : null;
+
+      if (
+        addition === null ||
+        addition.state !== "delivered" ||
+        addition.operationId === null
+      ) {
+        return NextResponse.json(
+          { error: { code: "not_delivered", message: "Formato não entregue." } },
+          { status: 409 },
+        );
+      }
+      const probe = new CompositionVerticalProbe({ client: supabaseAdmin });
+      let vertical;
+      try {
+        vertical = await probe.probeVerticalArtifact({
+          storeId: campaign.store_id,
+          campaignId: id,
+          operationId: addition.operationId,
+        });
+      } catch {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 503 },
+        );
+      }
+      if (vertical.kind === "indeterminate") {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 503 },
+        );
+      }
+      if (vertical.kind !== "integral") {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 404 },
+        );
+      }
+      const downloaded = await supabaseAdmin.storage
+        .from(COMPOSITION_ARTIFACT_BUCKET)
+        .download(vertical.storagePath);
+      if (downloaded.error || !downloaded.data) {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 502 },
+        );
+      }
+      const filename = buildSafeDownloadFilename({
+        productName: campaign.product_name,
+        createdAt: campaign.created_at,
+        extension: "jpg",
+      });
+      return new NextResponse(
+        new Blob([await downloaded.data.arrayBuffer()], {
+          type: vertical.mimeType,
+        }),
+        {
+          headers: {
+            "Content-Type": vertical.mimeType,
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Cache-Control": "private, no-store",
+          },
+        },
+      );
+    }
   }
 
   // F60.5 — ramo 9:16 por expansao ANTES do gate F56.2b1b/store direto.
