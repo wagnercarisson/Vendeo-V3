@@ -42,4 +42,44 @@ export const es419CampaignDetailMessages = Object.freeze({
     refunded: "Operación reembolsada.",
     processing: "Procesando formatos...",
   }),
+  formatAddition: Object.freeze({
+    title: "Agregar formato vertical",
+    description:
+      "Crea una versión vertical de esta campaña sin cambiar el arte cuadrado.",
+    action: "Agregar vertical 9:16",
+    cost: "Costo: 1 crédito",
+    confirm: "Confirmar adición",
+    cancel: "Cancelar",
+    processing: "Creando el formato vertical...",
+    tracking: "Puedes seguir el avance en esta página.",
+    retry: "Intentar de nuevo",
+    delivered: "Formato vertical listo.",
+    refunded: "La adición se deshizo y el crédito se devolvió.",
+    unknown:
+      "No fue posible confirmar el resultado ahora. Consulta de nuevo en unos instantes.",
+    failed:
+      "No fue posible crear el formato vertical. El crédito se devolvió.",
+    unavailable: "La adición no está disponible en este momento. Inténtalo más tarde.",
+    selection: "Elige arriba el formato que quieres ver.",
+    incompatible: Object.freeze({
+      unsupportedDimensions:
+        "El arte original no tiene el tamaño necesario para el formato vertical.",
+      unsupportedMime:
+        "El archivo original no está en un formato de imagen compatible.",
+      artifactInvalid: "No fue posible validar el arte original.",
+      pathNotCanonical: "El arte original no corresponde a esta campaña.",
+      formatNotSquare:
+        "Esta campaña no está disponible para recibir el formato vertical.",
+      campaignNotReady:
+        "La campaña debe estar lista para recibir el formato vertical.",
+      sourceOriginInvalid:
+        "El origen de esta campaña no es compatible con el formato vertical.",
+    }),
+    readUnavailable: Object.freeze({
+      artifactAbsent: "No se encontró el arte original.",
+      artifactIndeterminate: "No fue posible verificar el arte original.",
+      readFailed: "No fue posible consultar la adición ahora.",
+      identityConflict: "Los datos de la campaña no coinciden.",
+    }),
+  }),
 }) satisfies CampaignDetailMessages;

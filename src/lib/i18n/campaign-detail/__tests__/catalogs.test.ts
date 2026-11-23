@@ -38,6 +38,32 @@ const EXPECTED_PT_KEYS = [
   "downloadOriginal",
   "editedBadge",
   "fallbackTitle",
+  "formatAddition.action",
+  "formatAddition.cancel",
+  "formatAddition.confirm",
+  "formatAddition.cost",
+  "formatAddition.delivered",
+  "formatAddition.description",
+  "formatAddition.failed",
+  "formatAddition.incompatible.artifactInvalid",
+  "formatAddition.incompatible.campaignNotReady",
+  "formatAddition.incompatible.formatNotSquare",
+  "formatAddition.incompatible.pathNotCanonical",
+  "formatAddition.incompatible.sourceOriginInvalid",
+  "formatAddition.incompatible.unsupportedDimensions",
+  "formatAddition.incompatible.unsupportedMime",
+  "formatAddition.processing",
+  "formatAddition.readUnavailable.artifactAbsent",
+  "formatAddition.readUnavailable.artifactIndeterminate",
+  "formatAddition.readUnavailable.identityConflict",
+  "formatAddition.readUnavailable.readFailed",
+  "formatAddition.refunded",
+  "formatAddition.retry",
+  "formatAddition.selection",
+  "formatAddition.title",
+  "formatAddition.tracking",
+  "formatAddition.unavailable",
+  "formatAddition.unknown",
   "publicationKit",
   "formats.activeLabel",
   "formats.explanations.delivered",
@@ -123,6 +149,10 @@ describe("catálogos do namespace da campanha pronta pt-BR e es-419", () => {
       expect(Object.isFrozen(catalog.formats.labels)).toBe(true);
       expect(Object.isFrozen(catalog.formats.explanations)).toBe(true);
       expect(Object.isFrozen(catalog.jointNotes)).toBe(true);
+      // F62 — textos da adição vertical congelados em todos os níveis.
+      expect(Object.isFrozen(catalog.formatAddition)).toBe(true);
+      expect(Object.isFrozen(catalog.formatAddition.incompatible)).toBe(true);
+      expect(Object.isFrozen(catalog.formatAddition.readUnavailable)).toBe(true);
     }
   });
 
@@ -169,5 +199,81 @@ describe("catálogos do namespace da campanha pronta pt-BR e es-419", () => {
       "texto de la publicación",
     );
     expect(es419CampaignDetailMessages.copy.targets.cta).toBe("Llamada");
+  });
+
+  it("F62 — cobre custo, confirmação, acompanhamento, retomada e rollback", () => {
+    for (const catalog of [
+      ptBRCampaignDetailMessages,
+      es419CampaignDetailMessages,
+    ]) {
+      const messages = catalog.formatAddition;
+
+      expect(messages.cost).toMatch(/1 cr[eé]dito/);
+      expect(messages.confirm.trim()).not.toBe("");
+      expect(messages.cancel.trim()).not.toBe("");
+      expect(messages.processing.trim()).not.toBe("");
+      expect(messages.tracking.trim()).not.toBe("");
+      expect(messages.retry.trim()).not.toBe("");
+      expect(messages.delivered.trim()).not.toBe("");
+      expect(messages.refunded.trim()).not.toBe("");
+      expect(messages.unknown.trim()).not.toBe("");
+      expect(messages.failed.trim()).not.toBe("");
+      expect(messages.unavailable.trim()).not.toBe("");
+      expect(messages.selection.trim()).not.toBe("");
+    }
+
+    expect(ptBRCampaignDetailMessages.formatAddition.cost).toBe(
+      "Custo: 1 crédito",
+    );
+    expect(es419CampaignDetailMessages.formatAddition.cost).toBe(
+      "Costo: 1 crédito",
+    );
+  });
+
+  it("F62 — incompatibilidade e indisponibilidade têm texto por motivo", () => {
+    for (const catalog of [
+      ptBRCampaignDetailMessages,
+      es419CampaignDetailMessages,
+    ]) {
+      const messages = catalog.formatAddition;
+
+      for (const value of Object.values(messages.incompatible)) {
+        expect(value.trim()).not.toBe("");
+      }
+      for (const value of Object.values(messages.readUnavailable)) {
+        expect(value.trim()).not.toBe("");
+      }
+    }
+
+    // Itens ausentes/indisponíveis são distintos e não prometem adaptação.
+    expect(ptBRCampaignDetailMessages.formatAddition.readUnavailable.artifactAbsent).not.toBe(
+      ptBRCampaignDetailMessages.formatAddition.readUnavailable.readFailed,
+    );
+  });
+
+  it("F62 — não promete adaptação futura, 1080, conversão ou emoji", () => {
+    const forbidden = [
+      /1080/,
+      /convert(er|ir|ersión|sión)/i,
+      /redimension/i,
+      /adapt(ar|ación|ação)/i,
+      /em breve/i,
+      /pr[óo]ximamente/i,
+      /futuro/i,
+    ];
+    const emoji =
+      /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u;
+
+    for (const catalog of [
+      ptBRCampaignDetailMessages,
+      es419CampaignDetailMessages,
+    ]) {
+      const text = Object.values(flatten(catalog)).join("\n");
+
+      for (const pattern of forbidden) {
+        expect(text).not.toMatch(pattern);
+      }
+      expect(text).not.toMatch(emoji);
+    }
   });
 });

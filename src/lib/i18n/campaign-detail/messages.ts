@@ -37,6 +37,8 @@ export interface CampaignDetailMessages {
   readonly formats: CampaignFormatPresentationMessages;
   /** F61 — notas de estado conjunto, em bloco único localizado. */
   readonly jointNotes: CampaignDetailJointNotesMessages;
+  /** F62 — textos da adição posterior do formato vertical. */
+  readonly formatAddition: CampaignDetailFormatAdditionMessages;
 }
 
 export interface CampaignDetailJointNotesMessages {
@@ -47,4 +49,41 @@ export interface CampaignDetailJointNotesMessages {
   readonly finalizationPending: string;
   readonly refunded: string;
   readonly processing: string;
+}
+
+export interface CampaignDetailFormatAdditionIncompatibleMessages {
+  readonly unsupportedDimensions: string;
+  readonly unsupportedMime: string;
+  readonly artifactInvalid: string;
+  readonly pathNotCanonical: string;
+  readonly formatNotSquare: string;
+  readonly campaignNotReady: string;
+  readonly sourceOriginInvalid: string;
+}
+
+export interface CampaignDetailFormatAdditionReadUnavailableMessages {
+  readonly artifactAbsent: string;
+  readonly artifactIndeterminate: string;
+  readonly readFailed: string;
+  readonly identityConflict: string;
+}
+
+export interface CampaignDetailFormatAdditionMessages {
+  readonly title: string;
+  readonly description: string;
+  readonly action: string;
+  readonly cost: string;
+  readonly confirm: string;
+  readonly cancel: string;
+  readonly processing: string;
+  readonly tracking: string;
+  readonly retry: string;
+  readonly delivered: string;
+  readonly refunded: string;
+  readonly unknown: string;
+  readonly failed: string;
+  readonly unavailable: string;
+  readonly selection: string;
+  readonly incompatible: CampaignDetailFormatAdditionIncompatibleMessages;
+  readonly readUnavailable: CampaignDetailFormatAdditionReadUnavailableMessages;
 }
