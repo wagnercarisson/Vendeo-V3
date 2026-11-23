@@ -1,0 +1,85 @@
+---
+phase: 62-adicionar-vertical-campanha-quadrada
+plan: 07
+subsystem: release-readiness
+tags: [support, runbook, offline-gates, migration-authorization, release-checklist, awaiting-review]
+
+requires:
+  - phase: 62-adicionar-vertical-campanha-quadrada
+    provides: 62-06 aceito (lista/dashboard/download/pendência)
+provides:
+  - runbook de suporte da adição
+  - evidência de gates offline sequenciais
+  - pacote de autorização da migration (não aplicado)
+  - checklist de release com separação declaração×conferência
+affects: [62-07, 62-08]
+
+key-files:
+  created:
+    - docs/operations/f62-addition-support-runbook.md
+    - docs/operations/f62-release-checklist.md
+    - .planning/phases/62-adicionar-vertical-campanha-quadrada/62-OFFLINE-GATES.md
+    - .planning/phases/62-adicionar-vertical-campanha-quadrada/62-MIGRATION-AUTHORIZATION.md
+
+key-decisions:
+  - "O runbook é read-only no diagnóstico e usa somente RPCs idempotentes da adição no encerramento."
+  - "Gates offline reais foram executados sequencialmente; evidência não é prova de produção."
+  - "O pacote de migration prepara autorização, mas NÃO a concede; migration permanece não aplicada."
+  - "O checklist separa declaração de produção histórica da conferência técnica de versão/hash/ledger/schema."
+  - "62-08 não foi iniciado."
+
+requirements-completed: [ADD-ELIG-01, ADD-OP-02, ADD-LINK-03, ADD-BRIDGE-04, ADD-ECON-05, ADD-ORCH-06, ADD-DELIV-07, ADD-FAIL-08, ADD-GATE-09, ADD-READ-10, ADD-SUPPORT-11, FMT-ADD-12, PAGE-ADD-13, LIST-ADD-14, DASH-ADD-15, DL-ADD-16, COMP-ADD-17, CREDIT-ADD-18, ORCH916-ADD-19, CTRL916-ADD-20, FLAG-ADD-21]
+
+duration: ~35 min
+completed: 2026-11-23
+---
+
+# Phase 62 Plan 07 — suporte, gates offline e pacote de release
+
+**Runbook seguro, evidência offline real, autorização de migration preparada (não concedida) e checklist com declaração separada**
+
+> **Status: EXECUTADO LOCALMENTE/OFFLINE EM 2026-11-23 — AGUARDANDO O REVIEW STOP; NÃO ACEITO; `62-08` NÃO INICIADO.**
+> Nenhum banco, Storage, provider, migration, ambiente, segredo/flag, merge, push,
+> deploy, sync ou archive foi acionado.
+
+## Performance
+
+- **Tasks:** 4/4 documentais executadas; Task 5 é o Review Stop humano.
+- **Files created:** 4 documentos.
+
+## Commit
+
+| Commit | Conteúdo |
+|---|---|
+| `546f3be8` | runbook, gates offline, pacote de migration e checklist de release |
+
+## Entregas
+
+- **Runbook:** identifica adição por campanha/operação/request/artefato; distingue `open`, `processing`, `unknown`, `refunded`, `delivered` e falha definitiva; exige leitura e RPC idempotente; veda crédito manual, exclusão de vínculo, projeção em `campaigns.storage_path` e uso da flag compartilhada como rollback.
+- **Gates offline:** typecheck 0; lint 0; build 0 (102/102); **13 arquivos / 168 testes dirigidos**; global **863 arquivos + 2 skipped / 10.756 testes + 10 skipped**; OpenSpec 1/0; diff-check limpo; baseline `5572378b`.
+- **Pacote de migration:** caminho `20261123130252_campaign_format_addition.sql`, SHA-256 `61c727…f5b878`, ledger esperado baseline+1, backup/restore-list, schema pré/pós, RLS/grants, guards, cenários, critérios de parada e rollback. **Não aplicada.**
+- **Checklist de release:** versão/hash/ledger/schema/backup, flags, provas PostgreSQL/Storage/provider/visual pendentes, rollback, monitoramento e autorização de publicação; separa a declaração F60.7 da conferência técnica.
+
+## Separação de evidências
+
+| Camada | O que cobre | O que NÃO cobre |
+|---|---|---|
+| Offline (este plano) | código, testes, build, documentação | banco/Storage/provider/visual reais |
+| Autorização de migration | preparação do gate | aplicação ou aprovação |
+| `62-08` | provas reais e validação | ativação/publicação automáticas |
+
+## Limitações
+
+- Nenhum banco, Storage, provider, migration, ambiente, segredo/flag, merge, push ou deploy foi acionado.
+- Gates offline não provam RLS, locks, concorrência real, restore, provider ou legibilidade visual.
+- A autorização da migration não foi concedida; o pacote apenas a prepara.
+- `62-08` não iniciado.
+
+## Next
+
+Review Stop do `62-07`. Não iniciar `62-08` sem autorização específica e revisão/aprovação.
+
+---
+
+*Phase: 62-adicionar-vertical-campanha-quadrada*
+*Executed: 62-07, awaiting review, 2026-11-23*
