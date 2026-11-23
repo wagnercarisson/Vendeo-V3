@@ -114,6 +114,7 @@ function validateMigrationShape(payload, nowMs) {
   const start = date(payload.window.start, "window.start");
   const end = date(payload.window.end, "window.end");
   if (end <= start) fail("window_order");
+  if (nowMs < start || nowMs >= end) fail("window_not_current");
   nonEmpty(payload.approver, "approver");
   validateDates(payload, nowMs);
   nonEmpty(payload.rollback_plan, "rollback_plan");
@@ -201,6 +202,15 @@ export function validateMigrationAuthorization(
   ) {
     fail("expected_sha256_mismatch");
   }
+  if (!expected.environment || typeof expected.environment !== "object") {
+    fail("expected_environment_missing");
+  }
+  validateEnvironment(expected.environment, "expected.");
+  for (const field of ["host", "port", "database", "container"]) {
+    if (payload.environment[field] !== expected.environment[field]) {
+      fail(`expected_environment_${field}_mismatch`);
+    }
+  }
   return payload;
 }
 
@@ -238,12 +248,22 @@ function main() {
   const now = Date.now();
 
   if (kind === "migration") {
+    const port = Number(requiredArg("expected-port"));
+    if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+      fail("invalid_expected_port");
+    }
     validateMigrationAuthorization(
       payload,
       {
         branch: requiredArg("expected-branch"),
         head: requiredArg("expected-head"),
         sha256: requiredArg("expected-sha256"),
+        environment: {
+          host: requiredArg("expected-host"),
+          port,
+          database: requiredArg("expected-database"),
+          container: requiredArg("expected-container"),
+        },
       },
       now,
     );

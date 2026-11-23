@@ -70,7 +70,12 @@ function provider(preflight, overrides = {}) {
   };
 }
 
-const EXPECTED = { branch: BRANCH, head: HEAD, sha256: SHA };
+const EXPECTED = {
+  branch: BRANCH,
+  head: HEAD,
+  sha256: SHA,
+  environment: { ...ENV },
+};
 
 describe("F62-08 — autorização estruturada", () => {
   it("aceita blocos válidos e correspondentes ao preflight", () => {
@@ -105,6 +110,48 @@ describe("F62-08 — autorização estruturada", () => {
           NOW,
         ),
       ).toThrow(/authorization_invalid/);
+    }
+  });
+
+  it("recusa janela futura ou encerrada", () => {
+    expect(() =>
+      validateMigrationAuthorization(
+        migration({
+          window: {
+            start: "2026-11-23T13:00:00.000Z",
+            end: "2026-11-23T14:00:00.000Z",
+          },
+        }),
+        EXPECTED,
+        NOW,
+      ),
+    ).toThrow(/window_not_current/);
+    expect(() =>
+      validateMigrationAuthorization(
+        migration({
+          window: {
+            start: "2026-11-23T09:00:00.000Z",
+            end: "2026-11-23T10:00:00.000Z",
+          },
+        }),
+        EXPECTED,
+        NOW,
+      ),
+    ).toThrow(/window_not_current/);
+  });
+
+  it("recusa divergência de cada campo do ambiente esperado", () => {
+    for (const field of ["host", "port", "database", "container"]) {
+      expect(() =>
+        validateMigrationAuthorization(
+          migration(),
+          {
+            ...EXPECTED,
+            environment: { ...ENV, [field]: field === "port" ? 5432 : "other" },
+          },
+          NOW,
+        ),
+      ).toThrow(new RegExp(`expected_environment_${field}_mismatch`));
     }
   });
 
