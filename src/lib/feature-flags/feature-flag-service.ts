@@ -19,6 +19,9 @@ export const PRODUCT_1_1_ALL_STORES_ENABLED_KEY =
 export const PRODUCT_9_16_ENABLED_KEY = "product_9_16_enabled";
 export const PRODUCT_9_16_TWO_STAGE_ENABLED_KEY =
   "product_9_16_two_stage_enabled";
+/** F62 — flag dedicada que bloqueia SOMENTE novas adições de formato. */
+export const CAMPAIGN_FORMAT_ADDITION_ENABLED_KEY =
+  "campaign_format_addition_enabled";
 
 export type ProductOneToOneFlagReadStatus =
   | "valid"
@@ -48,6 +51,7 @@ export const ALL_FEATURE_FLAG_KEYS = [
   PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
   PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
   PRODUCT_9_16_TWO_STAGE_ENABLED_KEY,
+  CAMPAIGN_FORMAT_ADDITION_ENABLED_KEY,
 ];
 
 // Env vars emergenciais opcionais (fail-safe de infra) — nunca são a decisão
@@ -218,6 +222,15 @@ export class FeatureFlagService {
   }
 
   /**
+   * F62 — flag dedicada da adição de formato vertical a campanha 1:1.
+   * Fail-closed, sem envOverride: ausente/erro ⇒ `false` (bloqueia somente
+   * novas adições). Operações já abertas continuam consultáveis/retomáveis.
+   */
+  isCampaignFormatAdditionEnabled(): Promise<boolean> {
+    return this.readFlag(CAMPAIGN_FORMAT_ADDITION_ENABLED_KEY, false);
+  }
+
+  /**
    * Reads both new-flow flags while preserving the distinction between a valid
    * false value and an unavailable/malformed row. The resolver must fail closed
    * for the entire pair if either status is not `valid`.
@@ -305,4 +318,8 @@ export async function isProduct9x16Enabled(): Promise<boolean> {
 
 export async function isProduct9_16TwoStageEnabled(): Promise<boolean> {
   return new FeatureFlagService().isProduct9_16TwoStageEnabled();
+}
+
+export async function isCampaignFormatAdditionEnabled(): Promise<boolean> {
+  return new FeatureFlagService().isCampaignFormatAdditionEnabled();
 }

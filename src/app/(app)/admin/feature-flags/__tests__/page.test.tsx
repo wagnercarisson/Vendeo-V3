@@ -61,7 +61,7 @@ function mockFlags(featureFlags: unknown[]) {
 }
 
 describe("Admin FeatureFlags page (Controles operacionais — multi-flags QCW)", () => {
-  it("renderiza as 5 flags com labels humanizados + keys mono + descrições e sem o seletor antigo", async () => {
+  it("renderiza as 6 flags com labels humanizados + keys mono + descrições e sem o seletor antigo", async () => {
     mockFlags([
       {
         id: "f1",
@@ -104,6 +104,15 @@ describe("Admin FeatureFlags page (Controles operacionais — multi-flags QCW)",
         updated_by: null,
         updated_at: null,
       },
+      {
+        id: "f6",
+        key: "campaign_format_addition_enabled",
+        enabled: false,
+        description:
+          "Bloqueia somente novas adições; operações abertas continuam consultáveis.",
+        updated_by: null,
+        updated_at: null,
+      },
     ]);
 
     const { default: Page } = await import("../page");
@@ -116,12 +125,14 @@ describe("Admin FeatureFlags page (Controles operacionais — multi-flags QCW)",
     expect(html).toContain("Geração de campanhas");
     expect(html).toContain("Geração de assinatura visual");
     expect(html).toContain("Geração 9:16 por expansão");
+    expect(html).toContain("Adicionar formato vertical 9:16 a campanha 1:1");
     // Keys técnicas como subtexto mono
     expect(html).toContain("force_brief_vision_check");
     expect(html).toContain("captcha_enabled");
     expect(html).toContain("campaign_generation_enabled");
     expect(html).toContain("visual_signature_generation_enabled");
     expect(html).toContain("product_9_16_two_stage_enabled");
+    expect(html).toContain("campaign_format_addition_enabled");
     // O seletor do gerador direto antigo não é mais renderizado.
     expect(html).not.toContain("product_9_16_enabled");
     // Descrição do banco (limite honesto do captcha sobre o Supabase Auth)
@@ -152,6 +163,7 @@ describe("Admin FeatureFlags page (Controles operacionais — multi-flags QCW)",
     expect(html).toContain("captcha_enabled");
     expect(html).toContain("campaign_generation_enabled");
     expect(html).toContain("visual_signature_generation_enabled");
+    expect(html).toContain("campaign_format_addition_enabled");
     // A flag encontrada permanece renderizada
     expect(html).toContain("Validação IA do brief (produto × imagem)");
   });

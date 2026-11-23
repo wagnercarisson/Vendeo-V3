@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   ALL_FEATURE_FLAG_KEYS,
+  CAMPAIGN_FORMAT_ADDITION_ENABLED_KEY,
   FeatureFlagService,
   PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
   PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
@@ -324,11 +325,12 @@ describe("FeatureFlagService — chaves Produto 1:1 F56.2a (fail-closed)", () =>
     });
   }
 
-  it("registra as duas chaves 1:1 e a chave 9:16 por expansão ao final da ordem canônica", () => {
-    expect(ALL_FEATURE_FLAG_KEYS.slice(-3)).toEqual([
+  it("registra as duas chaves 1:1, a chave 9:16 por expansão e a adição ao final da ordem canônica", () => {
+    expect(ALL_FEATURE_FLAG_KEYS.slice(-4)).toEqual([
       PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
       PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
       PRODUCT_9_16_TWO_STAGE_ENABLED_KEY,
+      CAMPAIGN_FORMAT_ADDITION_ENABLED_KEY,
     ]);
     expect(ALL_FEATURE_FLAG_KEYS).not.toContain(PRODUCT_9_16_ENABLED_KEY);
   });
@@ -463,5 +465,75 @@ describe("F60.5 - flag product_9_16_two_stage_enabled (painel administrativo)", 
       new FeatureFlagService().isProduct9_16TwoStageEnabled(),
     ).resolves.toBe(false);
     warn.mockRestore();
+  });
+});
+
+describe("F62 - flag campaign_format_addition_enabled (adição de formato)", () => {
+  function mockFlag(data: unknown, error: unknown = null) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "feature_flags") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(() => Promise.resolve({ data, error })),
+            })),
+          })),
+        };
+      }
+      return {};
+    });
+  }
+
+  it("expõe a chave canônica e a registra no painel existente", () => {
+    expect(CAMPAIGN_FORMAT_ADDITION_ENABLED_KEY).toBe(
+      "campaign_format_addition_enabled",
+    );
+    expect(ALL_FEATURE_FLAG_KEYS).toContain(CAMPAIGN_FORMAT_ADDITION_ENABLED_KEY);
+  });
+
+  it("leitura: true somente com enabled true", async () => {
+    mockFlag({ enabled: true });
+    await expect(
+      new FeatureFlagService().isCampaignFormatAdditionEnabled(),
+    ).resolves.toBe(true);
+
+    mockFlag({ enabled: false });
+    await expect(
+      new FeatureFlagService().isCampaignFormatAdditionEnabled(),
+    ).resolves.toBe(false);
+  });
+
+  it("ausente/erro/inválido ⇒ false (fail-closed)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    mockFlag(null);
+    await expect(
+      new FeatureFlagService().isCampaignFormatAdditionEnabled(),
+    ).resolves.toBe(false);
+
+    mockFlag(null, { message: "boom" });
+    await expect(
+      new FeatureFlagService().isCampaignFormatAdditionEnabled(),
+    ).resolves.toBe(false);
+
+    mockFlag({ enabled: "yes" });
+    await expect(
+      new FeatureFlagService().isCampaignFormatAdditionEnabled(),
+    ).resolves.toBe(false);
+
+    warn.mockRestore();
+  });
+
+  it("não consulta env var emergencial para liberar a adição", async () => {
+    process.env.VENDEO_CAMPAIGN_FORMAT_ADDITION_ENABLED = "true";
+    mockFlag(null);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(
+      new FeatureFlagService().isCampaignFormatAdditionEnabled(),
+    ).resolves.toBe(false);
+
+    warn.mockRestore();
+    delete process.env.VENDEO_CAMPAIGN_FORMAT_ADDITION_ENABLED;
   });
 });
