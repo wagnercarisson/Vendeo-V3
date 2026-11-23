@@ -162,6 +162,7 @@ function createRepoClient(input: {
     const self = () => chain;
     chain.select = vi.fn(self);
     chain.eq = vi.fn(self);
+    chain.in = vi.fn(self);
     chain.order = vi.fn(self);
     chain.maybeSingle = vi.fn(async () => {
       if (input.creditError && table === "product_1_1_campaign_credit_operations") {
