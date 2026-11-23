@@ -66,14 +66,14 @@ completed: 2026-11-23
 
 **Opt-in legado 1024 default-preserving, ponte square_original estabilizada, seleção/pricing/economia congeladas sem fallback, cliente financeiro strict e leitor sanitizado**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE; AGUARDANDO REVISÃO; NÃO ACEITO.**
+> **Status: EXECUTADO LOCALMENTE/OFFLINE; CORREÇÕES DIRIGIDAS DA REVISÃO APLICADAS; AGUARDANDO NOVA REVISÃO; NÃO ACEITO.**
 > `62-04` **não iniciado**. A migration do 62-02 **não foi aplicada**. Nenhum
 > banco, Storage, provider, geração, flag em ambiente, merge, push, deploy,
 > sync ou archive.
 >
-> **Bloqueio de aceite:** a suíte global tem **1 falha de guarda fora do plano**
-> (F60.4 `AUTHORIZED_CONTRACT_CHANGES`) que precisa de autorização explícita
-> para ser reconciliada. O guard **não foi alterado**.
+> **Correções dirigidas:** allowlist F60.4 atualizada somente com os seis
+> caminhos autorizados e `preflightFrozenExpansion` passou a comparar a seleção
+> completa (modelo, qualidade, `configVersionId`, origem) antes de delegar.
 
 ## Performance
 
@@ -91,6 +91,8 @@ completed: 2026-11-23
 4. **Task 4: cliente financeiro strict** — `04d2433a` (feat).
 5. **Task 5: leitor canônico sanitizado** — `3de5fd3a` (feat).
 6. **Correção de fronteira:** remoção do import do runtime 1:1 na ponte — `63eddf83` (fix).
+7. **Autorização dirigida no plano:** allowlist F60.4 e comparação completa — `fb3f279d` (docs).
+8. **Correção dirigida:** seis caminhos na allowlist + seleção completa — `8dd7e254` (fix).
 
 ## Files Created/Modified
 
@@ -129,22 +131,30 @@ completed: 2026-11-23
 | `npm.cmd run typecheck` | exit **0** |
 | `npm.cmd run lint` | exit **0** (não cobre TS — limitação preexistente) |
 | `npm.cmd run build` | exit **0**; **102/102** páginas |
-| Suíte global local | **851 arquivos PASS + 2 skipped + 1 FAILED (854)**; **10.634 testes PASS + 10 skipped + 1 failed (10.645)**; exit 1 |
+| Guard F60.4 | **8/8 PASS** |
+| Suíte global local | exit **0**; **852 arquivos PASS + 2 skipped (854)**; **10.635 testes PASS + 10 skipped (10.645)** |
 | OpenSpec `--changes --strict` | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
-A única falha global é o guard F60.4 descrito em **Issues Encountered**. Gates PostgreSQL/Storage/provider/app-env não executados; a migration não foi aplicada.
+A suíte global passou após a autorização dirigida do guard e a comparação completa da seleção. Gates PostgreSQL/Storage/provider/app-env não executados; a migration não foi aplicada.
 
 ## Deviations from Plan
 
-### Desvio de processo fora do plano (não contornado)
+### Correção dirigida autorizada (F62/62-03)
 
-**1. Guard F60.4 não reconhece os arquivos autorizados do 62-03**
-- **Encontrado em:** execução da suíte global, após os commits de implementação.
-- **Situação:** `src/lib/campaign/square-base/__tests__/regression.contract.test.ts` compara `CONTRACT_PATHS` contra `PHASE_BASE_SHA` e só aceita arquivos em `AUTHORIZED_CONTRACT_CHANGES`. Os seis arquivos de `composition-artifacts` alterados estão **na lista `files_modified` autorizada do plano 62-03**, mas não na allowlist do guard.
-- **Ação:** o guard **não foi modificado**. O executor não contornou a proteção.
-- **Necessário:** autorização explícita para adicionar os seis caminhos à allowlist (arquivo fora do plano) ou outra decisão do responsável.
-- **Impacto:** a suíte global permanece vermelha até essa reconciliação; os gates dirigidos do plano passam.
+**1. Guard F60.4 reconhece somente os seis caminhos autorizados**
+- **Encontrado em:** suíte global, após os commits de implementação.
+- **Situação:** `src/lib/campaign/square-base/__tests__/regression.contract.test.ts` comparava `CONTRACT_PATHS` contra `PHASE_BASE_SHA` e só aceitava arquivos em `AUTHORIZED_CONTRACT_CHANGES`. Os seis arquivos de `composition-artifacts` estavam em `files_modified` do 62-03, mas não na allowlist.
+- **Autorização:** registrada no `62-03-PLAN.md` antes do código (`fb3f279d`).
+- **Correção:** os seis caminhos exatos foram adicionados à allowlist com referência F62/62-03; `PHASE_BASE_SHA`, `PROTECTED_PATHS`, `CONTRACT_PATHS`, comparação temporal, controle positivo e demais asserções foram preservados. O diretório inteiro **não** foi liberado.
+- **Verificação:** guard **8/8 PASS**; suíte global verde.
+- **Commit:** `8dd7e254`.
+
+**2. `preflightFrozenExpansion` compara a seleção completa**
+- **Problema:** modelo/qualidade eram delegados ao preflight, mas `configVersionId` e origem não eram comparados explicitamente; trocar apenas um deles passava.
+- **Correção:** comparação local de modelo, qualidade, `configVersionId` e origem antes de delegar; divergência retorna falha fechada (`model_unavailable` com `detail: frozen_selection_mismatch:<campo>`). O motor compartilhado **não** foi alterado.
+- **Testes:** positivo com seleção intacta + negativos alterando somente `configVersionId` e somente origem, além de modelo/qualidade.
+- **Commit:** `8dd7e254`.
 
 ### Auto-fixed Issues
 
@@ -157,12 +167,13 @@ A única falha global é o guard F60.4 descrito em **Issues Encountered**. Gates
 
 ---
 
-**Total deviations:** 1 bloqueio de guard fora do plano + 1 correção de fronteira.
-**Impact:** implementação funcional e gates dirigidos verdes; aceite depende da autorização do guard.
+**Total deviations:** 2 correções dirigidas autorizadas (guard F60.4 + seleção completa) + 1 correção de fronteira.
+**Impact:** implementação funcional e suíte global verde; aceite ainda depende da nova revisão.
 
 ## Issues Encountered
 
-- **F60.4 global guard:** falha esperada por autorização não registrada; não alterada. É o único item que impede declarar a fase aceita.
+- **F60.4 global guard:** resolvido pela autorização dirigida registrada no plano; apenas os seis caminhos exatos foram allowlisted, com as demais proteções preservadas.
+- **Comparação da seleção congelada:** `configVersionId` e origem agora são comparados explicitamente antes do preflight; negativos dedicados adicionados.
 - **Leitura dupla da fonte:** `resolveReusableSquareSource` valida baixando os bytes e `ensureFormatAdditionSourceBridge` baixa novamente para passar ao `persistCompositionArtifact` (que revalida). É deliberado para preservar a autoridade F60.1 sem alterar sua assinatura; custo é uma leitura extra de Storage, não uma chamada paga.
 - **Sem prova real:** nenhum SQL/RPC/Storage/provider executado; atomicidade, concorrência e comportamento PostgREST continuam no Gate de banco/prova real.
 
@@ -172,7 +183,7 @@ A única falha global é o guard F60.4 descrito em **Issues Encountered**. Gates
 - A migration `20261123130252_campaign_format_addition.sql` continua **autorada e NÃO aplicada**.
 - Testes são estáticos/fakes: não provam concorrência real, RLS, leases, locks nem downloads/uploads reais.
 - A allowlist do cliente financeiro é estática; novos motivos exigem atualização explícita.
-- A suíte global tem 1 falha de guard F60.4 fora do plano, não contornada.
+- A suíte global está verde após a autorização dirigida do guard F60.4; o guard continua bloqueando qualquer outro arquivo.
 - `62-04` não iniciado; nenhum merge, push, deploy, sync ou archive.
 
 ## Next Phase Readiness
@@ -181,15 +192,16 @@ A única falha global é o guard F60.4 descrito em **Issues Encountered**. Gates
 - **Review Stop do `62-03`:** aguardando revisão e decisão sobre o guard F60.4.
 - `62-04` permanece bloqueado.
 
-## Self-Check: PASSED (com ressalva de guard)
+## Self-Check: PASSED
 
 - [x] Opt-in 1024 com default 1080 preservado.
 - [x] Ponte byte-idêntica, estável e sem crédito inventado (offline).
 - [x] Economia congelada sem fallback à campanha original.
 - [x] Cliente financeiro fechado; nenhum banco/provider acessado.
 - [x] Seis arquivos do plano: 93/93 testes.
-- [x] Typecheck/lint/build/OpenSpec/diff-check verdes.
-- [!] Suíte global: 1 falha de guard F60.4 fora do plano; necessária autorização.
+- [x] Guard F60.4: 8/8, com somente os seis caminhos autorizados.
+- [x] Seleção completa (modelo/qualidade/configVersionId/origem) comparada antes do preflight.
+- [x] Typecheck/lint/build/suíte global/OpenSpec/diff-check verdes.
 
 ---
 

@@ -15,6 +15,8 @@
 | `04d2433a` | cliente financeiro strict + testes |
 | `3de5fd3a` | leitor canônico sanitizado + testes |
 | `63eddf83` | correção de fronteira: remover import do runtime 1:1 |
+| `fb3f279d` | autorização dirigida no plano (allowlist + seleção completa) |
+| `8dd7e254` | seis caminhos exatos na allowlist + comparação completa da seleção |
 
 ## Gates dirigidos (plano)
 
@@ -28,6 +30,11 @@
 | Leitor | `npx vitest run src/lib/campaign/format-addition/__tests__/delivery-reader.contract.test.ts` | PASS |
 | Combinado | os seis arquivos | **6 arquivos / 93 testes PASS** |
 
+## Correções dirigidas (2026-11-23)
+
+1. **Guard F60.4 autorizado:** os seis caminhos exatos de `composition-artifacts` foram adicionados a `AUTHORIZED_CONTRACT_CHANGES` com referência F62/62-03; `PHASE_BASE_SHA`, `PROTECTED_PATHS`, `CONTRACT_PATHS`, comparação temporal, controle positivo e demais asserções preservados. Nenhum diretório inteiro foi liberado.
+2. **Seleção congelada completa:** `preflightFrozenExpansion` compara modelo, qualidade, `configVersionId` e origem antes de delegar; divergência retorna falha fechada com `detail: frozen_selection_mismatch:<campo>`. Motor compartilhado não alterado.
+
 ## Gates gerais
 
 | Gate | Resultado real |
@@ -35,22 +42,10 @@
 | `npm.cmd run typecheck` | exit **0** |
 | `npm.cmd run lint` | exit **0** (não cobre TypeScript — limitação preexistente) |
 | `npm.cmd run build` | exit **0**; 102/102 páginas |
-| Suíte global local | **exit 1**; **851 arquivos PASS + 2 skipped + 1 FAILED (854)**; **10.634 testes PASS + 10 skipped + 1 failed (10.645)** |
+| Guard F60.4 | **8/8 PASS** |
+| Suíte global local | **exit 0**; **852 arquivos PASS + 2 skipped (854)**; **10.635 testes PASS + 10 skipped (10.645)** |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
-
-## Falha global conhecida (não contornada)
-
-`src/lib/campaign/square-base/__tests__/regression.contract.test.ts` (F60.4) acusa os seis arquivos autorizados de `composition-artifacts`:
-
-- `src/lib/campaign/composition-artifacts/__tests__/persist.contract.test.ts`
-- `src/lib/campaign/composition-artifacts/__tests__/resolve-source.contract.test.ts`
-- `src/lib/campaign/composition-artifacts/persist.ts`
-- `src/lib/campaign/composition-artifacts/resolve-source.ts`
-- `src/lib/campaign/composition-artifacts/source-validation.ts`
-- `src/lib/campaign/composition-artifacts/types.ts`
-
-Eles estão em `files_modified` do plano 62-03, mas não em `AUTHORIZED_CONTRACT_CHANGES`. O guard **não foi alterado**. A reconciliação exige autorização explícita (arquivo fora do plano).
 
 ## Não executado
 
