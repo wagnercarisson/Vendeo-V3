@@ -58,10 +58,13 @@ completed: 2026-11-23
 
 **Derivação pura de elegibilidade 1024/1080 com separação entre indisponibilidade e incompatibilidade, extensão aditiva da apresentação individual e catálogos pt-BR/es-419 completos**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE; AGUARDANDO REVISÃO; NÃO ACEITO.**
-> O plano parou no Review Stop. `62-02` **não foi iniciado**. Nenhum banco,
-> Storage, provider, geração, migration aplicada, flag, merge, push, deploy,
-> sync ou archive foi executado.
+> **Status: ACEITO TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE, SEM BLOQUEADORES.**
+> **Histórico de execução:** executado localmente/offline em 2026-11-23 e
+> aprovado na revisão seguinte. O plano parou no Review Stop. `62-02` não foi
+> iniciado por esta execução. Nenhum banco, Storage, provider, geração,
+> migration aplicada, flag, merge, push, deploy, sync ou archive foi executado.
+> **Escopo do aceite:** somente `62-01`; `62-02` foi autorizado em etapa
+> separada e `62-03`+ permanecem não autorizados.
 
 ## Performance
 
@@ -104,7 +107,7 @@ Baseline documental aprovada e versionada em `c76f3b2e` **antes** de alterar `sr
 ### Alterados
 
 - `src/lib/campaign/format-presentation.ts` — campo opcional `addition` e mapeamento da adição sem alterar o contrato histórico.
-- `src/lib/campaign/__tests__/format-presentation.test.ts` — 17 testes novos de adição (30 no total do arquivo).
+- `src/lib/campaign/__tests__/format-presentation.test.ts` — 11 testes novos de adição + 19 anteriores = 30 no total do arquivo.
 - `src/lib/i18n/campaign-detail/messages.ts` — namespace tipado `formatAddition`.
 - `src/lib/i18n/campaign-detail/catalogs/pt-BR.ts` — textos da adição.
 - `src/lib/i18n/campaign-detail/catalogs/es-419.ts` — paridade estrutural.
@@ -119,7 +122,7 @@ Baseline documental aprovada e versionada em `c76f3b2e` **antes** de alterar `sr
 - **Apresentação:** sem adição, `absent/not_requested` byte-equivalente ao comportamento anterior; com adição, `delivered`/`processing`/`unknown`/`absent` com `reason: "not_delivered"`; `flow=single_format`; `partial=false`; `active` só no formato selecionado e entregue.
 - **Defaults preservados:** `addition` é opcional; nenhum consumidor existente foi alterado; os testes históricos de apresentação continuam passando.
 
-## Gates reais
+## Gates reais — evidência do executor
 
 | Gate | Resultado |
 |---|---|
@@ -132,6 +135,13 @@ Baseline documental aprovada e versionada em `c76f3b2e` **antes** de alterar `sr
 | `git diff --check` | limpo |
 
 Gates de PostgreSQL/homolog, Storage, provider e app-env **não executados** por exigirem autorização e ambiente separados.
+
+### Aceite e reexecução do revisor (2026-11-23)
+
+- **Veredito do revisor:** `62-01` **aprovado tecnicamente, local/offline, sem bloqueadores**.
+- **Reexecução do revisor:** suíte de apresentação — **11 testes novos + 19 anteriores = 30**, corrigindo o registro do executor que dizia 17 novos. A tabela acima permanece como **evidência do executor**; a reexecução do revisor é atribuída separadamente e não substitui os números originais.
+- **Origem das evidências:** typecheck, lint, build, suíte global, OpenSpec e diff-check foram executados pelo executor. Nenhum gate de banco/Storage/provider foi executado por nenhuma das partes.
+- **Escopo:** o aceite cobre somente `62-01`. `62-02` foi autorizado em etapa separada; `62-03`+ permanecem não autorizados.
 
 ## Deviations from Plan
 
@@ -173,9 +183,9 @@ None — nenhum serviço externo, migration ou configuração de ambiente foi ne
 
 ## Next Phase Readiness
 
-- Fundação pura pronta para `62-02` (persistência/RPCs/flag), **não iniciado**.
-- **Review Stop do `62-01`:** aguardando revisão/aprovação explícita.
-- `62-02`+ permanecem não autorizados. Nenhum merge, push, deploy, sync ou archive.
+- Fundação pura pronta e **aceita tecnicamente** (`62-01`).
+- `62-02` (persistência/RPCs/flag) autorizado separadamente; `62-03`+ permanecem não autorizados.
+- Nenhum merge, push, deploy, sync ou archive.
 
 ## Self-Check: PASSED
 
@@ -188,4 +198,4 @@ None — nenhum serviço externo, migration ou configuração de ambiente foi ne
 ---
 
 *Phase: 62-adicionar-vertical-campanha-quadrada*
-*Completed: 2026-11-23 (execução local; aceite pendente)*
+*Completed: 2026-11-23 (execução local; aceite técnico local/offline em 2026-11-23)*
