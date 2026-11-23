@@ -53,6 +53,7 @@ completed: 2026-11-23
 |---|---|
 | `546f3be8` | runbook, gates offline, pacote de migration e checklist de release |
 | `9e519073` | reconciliação R3/R5/R6 e autorização estruturada do 62-08 |
+| `4e4a959f` | ordem de release, segredo de confirmação e aceite 10/110 do 62-06 |
 
 ## Entregas
 
