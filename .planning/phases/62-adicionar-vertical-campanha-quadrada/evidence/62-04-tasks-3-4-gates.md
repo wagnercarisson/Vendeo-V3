@@ -12,6 +12,8 @@
 | `17635075` | execução original das Tasks 3–4 |
 | `d2e9b15a` | plano: correções C1–C4 e ampliação de escopo declarada |
 | `acd891aa` | pilot gate, leitores congelados no expansor e retomada segura |
+| `943aa260` | plano: correção C5 (`base = done` versus `square_prepared`) |
+| `7e150ecb` | preparação idempotente antes da expansão + provas com preparação real |
 
 ## Correções aplicadas
 
@@ -19,6 +21,7 @@
 - **C2 — congelado no expansor:** adaptador `createFormatAdditionExpansionRunner` repassa `readers.catalog`/`readers.pricing` ao `expandVerticalToNineSixteen`, depois dos seams aninhados, impedindo sobrescrita. Teste executa os leitores recebidos e recusa seleção divergente.
 - **C3 — retomada:** a visão durável é lida antes da preparação; replay `unknown` não encerra; `unknown`/`failedOutcome` reconciliam artefato. Arte íntegra entrega sem nova chamada; `failed` sem arte conclui estorno; `unknown` sem arte permanece unknown sem estorno.
 - **C4 — preparação:** `indeterminate`, `persistence_failed` e `readback_failed` são retomáveis (`preparation_retry`) sem finalização/estorno; falhas comprovadamente definitivas seguem para finalização.
+- **C5 — base done:** `base = done` indica apenas reutilização do quadrado original; não prova a existência do `square_prepared`. Antes de expansão nova/retry, a preparação idempotente sempre garante/reutiliza o prepared. Atalhos de entrega/reconciliação, concorrência e `allowNewPaidStep=false` continuam antes da preparação.
 
 ## Gates dirigidos
 
@@ -29,25 +32,28 @@
 | Adaptador congelado/root | `npx vitest run .../expansion-adapter.contract.test.ts` | **3 testes PASS** |
 | Expansor real + pilot gate | `npx vitest run .../expand.core.contract.test.ts` | **36 testes PASS** |
 | Preparação (regressão) | `npx vitest run .../preparation-step.contract.test.ts` | **3 testes PASS** |
+| Prepared real + reuse | `npx vitest run .../preparation-reuse.integration.test.ts` | **2 testes PASS** |
 | Guard de não-ativação | `npx vitest run src/lib/product-1-1/__tests__/non-activation.contract.test.ts` | **65 testes PASS** |
-| Total focado | seis arquivos acima | **6 arquivos / 159 testes PASS** |
+| Total focado | sete arquivos acima | **7 arquivos / 163 testes PASS** |
 
 ## Gates gerais
 
 | Gate | Resultado real |
 |---|---|
-| Diretórios afetados | **57 arquivos / 766 testes PASS** (`format-addition`, orquestração 9:16, `vertical-expansion`, guard) |
+| Diretórios afetados | **58 arquivos / 770 testes PASS** (`format-addition`, orquestração 9:16, `vertical-expansion`, guard) |
 | `npm.cmd run typecheck` | exit **0** |
 | `npm.cmd run lint` | exit **0** (não cobre TypeScript — limitação preexistente) |
 | `npm.cmd run build` | exit **0**; **102/102 páginas** |
-| Suíte global | **exit 0**; **855 arquivos PASS + 2 skipped (857)**; **10.695 testes PASS + 10 skipped (10.705)** |
+| Suíte global | **exit 0**; **856 arquivos PASS + 2 skipped (858)**; **10.699 testes PASS + 10 skipped (10.709)** |
 | OpenSpec strict (`npx openspec validate --changes --strict`) | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
 ## Provas comportamentais
 
 - Abertura nova → visão → preparação → pilot gate → expansão com congelado → entrega; ordem registrada.
-- Base `done` não refaz preparação; visão é lida antes da preparação.
+- Abertura real (`base = done`, expansão `pending`, prepared ausente) cria o prepared antes de expandir.
+- Prepared íntegro existente é reutilizado com zero transformações e sem novo upload/insert.
+- Base `done` não é usado como prova de prepared; execução concorrente e terminais não preparam.
 - `unknown` + arte íntegra ⇒ entrega idempotente sem expansão/preparação/estorno.
 - `unknown` + arte ausente ⇒ `unknown`, sem estorno.
 - `failed` + arte ausente ⇒ estorno único; `failed` + arte íntegra ⇒ entrega sem estorno.
