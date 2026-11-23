@@ -14,6 +14,7 @@
 | **R5** | `62-07` | **L-E — verify do checkpoint humano.** Trocar o `Get-Content ...` com `Select-String` do checklist de release (Task 5) por `if ($t -notmatch ...) { throw }`, alinhando o verify auxiliar ao restante da rodada. O gate real continua sendo a revisão humana. |
 | **R6** | `62-07`, `62-08` | **L-D — notas de decomposição.** Adicionar nota curta de decomposição em `62-07` (5 tasks) e `62-08` (8 tasks), como já existe em `62-03`/`62-04`, para não sugerir plano grande demais. |
 | **R7** | `62-05` | **INFO-2 — teste do chip na task.** Incluir `campaign-format-chips.test.tsx` no `<verify>` da Task 3 (task que altera o componente), e não apenas na verificação do plano. |
+| **R8** | `62-03`, `62-04` | **Seleção de campanha legada.** Reconciliado em 2026-11-23: `legacy_campaign` é origem da campanha/fonte, não da seleção. A abertura nova usa a configuração atual `configured` com versão válida; não aceitar `legacy`/`legacy_sunburst_low` nem ampliar o CHECK do F60.6. Incluir teste explícito de campanha legada + seleção atual configurada antes de executar `62-03`/`62-04`. |
 
 ## Fora deste registro
 

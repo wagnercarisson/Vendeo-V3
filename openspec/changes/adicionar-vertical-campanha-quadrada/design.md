@@ -159,6 +159,8 @@ Constraints: `(campaign_id, request_id)` único; no máximo uma adição `open` 
 
 **Decisão:** na abertura, o servidor lê **uma vez** a seleção de expansão (`model`, `quality`, `config_version_id`) e o pricing/valores econômicos aplicáveis, e grava tudo no vínculo (`frozen_economics`). Toda retomada/retry usa leitores congelados de catálogo e pricing, além dos valores gravados; nunca relê a configuração, o catálogo ou o pricing vigente para a mesma operação. Se o congelado estiver ausente, malformado ou incompatível com a seleção, a operação bloqueia antes de chamada paga e não inventa valores.
 
+**Seleção de campanha legada (reconciliado em 2026-11-23):** a origem `legacy_campaign` refere-se à **campanha/fonte**, não à seleção de expansão. Uma campanha legada elegível usa a configuração de expansão **atual** (`configured`, com `config_version_id` válido) na nova operação. `legacy`/`legacy_sunburst_low` é origem histórica de operações antigas e NÃO é aceito em abertura nova; o CHECK do F60.6 não é ampliado. A campanha legada continua sem exigir operação financeira original.
+
 **Por quê:** o requisito é explícito; sem congelamento, uma mudança de catálogo/pricing entre tentativas alteraria o custo e a semântica da operação.
 
 **Alternativas rejeitadas:**

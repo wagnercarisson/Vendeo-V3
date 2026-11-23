@@ -98,7 +98,8 @@ Retorno de sucesso: `{ success: true, idempotent: boolean, state: "open"|"delive
 Erros: envelope fechado `{ success: false, reason: <código interno> }`; nenhum erro de transporte é sucesso.
 
 Formas JSON canônicas:
-- `p_selection := { model: string, quality: "low"|"medium", configVersionId: uuid, selectionOrigin: "configured"|"legacy" }`.
+- `p_selection := { model: string, quality: "low"|"medium", configVersionId: uuid, selectionOrigin: "configured" }`.
+  - **Reconciliado em 2026-11-23:** `selectionOrigin` é a origem da **seleção de expansão**, não da campanha. Abertura nova (inclusive de campanha `legacy_campaign`) usa a configuração atual `configured` com versão de configuração válida. `legacy`/`legacy_sunburst_low` é origem histórica de operações antigas e **não** é aceito nesta abertura; o CHECK consolidado do F60.6 não será ampliado. Campanha legada + seleção atual configurada é o caso suportado.
 - `p_frozen_economics := { pricingVersionId: uuid, pricing: object, usdBrlRateAtGeneration: number|null, creditValueBrlAtGeneration: number|null, capturedAt: ISO-8601 }`.
 - O JSONB gravado no vínculo é exatamente o objeto validado na abertura; não é recalculado na retomada e não pode ser substituído pelo snapshot econômico da campanha original.
 

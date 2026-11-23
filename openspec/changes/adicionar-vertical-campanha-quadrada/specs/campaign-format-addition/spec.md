@@ -165,7 +165,7 @@ O sistema SHALL registrar a fonte quadrada entregue como `square_original` inter
 
 ### Requirement: Configuração e parâmetros econômicos congelados
 
-Na abertura da adição, o sistema SHALL congelar a seleção de expansão (modelo, qualidade e versão de configuração) e os parâmetros econômicos aplicáveis à chamada paga. Retomadas, retries e continuações da mesma operação SHALL usar os valores congelados e SHALL NOT reler a configuração ou o pricing vigente para substituí-los. Configuração ou economia congelada ausente, malformada ou incompatível SHALL bloquear antes de chamada paga.
+Na abertura da adição, o sistema SHALL congelar a seleção de expansão (modelo, qualidade e versão de configuração) e os parâmetros econômicos aplicáveis à chamada paga. Retomadas, retries e continuações da mesma operação SHALL usar os valores congelados e SHALL NOT reler a configuração ou o pricing vigente para substituí-los. Configuração ou economia congelada ausente, malformada ou incompatível SHALL bloquear antes de chamada paga. Em campanha `legacy_campaign`, a seleção congelada SHALL ser a configuração de expansão **atual** (`configured`, com versão válida); a origem histórica da campanha NÃO SHALL ser usada como origem da seleção nem exigir operação financeira original.
 
 #### Scenario: Abertura grava a seleção e a economia
 
@@ -185,6 +185,13 @@ Na abertura da adição, o sistema SHALL congelar a seleção de expansão (mode
 - **THEN** o sistema SHALL bloquear a chamada paga
 - **AND** SHALL NOT inventar valores, chamar provider ou consumir tentativa paga
 - **AND** SHALL manter o estado recuperável para revisão
+
+#### Scenario: Campanha legada usa a seleção atual configurada
+
+- **WHEN** a adição é de uma campanha `legacy_campaign` elegível
+- **THEN** a seleção congelada SHALL ser a configuração de expansão atual (`configured`) com versão válida
+- **AND** SHALL NOT usar `legacy`/`legacy_sunburst_low` como origem da nova seleção
+- **AND** SHALL NOT exigir operação financeira original
 
 ### Requirement: Orquestração reutiliza o motor existente sem o fluxo conjunto
 
