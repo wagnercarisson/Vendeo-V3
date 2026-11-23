@@ -246,12 +246,24 @@ describe("F62-02 grupo 5 — flag dedicada fail-closed", () => {
   });
 });
 
-describe("F62-02 grupo 6 — limites de escopo", () => {
-  it("não projeta campanha, não altera storage_path e não usa o fluxo conjunto", () => {
+describe("F62-02 grupo 6 — limites de escopo e rollback não destrutivo", () => {
+  it("não projeta campanha e lê storage_path apenas para comparar a fonte", () => {
     expect(SQL).not.toMatch(/UPDATE\s+public\.campaigns/i);
-    expect(SQL).not.toContain("storage_path");
+    expect(SQL).toMatch(
+      /SELECT c\.id, c\.status, c\.input_snapshot, c\.storage_path/,
+    );
+    expect(SQL).not.toContain("campaigns.storage_path");
     expect(SQL).not.toContain("product_two_format");
     expect(SQL).not.toContain("projectDeliveredCampaign");
     expect(SQL).not.toContain("projectClosedCampaign");
+  });
+
+  it("REVERT é rollback operacional e não contém reversão destrutiva", () => {
+    expect(RAW).toContain("ROLLBACK OPERACIONAL");
+    expect(RAW).toContain("REVERSÃO ESTRUTURAL");
+    expect(RAW).toContain("Pré-condições obrigatórias");
+    expect(RAW).toContain("NÃO apagar vínculos");
+    expect(RAW).not.toMatch(/DROP\s+TABLE/i);
+    expect(RAW).not.toMatch(/DELETE\s+FROM\s+public\.feature_flags/i);
   });
 });

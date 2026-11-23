@@ -112,9 +112,34 @@ describe("F62-02 RPC grupo 2 — abertura/replay atômica", () => {
       "primary_operation_missing",
       "primary_operation_not_delivered",
       "source_identity_conflict",
+      "source_path_missing",
+      "source_operation_artifact_mismatch",
+      "source_path_mismatch",
+      "source_provenance_mismatch",
     ]) {
       expect(OPEN, `motivo ausente: ${token}`).toContain(token);
     }
+  });
+
+  it("comprova que a ponte corresponde à fonte corrente apresentada", () => {
+    expect(OPEN).toContain("c.storage_path");
+    expect(OPEN).toContain("sourceStoragePath");
+    expect(OPEN).toContain("sourceChecksumSha256");
+    expect(OPEN).toContain("sourceOrigin");
+    expect(OPEN).toContain("product-1-1");
+    expect(OPEN).toContain("art-1024");
+    expect(OPEN).toContain("v(2|3)");
+    expect(OPEN).toContain("v_campaign_storage_path");
+  });
+
+  it("legado usa a seleção atual configurada e não exige operação original", () => {
+    expect(OPEN).toContain("p_source_origin = 'legacy_campaign'");
+    expect(OPEN).toContain("legacy_source_operation_forbidden");
+    expect(OPEN).toContain(
+      "(p_selection->>'selectionOrigin') IS DISTINCT FROM 'configured'",
+    );
+    expect(OPEN).toContain("invalid_selection_origin");
+    expect(OPEN).not.toMatch(/selectionOrigin[^\n]*legacy/i);
   });
 
   it("valida a ponte square_original 1024 JPEG com checksum e origem de reuso", () => {
@@ -195,12 +220,42 @@ describe("F62-02 RPC grupo 3 — entrega restrita à adição", () => {
       "role = 'vertical'",
       "vertical_artifact_missing",
       "vertical_artifact_invalid",
+      "vertical_provenance_invalid",
       "1080",
       "1920",
       "image/jpeg",
+      "campaign-internal-artifacts",
+      "vertical.jpg",
+      "ai_expansion",
+      "square_prepared",
+      "deterministic_preparation",
+      "derivedFromArtifactId",
+      "sourceChecksumSha256",
     ]) {
       expect(DELIVER, `validação ausente: ${token}`).toContain(token);
     }
+  });
+
+  it("exige path/bucket/procedência esperados antes de consumir o crédito", () => {
+    const pathGuard = DELIVER.indexOf("vertical_artifact_invalid");
+    const provenanceGuard = DELIVER.indexOf("vertical_provenance_invalid");
+    const mark = DELIVER.indexOf(
+      "public.product_1_1_mark_campaign_credit_art_uploaded(",
+    );
+    expect(pathGuard).toBeGreaterThan(-1);
+    expect(provenanceGuard).toBeGreaterThan(pathGuard);
+    expect(mark).toBeGreaterThan(provenanceGuard);
+  });
+
+  it("reconcilia crédito já entregue antes de revalidar o arte", () => {
+    const reconcile = DELIVER.indexOf("v_credit.status = 'delivered'");
+    const artifact = DELIVER.indexOf("SELECT * INTO v_artifact");
+    const mark = DELIVER.indexOf(
+      "public.product_1_1_mark_campaign_credit_art_uploaded(",
+    );
+    expect(reconcile).toBeGreaterThan(-1);
+    expect(artifact).toBeGreaterThan(reconcile);
+    expect(mark).toBeGreaterThan(artifact);
   });
 
   it("usa mark + deliver existentes uma vez cada", () => {
@@ -217,7 +272,7 @@ describe("F62-02 RPC grupo 3 — entrega restrita à adição", () => {
     expect(DELIVER).toContain("delivery_identity_conflict");
     expect(DELIVER).toContain("stale_publication");
     expect(DELIVER).not.toMatch(/UPDATE\s+public\.campaigns/i);
-    expect(DELIVER).not.toContain("storage_path");
+    expect(DELIVER).not.toContain("campaigns.storage_path");
     expect(DELIVER).not.toContain("product_two_format");
   });
 });

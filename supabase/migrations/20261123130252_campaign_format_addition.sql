@@ -219,6 +219,9 @@ DECLARE
   v_campaign_id        UUID;
   v_campaign_snapshot  JSONB;
   v_campaign_status    TEXT;
+  v_campaign_storage_path TEXT;
+  v_path_match         TEXT[];
+  v_uuid_pattern       TEXT := '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
   v_artifact           public.campaign_composition_artifacts%ROWTYPE;
   v_source_credit      public.product_1_1_campaign_credit_operations%ROWTYPE;
   v_link               public.campaign_format_additions%ROWTYPE;
@@ -312,8 +315,8 @@ BEGIN
     hashtext('cfa_open:' || p_campaign_id::text || ':9:16')
   );
 
-  SELECT c.id, c.status, c.input_snapshot
-    INTO v_campaign_id, v_campaign_status, v_campaign_snapshot
+  SELECT c.id, c.status, c.input_snapshot, c.storage_path
+    INTO v_campaign_id, v_campaign_status, v_campaign_snapshot, v_campaign_storage_path
   FROM public.campaigns c
   WHERE c.id = p_campaign_id AND c.store_id = p_store_id
   FOR UPDATE;
@@ -407,6 +410,53 @@ BEGIN
      OR v_artifact.checksum_sha256::text <> p_source_checksum_sha256
   THEN
     RETURN jsonb_build_object('success', false, 'reason', 'source_artifact_invalid');
+  END IF;
+
+  -- A ponte precisa corresponder à fonte CORRENTE apresentada pela campanha.
+  -- Replay/adição ativa já retornaram acima; esta checagem só vale para abertura.
+  IF v_campaign_storage_path IS NULL OR v_campaign_storage_path = '' THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'source_path_missing');
+  END IF;
+
+  IF p_source_origin = 'new_flow_1_1' THEN
+    v_path_match := regexp_match(
+      v_campaign_storage_path,
+      '^(' || v_uuid_pattern || ')/(' || v_uuid_pattern || ')/product-1-1/(' || v_uuid_pattern || ')/art-1024\.jpe?g$',
+      'i'
+    );
+
+    IF v_path_match IS NULL
+       OR lower(v_path_match[1]) <> lower(p_store_id::text)
+       OR lower(v_path_match[2]) <> lower(p_campaign_id::text)
+       OR lower(v_path_match[3]) <> lower(p_source_operation_id::text) THEN
+      RETURN jsonb_build_object(
+        'success', false, 'reason', 'source_operation_artifact_mismatch'
+      );
+    END IF;
+  ELSE
+    v_path_match := regexp_match(
+      v_campaign_storage_path,
+      '^(' || v_uuid_pattern || ')/(' || v_uuid_pattern || ')(/v(2|3))?\.jpe?g$',
+      'i'
+    );
+
+    IF v_path_match IS NULL
+       OR lower(v_path_match[1]) <> lower(p_store_id::text)
+       OR lower(v_path_match[2]) <> lower(p_campaign_id::text) THEN
+      RETURN jsonb_build_object('success', false, 'reason', 'source_path_mismatch');
+    END IF;
+  END IF;
+
+  -- Proveniência gravada na ponte deve apontar para o MESMO path/checksum/origem
+  -- e para a dimensão/MIME validados. Ponte antiga da mesma campanha falha aqui.
+  IF v_artifact.provenance->>'sourceOrigin' IS DISTINCT FROM p_source_origin
+     OR v_artifact.provenance->>'sourceStoragePath' IS DISTINCT FROM v_campaign_storage_path
+     OR v_artifact.provenance->>'sourceChecksumSha256' IS DISTINCT FROM p_source_checksum_sha256
+     OR v_artifact.provenance->>'sourceWidth' IS DISTINCT FROM '1024'
+     OR v_artifact.provenance->>'sourceHeight' IS DISTINCT FROM '1024'
+     OR v_artifact.provenance->>'sourceMimeType' IS DISTINCT FROM 'image/jpeg'
+  THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'source_provenance_mismatch');
   END IF;
 
   IF p_source_origin = 'new_flow_1_1' THEN
@@ -520,6 +570,9 @@ DECLARE
   v_link        public.campaign_format_additions%ROWTYPE;
   v_credit      public.product_1_1_campaign_credit_operations%ROWTYPE;
   v_artifact    public.campaign_composition_artifacts%ROWTYPE;
+  v_prepared    public.campaign_composition_artifacts%ROWTYPE;
+  v_expected_vertical_path TEXT;
+  v_expected_prepared_path TEXT;
 BEGIN
   IF p_store_id IS NULL THEN RAISE EXCEPTION 'missing_store_id'; END IF;
   IF p_campaign_id IS NULL THEN RAISE EXCEPTION 'missing_campaign_id'; END IF;
@@ -607,11 +660,52 @@ BEGIN
   IF NOT FOUND THEN
     RETURN jsonb_build_object('success', false, 'reason', 'vertical_artifact_missing');
   END IF;
+
+  v_expected_vertical_path :=
+    lower(p_store_id::text) || '/' || lower(p_campaign_id::text) || '/'
+    || lower(p_operation_id::text) || '/vertical.jpg';
+
   IF v_artifact.format <> '9:16'
      OR v_artifact.width <> 1080
      OR v_artifact.height <> 1920
-     OR v_artifact.mime_type <> 'image/jpeg' THEN
+     OR v_artifact.mime_type <> 'image/jpeg'
+     OR v_artifact.origin <> 'ai_expansion'
+     OR v_artifact.storage_bucket <> 'campaign-internal-artifacts'
+     OR v_artifact.storage_path <> v_expected_vertical_path THEN
     RETURN jsonb_build_object('success', false, 'reason', 'vertical_artifact_invalid');
+  END IF;
+
+  -- O vertical precisa ser comprovadamente a expansão do prepared DESTA operação,
+  -- com path/bucket e proveniência allowlisted, antes de qualquer efeito novo.
+  SELECT * INTO v_prepared
+  FROM public.campaign_composition_artifacts
+  WHERE store_id = p_store_id
+    AND campaign_id = p_campaign_id
+    AND operation_id = p_operation_id
+    AND role = 'square_prepared';
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'vertical_provenance_invalid');
+  END IF;
+
+  v_expected_prepared_path :=
+    lower(p_store_id::text) || '/' || lower(p_campaign_id::text) || '/'
+    || lower(p_operation_id::text) || '/square_prepared.jpg';
+
+  IF v_prepared.format <> '1:1'
+     OR v_prepared.width <> 1152
+     OR v_prepared.height <> 1152
+     OR v_prepared.mime_type <> 'image/jpeg'
+     OR v_prepared.origin <> 'deterministic_preparation'
+     OR v_prepared.storage_bucket <> 'campaign-internal-artifacts'
+     OR v_prepared.storage_path <> v_expected_prepared_path
+     OR v_artifact.derived_from_artifact_id IS DISTINCT FROM v_prepared.id
+     OR v_artifact.provenance->>'sourceOrigin' IS DISTINCT FROM 'composition_artifact'
+     OR v_artifact.provenance->>'derivedFromArtifactId' IS DISTINCT FROM v_prepared.id::text
+     OR v_artifact.provenance->>'sourceStoragePath' IS DISTINCT FROM v_prepared.storage_path
+     OR v_artifact.provenance->>'sourceChecksumSha256' IS DISTINCT FROM v_prepared.checksum_sha256::text
+  THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'vertical_provenance_invalid');
   END IF;
 
   -- Token de publicação = dono atual do fence (nunca inventado aqui).
@@ -905,22 +999,30 @@ GRANT EXECUTE ON FUNCTION public.product_1_1_get_campaign_operation_by_campaign(
   TO service_role;
 
 -- =============================================================================
--- REVERT (manual, somente com autorização; ordem obrigatória)
+-- REVERT / ROLLBACK
 -- =============================================================================
--- 1. Restaurar `product_1_1_get_campaign_operation_by_campaign` com a definição
---    imediatamente anterior (20261109174110_f60_9_16_two_stage_control.sql).
--- 2. REVOKE ALL ON FUNCTION public.campaign_format_add_refund(UUID, UUID, UUID, INTEGER, TEXT) FROM service_role;
--- 3. REVOKE ALL ON FUNCTION public.campaign_format_add_deliver(UUID, UUID, UUID, UUID) FROM service_role;
--- 4. REVOKE ALL ON FUNCTION public.campaign_format_add_open(UUID, UUID, UUID, UUID, TEXT, UUID, UUID, UUID, TEXT, JSONB, JSONB) FROM service_role;
--- 5. DROP FUNCTION IF EXISTS public.campaign_format_add_refund(UUID, UUID, UUID, INTEGER, TEXT);
--- 6. DROP FUNCTION IF EXISTS public.campaign_format_add_deliver(UUID, UUID, UUID, UUID);
--- 7. DROP FUNCTION IF EXISTS public.campaign_format_add_open(UUID, UUID, UUID, UUID, TEXT, UUID, UUID, UUID, TEXT, JSONB, JSONB);
--- 8. DROP TRIGGER IF EXISTS trg_cfa_guard ON public.campaign_format_additions;
--- 9. DROP FUNCTION IF EXISTS public.trg_cfa_guard_fn();
--- 10. DROP TABLE IF EXISTS public.campaign_format_additions;
--- 11. ALTER TABLE public.campaign_composition_artifacts DROP CONSTRAINT IF EXISTS ck_cca_reuse_role;
--- 12. ALTER TABLE public.campaign_composition_artifacts DROP CONSTRAINT IF EXISTS ck_cca_origin;
--- 13. ALTER TABLE public.campaign_composition_artifacts ADD CONSTRAINT ck_cca_origin CHECK (origin IN ('provider_generation','deterministic_preparation','ai_expansion'));
--- 14. DELETE FROM public.feature_flags WHERE key = 'campaign_format_addition_enabled';
+-- ROLLBACK OPERACIONAL (preferencial e NÃO destrutivo):
+--   UPDATE public.feature_flags SET enabled = false, updated_at = now()
+--    WHERE key = 'campaign_format_addition_enabled';
+--   (ou manter o seed `false`). Isso bloqueia SOMENTE novas adições.
+--
+--   NÃO apagar vínculos, créditos, operações, artefatos, auditoria ou histórico.
+--   Operações já abertas continuam consultáveis, retomáveis e finalizáveis;
+--   o vertical individual, o conjunto, o 1:1 e o download não são desligados.
+--
+-- REVERSÃO ESTRUTURAL (procedimento SEPARADO, com autorização própria;
+-- NÃO incluída nesta migration e NÃO executável por este REVERT):
+--   Pré-condições obrigatórias, todas comprovadas:
+--     (a) `campaign_format_additions` sem linhas (histórico exportado/arquivado);
+--     (b) nenhum artefato `delivered_campaign_reuse` nem vertical de adição em uso;
+--     (c) nenhuma operação, claim ou outcome aberto;
+--     (d) backup + `restore-list` válidos e autorização explícita.
+--   Somente então, em migration própria, restaurar a definição anterior de
+--   `product_1_1_get_campaign_operation_by_campaign`, revogar/remover as RPCs e
+--   a guarda, remover a tabela vazia, restaurar o CHECK antigo apenas quando não
+--   existir `delivered_campaign_reuse` e remover a flag.
+--
+--   NUNCA remover a tabela com histórico e NUNCA restaurar o CHECK antigo
+--   enquanto houver linhas com a nova origem.
 -- `credit_transactions`, `credit_balances` e `campaign_composition_artifacts`
--- NÃO são apagados pelo REVERT; linhas antigas permanecem válidas.
+-- não são apagados: linhas antigas e novas permanecem válidas.
