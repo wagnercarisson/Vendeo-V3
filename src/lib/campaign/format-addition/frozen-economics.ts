@@ -444,6 +444,29 @@ function matchesFrozenSelection(
 }
 
 /**
+ * Compara a seleção INTEIRA com o congelado antes de delegar. Modelo/qualidade
+ * sozinhos não bastam: `configVersionId` e origem também são contrato de
+ * retomada e precisam falhar fechado quando divergirem.
+ */
+function frozenSelectionMismatch(
+  frozen: FrozenEconomics,
+  selection: ExpansionSelection,
+): "model" | "quality" | "config_version" | "selection_origin" | null {
+  if (selection.model !== frozen.selection.model) return "model";
+  if (selection.quality !== frozen.selection.quality) return "quality";
+  if (selection.configVersionId !== frozen.selection.configVersionId) {
+    return "config_version";
+  }
+  if (
+    selection.origin !== "configured" ||
+    selection.origin !== frozen.selection.selectionOrigin
+  ) {
+    return "selection_origin";
+  }
+  return null;
+}
+
+/**
  * Leitores estáticos para retomada: retornam exatamente o congelado e recusam
  * seleção divergente. Nenhuma leitura de catálogo/pricing/campanha é feita.
  */
@@ -488,6 +511,15 @@ export function createFrozenExpansionReaders(
     pricing,
     readEconomicSnapshot,
     async preflightFrozenExpansion(selection: ExpansionSelection) {
+      const mismatch = frozenSelectionMismatch(frozen, selection);
+      if (mismatch !== null) {
+        return Object.freeze({
+          ok: false as const,
+          failure: "model_unavailable" as const,
+          reason: "catalog_row_missing" as const,
+          detail: `frozen_selection_mismatch:${mismatch}`,
+        });
+      }
       return preflightExpansionToNineSixteen({ catalog, pricing }, selection);
     },
   });

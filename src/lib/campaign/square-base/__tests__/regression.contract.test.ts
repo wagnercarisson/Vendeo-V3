@@ -96,6 +96,15 @@ const AUTHORIZED_CONTRACT_CHANGES = new Set([
   "src/lib/campaign/vertical-expansion/__tests__/expand.concurrency.contract.test.ts",
   "src/lib/campaign/vertical-expansion/__tests__/expand.failure-output.contract.test.ts",
   "src/lib/campaign/vertical-expansion/__tests__/probe.contract.test.ts",
+  // F62 / 62-03 (autorizado): opt-in legado 1024 default-preserving, extensão
+  // explícita de ArtifactOrigin e propagação da revalidação interna. Somente os
+  // seis caminhos abaixo; o diretório inteiro NÃO é liberado.
+  "src/lib/campaign/composition-artifacts/persist.ts",
+  "src/lib/campaign/composition-artifacts/resolve-source.ts",
+  "src/lib/campaign/composition-artifacts/source-validation.ts",
+  "src/lib/campaign/composition-artifacts/types.ts",
+  "src/lib/campaign/composition-artifacts/__tests__/persist.contract.test.ts",
+  "src/lib/campaign/composition-artifacts/__tests__/resolve-source.contract.test.ts",
 ]);
 
 interface GitResult {

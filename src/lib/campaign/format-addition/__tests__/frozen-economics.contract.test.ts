@@ -263,13 +263,52 @@ describe("F62-03 — economia congelada", () => {
         ...SELECTION,
         model: "gpt-image-2.5-sunburst",
       }),
-    ).resolves.toMatchObject({ ok: false, failure: "model_unavailable" });
+    ).resolves.toMatchObject({
+      ok: false,
+      failure: "model_unavailable",
+      detail: "frozen_selection_mismatch:model",
+    });
 
     await expect(
       readers.preflightFrozenExpansion({ ...SELECTION, quality: "medium" }),
     ).resolves.toMatchObject({
       ok: false,
-      failure: "configuration_read_failed",
+      failure: "model_unavailable",
+      detail: "frozen_selection_mismatch:quality",
+    });
+
+    await expect(
+      readers.preflightFrozenExpansion({
+        ...SELECTION,
+        configVersionId: "33333333-3333-4333-8333-333333333333",
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      failure: "model_unavailable",
+      detail: "frozen_selection_mismatch:config_version",
+    });
+
+    await expect(
+      readers.preflightFrozenExpansion({
+        ...SELECTION,
+        origin: "legacy_sunburst_low",
+        configVersionId: null,
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      failure: "model_unavailable",
+      detail: "frozen_selection_mismatch:config_version",
+    });
+
+    await expect(
+      readers.preflightFrozenExpansion({
+        ...SELECTION,
+        origin: "legacy_sunburst_low",
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      failure: "model_unavailable",
+      detail: "frozen_selection_mismatch:selection_origin",
     });
 
     await expect(
