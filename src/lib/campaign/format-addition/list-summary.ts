@@ -133,7 +133,7 @@ export async function readFormatAdditionListSummaries(input: {
   }
   if (operationIds.length === 0) return result;
 
-  const [credits, artifacts] = await Promise.all([
+  const [credits, artifacts, outcomes] = await Promise.all([
     input.client
       .from("product_1_1_campaign_credit_operations")
       .select("operation_id, status")
@@ -144,6 +144,10 @@ export async function readFormatAdditionListSummaries(input: {
       .select("operation_id, role, format, width, height, mime_type, storage_path")
       .in("operation_id", operationIds)
       .in("role", ["vertical"] as const),
+    input.client
+      .from("product_generation_operation_outcomes_v")
+      .select("operation_id, outcome")
+      .in("operation_id", operationIds),
   ]);
 
   const creditMap = new Map<string, (typeof CREDIT_STATUSES)[number]>();
@@ -183,6 +187,20 @@ export async function readFormatAdditionListSummaries(input: {
     }
   }
 
+  const outcomeMap = new Map<string, string>();
+  if (!outcomes.error) {
+    for (const row of (outcomes.data ?? []) as unknown[]) {
+      const record = asRecord(row);
+      if (
+        record !== null &&
+        typeof record.operation_id === "string" &&
+        typeof record.outcome === "string"
+      ) {
+        outcomeMap.set(record.operation_id, record.outcome);
+      }
+    }
+  }
+
   for (const campaign of candidates) {
     const row = selected.get(campaign.id);
     if (!row) continue;
@@ -202,10 +220,16 @@ export async function readFormatAdditionListSummaries(input: {
         refunded = true;
       } else if (credit === "delivered") {
         state = verticalArtifacts.has(operationId) ? "delivered" : "unknown";
-      } else if (credit === "reserved" || credit === "art_uploaded") {
-        state = "processing";
-      } else if (credits.error || artifacts.error) {
+      } else if (
+        credits.error ||
+        artifacts.error ||
+        outcomes.error ||
+        credit === undefined
+      ) {
         state = "unknown";
+      } else if (credit === "reserved" || credit === "art_uploaded") {
+        state =
+          outcomeMap.get(operationId) === "unknown" ? "unknown" : "processing";
       } else if (status === "delivered") {
         state = verticalArtifacts.has(operationId) ? "delivered" : "unknown";
       } else {

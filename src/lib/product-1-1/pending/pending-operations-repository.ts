@@ -34,6 +34,23 @@ const CLAIM_COLUMNS = "source, stage, status, attempt_number, updated_at";
 const OUTCOME_COLUMNS = "source, outcome, stage, support_reference";
 const STEP_COLUMNS = "stage, status, attempts_used, updated_at";
 
+function isMissingTableError(error: {
+  readonly code?: string;
+  readonly message?: string;
+}): boolean {
+  return (
+    error.code === "42P01" ||
+    error.code === "PGRST205" ||
+    /relation .*campaign_format_additions.* does not exist/i.test(
+      error.message ?? "",
+    ) ||
+    /campaign_format_additions.*does not exist/i.test(error.message ?? "") ||
+    /could not find the table .*campaign_format_additions/i.test(
+      error.message ?? "",
+    )
+  );
+}
+
 interface CreditRow {
   campaign_id: string;
   operation_id: string;
@@ -284,10 +301,39 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     });
   }
 
+  private async readFormatAdditionOperationIds(
+    operationIds: readonly string[],
+  ): Promise<Set<string>> {
+    if (operationIds.length === 0) return new Set();
+    const { data, error } = await this.client
+      .from("campaign_format_additions")
+      .select("operation_id")
+      .in("operation_id", [...operationIds]);
+    if (error) {
+      // Tabela AUSENTE (feature ainda inativa) preserva o comportamento
+      // anterior. Qualquer outra falha é INDETERMINADA e bloqueia a consulta:
+      // não se libera operação sem classificação.
+      if (isMissingTableError(error)) return new Set();
+      throw new Error(
+        `pending_operation_addition_classification_failed:${error.message}`,
+      );
+    }
+    return new Set(
+      (data ?? [])
+        .map((row) => row.operation_id)
+        .filter((value): value is string => typeof value === "string"),
+    );
+  }
+
   async findPendingOperation(
     campaignId: string,
     operationId: string,
   ): Promise<PendingOperationState | null> {
+    // F62 — a resolução ADMINISTRATIVA direta também precisa excluir adições
+    // antes de probe/RPC/projeção; esconder só da lista não era suficiente.
+    const additions = await this.readFormatAdditionOperationIds([operationId]);
+    if (additions.has(operationId)) return null;
+
     const { data, error } = await this.client
       .from(CREDIT_TABLE)
       .select(CREDIT_COLUMNS)
@@ -381,21 +427,9 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     const operationIds = (data ?? []).map((row) => row.operation_id);
     let rows = (data ?? []) as CreditRow[];
     if (operationIds.length > 0) {
-      // F62 — adições verticais têm crédito/fila próprios; nunca aparecem como
-      // pendência 1:1 legada. Leitura best-effort: se a tabela ainda não existir
-      // (feature inativa), o comportamento anterior é preservado.
-      const additions = await this.client
-        .from("campaign_format_additions")
-        .select("operation_id")
-        .in("operation_id", operationIds);
-      if (!additions.error) {
-        const excluded = new Set(
-          (additions.data ?? [])
-            .map((row) => row.operation_id)
-            .filter((value): value is string => typeof value === "string"),
-        );
-        rows = rows.filter((row) => !excluded.has(row.operation_id));
-      }
+      // F62 — uma única consulta em lote; erro indeterminado bloqueia a fila.
+      const excluded = await this.readFormatAdditionOperationIds(operationIds);
+      rows = rows.filter((row) => !excluded.has(row.operation_id));
     }
 
     const views: PendingOperationView[] = [];

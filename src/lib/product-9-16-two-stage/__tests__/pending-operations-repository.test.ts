@@ -10,7 +10,7 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 type Row = Record<string, unknown>;
 
-function chain(rows: Row[]) {
+function chain(rows: Row[], error: { code?: string; message: string } | null = null) {
   let data = rows;
   const api = {
     select: () => api,
@@ -23,15 +23,20 @@ function chain(rows: Row[]) {
       return api;
     },
     order: () => api,
-    maybeSingle: async () => ({ data: data[0] ?? null, error: null }),
+    maybeSingle: async () => ({ data: error ? null : (data[0] ?? null), error }),
     then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
-      Promise.resolve({ data, error: null }).then(resolve, reject),
+      Promise.resolve({ data: error ? null : data, error }).then(resolve, reject),
   };
   return api;
 }
 
-function clientFrom(tables: Record<string, Row[]>) {
-  return { from: (table: string) => chain(tables[table] ?? []) } as never;
+function clientFrom(
+  tables: Record<string, Row[]>,
+  errors: Record<string, { code?: string; message: string }> = {},
+) {
+  return {
+    from: (table: string) => chain(tables[table] ?? [], errors[table] ?? null),
+  } as never;
 }
 
 const integral: ArtifactProbe = {
@@ -122,6 +127,103 @@ describe("sonda de arte por origem canônica", () => {
 
     const result = await repository.listPendingOperations();
     expect(result.map((item) => item.operationId)).toEqual(["normal"]);
+  });
+
+  it("resolução direta também exclui a adição antes de probe/RPC", async () => {
+    const prober = { probeArtifact: vi.fn(async () => integral) };
+    const repository = new SupabasePendingOperationsRepository(
+      clientFrom({
+        product_1_1_campaign_credit_operations: [
+          {
+            campaign_id: "c",
+            operation_id: "addition",
+            store_id: "s",
+            amount: 1,
+            status: "reserved",
+            state_epoch: 1,
+            publication_state: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+        campaign_format_additions: [{ operation_id: "addition" }],
+      }),
+      prober,
+    );
+
+    await expect(
+      repository.findPendingOperation("c", "addition"),
+    ).resolves.toBeNull();
+    expect(prober.probeArtifact).not.toHaveBeenCalled();
+  });
+
+  it("erro indeterminado da classificação bloqueia a consulta", async () => {
+    const repository = new SupabasePendingOperationsRepository(
+      clientFrom(
+        {
+          product_1_1_campaign_credit_operations: [
+            {
+              campaign_id: "c",
+              operation_id: "op",
+              store_id: "s",
+              amount: 1,
+              status: "reserved",
+              state_epoch: 1,
+              publication_state: null,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+        },
+        {
+          campaign_format_additions: { message: "permission denied" },
+        },
+      ),
+      { probeArtifact: vi.fn(async () => integral) },
+    );
+
+    await expect(
+      repository.findPendingOperation("c", "op"),
+    ).rejects.toThrow(/addition_classification_failed/);
+    await expect(repository.listPendingOperations()).rejects.toThrow(
+      /addition_classification_failed/,
+    );
+  });
+
+  it("tabela comprovadamente ausente preserva operações normais", async () => {
+    const prober = { probeArtifact: vi.fn(async () => integral) };
+    const repository = new SupabasePendingOperationsRepository(
+      clientFrom(
+        {
+          product_1_1_campaign_credit_operations: [
+            {
+              campaign_id: "c",
+              operation_id: "normal",
+              store_id: "s",
+              amount: 1,
+              status: "reserved",
+              state_epoch: 1,
+              publication_state: null,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+        },
+        {
+          campaign_format_additions: {
+            code: "42P01",
+            message: 'relation "campaign_format_additions" does not exist',
+          },
+        },
+      ),
+      prober,
+    );
+
+    await expect(
+      repository.findPendingOperation("c", "normal"),
+    ).resolves.toMatchObject({ operationId: "normal" });
+    const list = await repository.listPendingOperations();
+    expect(list.map((item) => item.operationId)).toEqual(["normal"]);
   });
 
   it("origem legada preserva a sonda por formato (1:1 e 9:16 direto)", async () => {

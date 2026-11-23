@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   additions: [] as Record<string, unknown>[],
   credits: [] as Record<string, unknown>[],
   artifacts: [] as Record<string, unknown>[],
+  outcomes: [] as Record<string, unknown>[],
   twoFormat: new Map<string, unknown>(),
 }));
 
@@ -40,7 +41,9 @@ vi.mock("@/lib/supabase/server", () => ({
             ? h.credits
             : table === "campaign_composition_artifacts"
               ? h.artifacts
-              : [];
+              : table === "product_generation_operation_outcomes_v"
+                ? h.outcomes
+                : [];
       const query: Record<string, unknown> = {};
       query.select = () => query;
       query.in = () => query;
@@ -106,6 +109,14 @@ beforeEach(() => {
       storage_path: "store/cnone.jpg",
       input_snapshot: {},
     },
+    {
+      id: "cunknown",
+      product_name: "Quadrado com resultado incerto",
+      status: "ready",
+      created_at: "2026-11-19T00:00:00Z",
+      storage_path: "store/cunknown.jpg",
+      input_snapshot: {},
+    },
   ];
   h.additions = [
     {
@@ -115,8 +126,18 @@ beforeEach(() => {
       status: "delivered",
       created_at: "2026-11-23T00:00:00Z",
     },
+    {
+      campaign_id: "cunknown",
+      operation_id: "opunknown",
+      source_origin: "legacy_campaign",
+      status: "open",
+      created_at: "2026-11-19T00:00:00Z",
+    },
   ];
-  h.credits = [{ operation_id: "op11", status: "delivered" }];
+  h.credits = [
+    { operation_id: "op11", status: "delivered" },
+    { operation_id: "opunknown", status: "reserved" },
+  ];
   h.artifacts = [
     {
       operation_id: "op11",
@@ -128,6 +149,7 @@ beforeEach(() => {
       storage_path: "op11/vertical.jpg",
     },
   ];
+  h.outcomes = [{ operation_id: "opunknown", outcome: "unknown" }];
   h.twoFormat = new Map([
     [
       "cjoint",
@@ -148,8 +170,8 @@ describe("F62-06 — regressões integradas da adição", () => {
     const { listCampaigns } = await import("@/lib/campaign/list");
     const result = await listCampaigns("store", { page: 1, pageSize: 10 });
 
-    expect(result.items).toHaveLength(4);
-    expect(new Set(result.items.map((item) => item.id)).size).toBe(4);
+    expect(result.items).toHaveLength(5);
+    expect(new Set(result.items.map((item) => item.id)).size).toBe(5);
 
     const addition = result.items.find((item) => item.id === "c11");
     expect(addition?.formatPresentation.formats["1:1"].state).toBe("delivered");
@@ -175,6 +197,10 @@ describe("F62-06 — regressões integradas da adição", () => {
     expect(absent?.formatPresentation.formats["9:16"].reason).toBe(
       "not_requested",
     );
+
+    const unknown = result.items.find((item) => item.id === "cunknown");
+    expect(unknown?.formatPresentation.formats["9:16"].state).toBe("unknown");
+    expect(unknown?.formatPresentation.formats["1:1"].state).toBe("delivered");
   });
 
   it("não repointa storage_path nem cria operação primária nova", async () => {

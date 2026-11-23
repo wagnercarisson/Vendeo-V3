@@ -213,6 +213,36 @@ describe("queryEligibleCampaigns", () => {
     );
   });
 
+  it("F62 — reserva com outcome unknown aparece como chip unknown", async () => {
+    buildChain([rows[0]]);
+    mockGenerateBatchThumbnailUrls.mockResolvedValue({
+      "campaign-1": "https://signed/square.jpg",
+    });
+    mockReadFormatAdditionListSummaries.mockResolvedValue(
+      new Map([
+        [
+          "campaign-1",
+          {
+            campaignId: "campaign-1",
+            operationId: "op-1",
+            state: "unknown",
+            sourceOrigin: "new_flow_1_1",
+            refunded: false,
+            preferredThumbnailPath: null,
+          },
+        ],
+      ]),
+    );
+
+    const { queryEligibleCampaigns } = await import(
+      "@/lib/dashboard/campaigns"
+    );
+    const result = await queryEligibleCampaigns("store-1");
+
+    expect(result[0].formatPresentation.formats["9:16"].state).toBe("unknown");
+    expect(result[0].formatPresentation.formats["1:1"].state).toBe("delivered");
+  });
+
   it("Quick 261106-qxn: formato indisponível permanece null, sem fallback para 1:1", async () => {
     buildChain([
       {

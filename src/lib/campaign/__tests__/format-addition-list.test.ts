@@ -86,6 +86,10 @@ describe("F62-06 — leitura em lote das adições", () => {
         data: [verticalArtifact("op1")],
         error: null,
       },
+      product_generation_operation_outcomes_v: {
+        data: [],
+        error: null,
+      },
     };
     const { client, calls } = fakeClient(tables);
     const result = await readFormatAdditionListSummaries({
@@ -98,6 +102,7 @@ describe("F62-06 — leitura em lote das adições", () => {
       "campaign_format_additions",
       "product_1_1_campaign_credit_operations",
       "campaign_composition_artifacts",
+      "product_generation_operation_outcomes_v",
     ]);
     expect(result.get("c1")).toMatchObject({ state: "delivered" });
     expect(result.get("c2")).toMatchObject({ state: "processing" });
@@ -120,6 +125,7 @@ describe("F62-06 — leitura em lote das adições", () => {
         data: [verticalArtifact("op1")],
         error: null,
       },
+      product_generation_operation_outcomes_v: { data: [], error: null },
     };
     const one = fakeClient({
       ...base,
@@ -151,8 +157,49 @@ describe("F62-06 — leitura em lote das adições", () => {
       campaigns: [campaign("c1"), campaign("c2"), campaign("c3")],
     });
 
-    expect(one.calls).toHaveLength(3);
-    expect(three.calls).toHaveLength(3);
+    expect(one.calls).toHaveLength(4);
+    expect(three.calls).toHaveLength(4);
+  });
+
+  it("reserva com outcome unknown vira unknown; terminal prevalece", async () => {
+    const { client } = fakeClient({
+      campaign_format_additions: {
+        data: [
+          addition("c1", "op1", "open"),
+          addition("c2", "op2", "open"),
+          addition("c3", "op3", "delivered"),
+        ],
+        error: null,
+      },
+      product_1_1_campaign_credit_operations: {
+        data: [
+          { operation_id: "op1", status: "reserved" },
+          { operation_id: "op2", status: "delivered" },
+          { operation_id: "op3", status: "delivered" },
+        ],
+        error: null,
+      },
+      campaign_composition_artifacts: {
+        data: [verticalArtifact("op2"), verticalArtifact("op3")],
+        error: null,
+      },
+      product_generation_operation_outcomes_v: {
+        data: [
+          { operation_id: "op1", outcome: "unknown" },
+          { operation_id: "op2", outcome: "unknown" },
+          { operation_id: "op3", outcome: "unknown" },
+        ],
+        error: null,
+      },
+    });
+    const result = await readFormatAdditionListSummaries({
+      client,
+      storeId: STORE,
+      campaigns: [campaign("c1"), campaign("c2"), campaign("c3")],
+    });
+    expect(result.get("c1")).toMatchObject({ state: "unknown" });
+    expect(result.get("c2")).toMatchObject({ state: "delivered" });
+    expect(result.get("c3")).toMatchObject({ state: "delivered" });
   });
 
   it("leitura de crédito indisponível vira unknown, nunca ausência", async () => {
