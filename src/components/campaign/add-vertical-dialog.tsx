@@ -72,6 +72,8 @@ function reasonMessage(
   return messages.unavailable;
 }
 
+const TRANSIENT_401_RETRY_DELAY_MS = 250;
+
 /**
  * F62/62-05 — modal do detalhe. Confirma com 1 crédito, acompanha por polling
  * READ-ONLY e nunca cancela/estorna ao fechar. Nenhum dado financeiro/técnico é
@@ -142,17 +144,34 @@ export function AddVerticalDialog({
       abortRef.current = controller;
       if (!options.silent) setLoading(true);
       try {
-        const response = await fetch(
-          `/api/campaign/${campaignId}/format-additions`,
-          {
-            method: "GET",
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-        const json = (await response.json().catch(() => null)) as
-          | AdditionDto
-          | null;
+        const requestOnce = async () => {
+          const response = await fetch(
+            `/api/campaign/${campaignId}/format-additions`,
+            {
+              method: "GET",
+              cache: "no-store",
+              signal: controller.signal,
+            },
+          );
+          const json = (await response.json().catch(() => null)) as
+            | AdditionDto
+            | null;
+          return { response, json };
+        };
+
+        let outcome = await requestOnce();
+        // F62-08 — o middleware pode responder 401 durante a renovação
+        // concorrente da sessão. Uma única releitura read-only, depois que a
+        // resposta copia os cookies renovados, recupera o clique sem afrouxar
+        // o gate.
+        if (!options.silent && outcome.response.status === 401) {
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, TRANSIENT_401_RETRY_DELAY_MS);
+          });
+          if (controller.signal.aborted || session !== sessionRef.current) return;
+          outcome = await requestOnce();
+        }
+        const { response, json } = outcome;
         if (controller.signal.aborted || session !== sessionRef.current) return;
         if (seq < appliedSeqRef.current) return;
         if (terminalRef.current && json?.state !== "delivered") return;

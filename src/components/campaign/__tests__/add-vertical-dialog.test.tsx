@@ -405,6 +405,75 @@ describe("F62-05 — modal de adição vertical", () => {
     vi.useRealTimers();
   });
 
+  it("F62-08: 401 transitório do middleware é relido uma vez e abre a confirmação", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ error: "Unauthorized" }, 401))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-1",
+        }),
+      );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(screen.getByText(messages.cost)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: messages.confirm }),
+    ).toBeEnabled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("F62-08: 401 persistente limita a releitura e não oferece confirmação", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(jsonResponse({ error: "Unauthorized" }, 401));
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(
+      screen.queryByRole("button", { name: messages.confirm }),
+    ).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("incompatível mostra explicação sem prometer confirmação", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       jsonResponse({
