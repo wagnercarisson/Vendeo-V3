@@ -249,6 +249,214 @@ describe("F61 — modelo puro de apresentação dos formatos", () => {
     });
   });
 
+  describe("individual com adição posterior (F62)", () => {
+    it("sem adição preserva exatamente absent/not_requested", () => {
+      for (const addition of [undefined, null]) {
+        const presentation = buildIndividualFormatPresentation({
+          resolution: resolveCampaignFormat({}),
+          lifecycle: "delivered",
+          addition,
+        });
+
+        expect(presentation.formats["9:16"]).toEqual({
+          state: "absent",
+          refunded: false,
+          reason: "not_requested",
+          active: false,
+        });
+      }
+    });
+
+    it("vertical entregue: os dois formatos delivered, flow single e partial false", () => {
+      const presentation = buildIndividualFormatPresentation(
+        {
+          resolution: resolveCampaignFormat({}),
+          lifecycle: "delivered",
+          addition: { format: "9:16", state: "delivered" },
+        },
+        "9:16",
+      );
+
+      expect(presentation.flow).toBe("single_format");
+      expect(presentation.partial).toBe(false);
+      expect(presentation.anyDelivered).toBe(true);
+      expect(presentation.formats["1:1"]).toEqual({
+        state: "delivered",
+        refunded: false,
+        reason: null,
+        active: false,
+      });
+      expect(presentation.formats["9:16"]).toEqual({
+        state: "delivered",
+        refunded: false,
+        reason: null,
+        active: true,
+      });
+    });
+
+    it("active do vertical só existe com seleção e entrega", () => {
+      const withoutSelection = buildIndividualFormatPresentation({
+        resolution: resolveCampaignFormat({}),
+        lifecycle: "delivered",
+        addition: { format: "9:16", state: "delivered" },
+      });
+      expect(withoutSelection.formats["9:16"].active).toBe(false);
+
+      const squareSelected = buildIndividualFormatPresentation(
+        {
+          resolution: resolveCampaignFormat({}),
+          lifecycle: "delivered",
+          addition: { format: "9:16", state: "delivered" },
+        },
+        "1:1",
+      );
+      expect(squareSelected.formats["1:1"].active).toBe(true);
+      expect(squareSelected.formats["9:16"].active).toBe(false);
+
+      const processingSelected = buildIndividualFormatPresentation(
+        {
+          resolution: resolveCampaignFormat({}),
+          lifecycle: "delivered",
+          addition: { format: "9:16", state: "processing" },
+        },
+        "9:16",
+      );
+      expect(processingSelected.formats["9:16"].active).toBe(false);
+    });
+
+    it("adição em processamento não altera o quadrado", () => {
+      const presentation = buildIndividualFormatPresentation({
+        resolution: resolveCampaignFormat({}),
+        lifecycle: "delivered",
+        addition: { format: "9:16", state: "processing" },
+      });
+
+      expect(presentation.formats["1:1"].state).toBe("delivered");
+      expect(presentation.formats["9:16"]).toEqual({
+        state: "processing",
+        refunded: false,
+        reason: null,
+        active: false,
+      });
+      expect(presentation.partial).toBe(false);
+    });
+
+    it("adição desconhecida vira unknown, nunca not_delivered/not_requested", () => {
+      const presentation = buildIndividualFormatPresentation({
+        resolution: resolveCampaignFormat({}),
+        lifecycle: "delivered",
+        addition: { format: "9:16", state: "unknown" },
+      });
+
+      expect(presentation.formats["9:16"]).toEqual({
+        state: "unknown",
+        refunded: false,
+        reason: null,
+        active: false,
+      });
+      expect(presentation.formats["9:16"].reason).not.toBe("not_delivered");
+      expect(presentation.formats["9:16"].reason).not.toBe("not_requested");
+    });
+
+    it("adição estornada é absent/refunded/not_delivered", () => {
+      const presentation = buildIndividualFormatPresentation({
+        resolution: resolveCampaignFormat({}),
+        lifecycle: "delivered",
+        addition: { format: "9:16", state: "absent", refunded: true },
+      });
+
+      expect(presentation.formats["9:16"]).toEqual({
+        state: "absent",
+        refunded: true,
+        reason: "not_delivered",
+        active: false,
+      });
+    });
+
+    it("adição ausente sem estorno não é not_requested", () => {
+      const presentation = buildIndividualFormatPresentation({
+        resolution: resolveCampaignFormat({}),
+        lifecycle: "delivered",
+        addition: { format: "9:16", state: "absent", refunded: false },
+      });
+
+      expect(presentation.formats["9:16"]).toEqual({
+        state: "absent",
+        refunded: false,
+        reason: "not_delivered",
+        active: false,
+      });
+    });
+
+    it("não presume estorno fora de absent", () => {
+      for (const state of ["delivered", "processing", "unknown"] as const) {
+        const presentation = buildIndividualFormatPresentation({
+          resolution: resolveCampaignFormat({}),
+          lifecycle: "delivered",
+          addition: { format: "9:16", state, refunded: true },
+        });
+        expect(presentation.formats["9:16"].refunded).toBe(false);
+      }
+    });
+
+    it("campanha vertical persistida ignora a adição e preserva o contrato", () => {
+      const presentation = buildIndividualFormatPresentation(
+        {
+          resolution: resolveCampaignFormat({
+            campaignFormat: "9:16",
+            formatContractVersion: "f59-vertical-9-16-v1",
+          }),
+          lifecycle: "delivered",
+          addition: { format: "9:16", state: "delivered" },
+        },
+        "9:16",
+      );
+
+      expect(presentation.flow).toBe("single_format");
+      expect(presentation.formats["9:16"].state).toBe("delivered");
+      expect(presentation.formats["1:1"]).toEqual({
+        state: "absent",
+        refunded: false,
+        reason: "not_requested",
+        active: false,
+      });
+    });
+
+    it("resolução unavailable não inventa adição nem fallback", () => {
+      const presentation = buildIndividualFormatPresentation(
+        {
+          resolution: resolveCampaignFormat(null),
+          lifecycle: "delivered",
+          addition: { format: "9:16", state: "delivered" },
+        },
+        "9:16",
+      );
+
+      expect(presentation.formats["1:1"].state).toBe("unavailable");
+      expect(presentation.formats["9:16"].state).toBe("unavailable");
+      expect(presentation.formats["9:16"].active).toBe(false);
+    });
+
+    it("entrada da adição não aceita dados internos e a saída é imutável", () => {
+      const presentation = buildIndividualFormatPresentation({
+        resolution: resolveCampaignFormat({}),
+        lifecycle: "delivered",
+        addition: { format: "9:16", state: "delivered" },
+      });
+
+      expect(Object.keys(presentation.formats["9:16"]).sort()).toEqual([
+        "active",
+        "reason",
+        "refunded",
+        "state",
+      ]);
+      expect(Object.isFrozen(presentation.formats["9:16"])).toBe(true);
+      expect(JSON.stringify(presentation)).not.toMatch(
+        /storagePath|input_snapshot|https?:\/\//,
+      );
+    });
+  });
+
   describe("indeterminação e snapshot", () => {
     it("unknown/unavailable globais", () => {
       expect(buildUnknownFormatPresentation()).toMatchObject({

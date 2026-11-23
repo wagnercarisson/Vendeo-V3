@@ -70,6 +70,27 @@ export interface JointFormatPresentationInputEntry {
 export interface IndividualFormatPresentationInput {
   readonly resolution: CampaignFormatResolution;
   readonly lifecycle: IndividualFormatLifecycle;
+  /**
+   * F62 — adição posterior do formato vertical. Ausente/`null` significa que
+   * NUNCA houve adição: o outro formato permanece `absent/not_requested`.
+   * Carrega apenas estado/marcas seguras; nunca snapshot, path ou bytes.
+   */
+  readonly addition?: FormatAdditionPresentationInput | null;
+}
+
+/**
+ * F62 — entrada segura da adição do vertical `9:16`.
+ *
+ * `absent` sempre significa tentativa/entrega ausente (`not_delivered`), e
+ * `refunded` é um modificador explícito. `unknown` nunca deve ser convertido
+ * em ausência pela apresentação.
+ */
+export interface FormatAdditionPresentationInput {
+  /** Formato alvo da adição; hoje apenas o vertical `9:16`. */
+  readonly format: "9:16";
+  readonly state: "delivered" | "processing" | "unknown" | "absent";
+  /** `true` somente quando a adição terminou estornada; nunca presumido. */
+  readonly refunded?: boolean;
 }
 
 const FORMAT_KEYS: readonly CampaignFormatKey[] = Object.freeze(["1:1", "9:16"]);
@@ -144,12 +165,41 @@ export function buildJointFormatPresentation(
 }
 
 /**
+ * Mapeia a adição posterior sem reinterpretar o estado durável.
+ * `absent` sempre recebe `not_delivered`; `active` exige `delivered` e a
+ * seleção efetiva do formato.
+ */
+function additionEntry(
+  addition: FormatAdditionPresentationInput,
+  activeFormat: CampaignFormatKey | null,
+  key: CampaignFormatKey,
+): CampaignFormatPresentationEntry {
+  switch (addition.state) {
+    case "delivered":
+      return entry("delivered", { active: activeFormat === key });
+    case "processing":
+      return entry("processing");
+    case "unknown":
+      return entry("unknown");
+    case "absent":
+      return entry("absent", {
+        refunded: addition.refunded === true,
+        reason: "not_delivered",
+      });
+  }
+}
+
+/**
  * Monta a apresentação de uma campanha individual a partir do formato
- * persistido (resolvedor) e do ciclo de vida já derivado pela superfície.
+ * persistido (resolvedor), do ciclo de vida já derivado pela superfície e,
+ * opcionalmente, do estado durável de uma adição posterior.
  *
  * - resolução `unavailable` ⇒ AMBOS `unavailable` (sem fallback `1:1`);
  * - formato persistido: `delivered`/`processing`/`refunded`/`unknown`;
- * - o OUTRO formato é SEMPRE `absent/not_requested`;
+ * - sem adição, o OUTRO formato é `absent/not_requested`;
+ * - com adição, o OUTRO formato reflete `delivered`/`processing`/`unknown`/
+ *   `absent` (sempre `reason: "not_delivered"`);
+ * - `active` depende da seleção recebida e exige entrega comprovada;
  * - `partial` sempre `false` (campanha individual não é parcial).
  */
 export function buildIndividualFormatPresentation(
@@ -187,7 +237,12 @@ export function buildIndividualFormatPresentation(
     }
   })();
 
-  const otherEntry = entry("absent", { reason: "not_requested" });
+  const otherEntry =
+    input.addition !== null &&
+    input.addition !== undefined &&
+    input.addition.format === otherKey
+      ? additionEntry(input.addition, activeFormat, otherKey)
+      : entry("absent", { reason: "not_requested" });
 
   return presentation(
     {
