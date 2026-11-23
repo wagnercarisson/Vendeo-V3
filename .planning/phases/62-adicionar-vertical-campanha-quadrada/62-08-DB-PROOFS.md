@@ -5,6 +5,25 @@
 **Produção, provider pago, geração, Storage, flags, migrations, merge, push, deploy, sync e archive:** não acionados.
 **Validação visual:** não executada.
 
+## Aceite da rodada PostgreSQL (2026-11-23)
+
+A rodada PostgreSQL é **aceita com ressalvas**:
+
+- **12/12 cenários PASS**, incluindo a concorrência real com duas sessões.
+- **Ressalva 1 — cleanup bloqueado:** `campaign_composition_artifacts` é
+  imutável e `credit_transactions` é append-only. O resíduo sintético da
+  concorrência permanece identificado e **não** foi removido; guards não foram
+  desativados.
+- **Ressalva 2 — S11 é prova de predicado:** o cenário comprovou o predicado SQL
+  usado pelo repositório para excluir a adição da fila/resolução. Não foi um teste
+  completo da jornada administrativa; a RPC administrativa não tem guard de banco.
+- **Ressalva 3 — artefatos sintéticos:** S05/S09 usaram metadados sintéticos; não
+  provam bytes, integridade, Storage ou provider.
+- **Achados preservados:** `credit_reservation_missing_tx` no saldo insuficiente;
+  refund sem `campaign_id`; ausência de guard de banco na RPC administrativa.
+- **Resíduo não reutilizado:** a rodada Storage/download cria fixtures novas e
+  não referencia `6208…003`.
+
 > Esta rodada é **separada** dos gates offline anteriores (`62-OFFLINE-GATES.md`).
 > Ela exercita SQL/RPCs reais no banco de homologação, mas **não** prova bytes,
 > integridade de imagem, download, Storage, provider ou jornada visual completa.
