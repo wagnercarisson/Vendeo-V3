@@ -52,7 +52,11 @@ import { normalizeTwoFormatOutcome } from "@/lib/campaign/two-format-outcome";
 import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
 import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
-import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
+import {
+  ProductOneToOneArtifactStore,
+  PRODUCT_ONE_TO_ONE_ARTIFACT_BUCKET,
+} from "@/lib/product-1-1/artifact/artifact-store";
+import { downloadStorageObjectViaNodeHttp } from "@/lib/product-1-1/artifact/node-http-storage-download";
 import { readTwoFormatDelivery } from "@/lib/product-two-format/delivery-reader";
 import { resolveTwoFormatAccess } from "@/lib/product-two-format/access";
 import { COMPOSITION_ARTIFACT_BUCKET } from "@/lib/campaign/composition-artifacts/artifact-path";
@@ -458,7 +462,15 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
           const artifactStore =
             formatResolution.kind === "9:16"
               ? new (await import("@/lib/product-vertical-9-16/artifact/artifact-store")).VerticalArtifactStore()
-              : new ProductOneToOneArtifactStore();
+              : new ProductOneToOneArtifactStore(
+                  undefined,
+                  undefined,
+                  (path) =>
+                    downloadStorageObjectViaNodeHttp({
+                      bucket: PRODUCT_ONE_TO_ONE_ARTIFACT_BUCKET,
+                      path,
+                    }),
+                );
           const probe = await artifactStore.probeArtifact({
             storeId: campaign.store_id,
             campaignId: id,

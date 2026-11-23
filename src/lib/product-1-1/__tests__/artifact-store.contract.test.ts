@@ -476,6 +476,56 @@ describe("Task 2 — probeArtifact (resultados TIPADOS, C2; SEM assinatura, I3)"
     expect(handles.signed).toHaveLength(0);
   });
 
+  it("F62: downloader injetado substitui o storage.download e mantém a validação por bytes", async () => {
+    const jpeg = await artifactJpeg(1024);
+    const injected = vi.fn(async () => jpeg);
+    const handles = createFakeClient({
+      metadata: {
+        storage_path: DETERMINISTIC_PATH,
+        width: 1024,
+        height: 1024,
+        mime_type: "image/jpeg",
+      },
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client, null, injected);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("integral");
+    expect(injected).toHaveBeenCalledWith(DETERMINISTIC_PATH);
+    expect(handles.downloads).toHaveLength(0);
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("F62: falha do downloader injetado é fail-closed (indeterminate), nunca absent", async () => {
+    const injected = vi.fn(async () => {
+      throw new Error("node_http_download_failed");
+    });
+    const handles = createFakeClient({
+      metadata: {
+        storage_path: DETERMINISTIC_PATH,
+        width: 1024,
+        height: 1024,
+        mime_type: "image/jpeg",
+      },
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client, null, injected);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("indeterminate");
+    expect(injected).toHaveBeenCalledWith(DETERMINISTIC_PATH);
+    expect(handles.downloads).toHaveLength(0);
+  });
+
   it("C2: upload-ok + metadata-fail (sem linha) mas objeto íntegro ⇒ integral (sem regenerar)", async () => {
     const handles = createFakeClient({
       download: { data: await artifactJpeg(1024), error: null },

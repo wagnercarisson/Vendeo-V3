@@ -29,6 +29,7 @@ export { artifactStoragePath } from "./artifact-path";
  */
 
 const BUCKET = "campaign-images";
+export const PRODUCT_ONE_TO_ONE_ARTIFACT_BUCKET = BUCKET;
 const ARTIFACT_TABLE = "product_1_1_campaign_artifacts";
 const ARTIFACT_SELECT_COLUMNS = "storage_path, width, height, mime_type";
 const ARTIFACT_SIZE = 1024;
@@ -168,6 +169,8 @@ export interface StoreArtifactInput {
   readonly imageDataUrl: string;
 }
 
+export type ArtifactDownloadBytes = (storagePath: string) => Promise<Buffer>;
+
 export class ProductOneToOneArtifactStore {
   /**
    * O contexto da miniatura precisa pertencer ao MESMO ambiente do client que
@@ -179,6 +182,7 @@ export class ProductOneToOneArtifactStore {
     private readonly client: SupabaseClient = supabaseAdmin,
     private readonly thumbnailContext: ThumbnailContext | null =
       client === supabaseAdmin ? createDefaultThumbnailContext() : null,
+    private readonly downloadBytes?: ArtifactDownloadBytes,
   ) {}
 
   /**
@@ -423,29 +427,40 @@ export class ProductOneToOneArtifactStore {
     // Baixa os bytes do objeto do bucket PRIVADO — o probe NUNCA assina (I3).
     // F2 — uma EXCEÇÃO do `download()` (rede/socket/abort) é `indeterminate`,
     //      NUNCA `absent`: ausência precisa ser PROVADA, não inferida de falha.
-    let data: unknown;
-    let error: unknown;
-    try {
-      ({ data, error } = await this.client.storage
-        .from(BUCKET)
-        .download(storagePath));
-    } catch {
-      return { kind: "indeterminate" };
-    }
-
-    if (error) {
-      // Ausência CONFIRMADA ≠ erro/instabilidade do Storage (nunca colapsam).
-      return isAbsenceError(error) ? { kind: "absent" } : { kind: "indeterminate" };
-    }
-    if (!data) {
-      return { kind: "indeterminate" };
-    }
-
+    // F62/62-08 — quando um transport explícito é injetado (`downloadBytes`),
+    //      ele substitui somente o transporte binário (evita o stack overflow do
+    //      fetch/Blob em Server Components); a validação dos bytes continua aqui.
     let buffer: Buffer;
-    try {
-      buffer = await toBuffer(data);
-    } catch {
-      return { kind: "indeterminate" };
+    if (this.downloadBytes) {
+      try {
+        buffer = await this.downloadBytes(storagePath);
+      } catch {
+        return { kind: "indeterminate" };
+      }
+    } else {
+      let data: unknown;
+      let error: unknown;
+      try {
+        ({ data, error } = await this.client.storage
+          .from(BUCKET)
+          .download(storagePath));
+      } catch {
+        return { kind: "indeterminate" };
+      }
+
+      if (error) {
+        // Ausência CONFIRMADA ≠ erro/instabilidade do Storage (nunca colapsam).
+        return isAbsenceError(error) ? { kind: "absent" } : { kind: "indeterminate" };
+      }
+      if (!data) {
+        return { kind: "indeterminate" };
+      }
+
+      try {
+        buffer = await toBuffer(data);
+      } catch {
+        return { kind: "indeterminate" };
+      }
     }
 
     // Integridade por CONTEÚDO (F1): formato REAL dos bytes + decode COMPLETO
