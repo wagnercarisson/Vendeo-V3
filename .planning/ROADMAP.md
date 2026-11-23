@@ -1011,7 +1011,7 @@ Plans:
 - [x] `62-01-PLAN.md` â€” contratos puros, elegibilidade, apresentacao e textos; executado e aceito tecnicamente local/offline em 2026-11-23.
 - [x] `62-02-PLAN.md` â€” persistencia/RPCs/flag dedicada; migration autorada e NAO aplicada; executado e aceito tecnicamente local/offline em 2026-11-23, apos correcoes dirigidas.
 - [x] `62-03-PLAN.md` â€” ponte de proveniencia, economia congelada, cliente financeiro e leitor canonico; executado e aceito tecnicamente local/offline em 2026-11-23, apos correcoes dirigidas.
-- [~] `62-04-PLAN.md` â€” orquestracao; Tasks 1-2 executadas localmente/offline em 2026-11-23; Review Stop intermediario; Tasks 3-4 nao iniciadas.
+- [~] `62-04-PLAN.md` â€” orquestracao; Tasks 1-2 executadas localmente/offline em 2026-11-23; correcoes de replay/checksum/client aplicadas; Review Stop intermediario; Tasks 3-4 nao iniciadas.
 - [ ] `62-05-PLAN.md` â€” rotas e jornada do detalhe.
 - [ ] `62-06-PLAN.md` â€” listagem, dashboard, download e regressoes integradas.
 - [ ] `62-07-PLAN.md` â€” suporte, gates offline e pacote de release.
