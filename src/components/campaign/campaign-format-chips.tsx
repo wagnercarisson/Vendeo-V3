@@ -50,6 +50,12 @@ export interface CampaignFormatChipsProps {
   readonly hrefs?: Partial<Record<CampaignFormatKey, string>>;
   /** Idioma da região flutuante (ex.: "es-419"); o portal vive fora do wrapper. */
   readonly helpLang?: string;
+  /**
+   * F62 — ação opcional do detalhe no chip não entregue. Ausente em
+   * lista/dashboard e nos consumidores legados: o comportamento existente é
+   * preservado (apenas explicação local).
+   */
+  readonly onFormatAction?: (format: CampaignFormatKey) => void;
 }
 
 const FORMAT_ORDER: readonly CampaignFormatKey[] = ["1:1", "9:16"];
@@ -182,6 +188,7 @@ export function CampaignFormatChips({
   messages,
   hrefs,
   helpLang,
+  onFormatAction,
 }: CampaignFormatChipsProps): ReactElement {
   const [mounted, setMounted] = useState(false);
   const [activeKey, setActiveKey] = useState<CampaignFormatKey | null>(null);
@@ -434,6 +441,8 @@ export function CampaignFormatChips({
             typeof href === "string" &&
             href.length > 0 &&
             entry.state === "delivered";
+          const hasAction =
+            formatKey === "9:16" && onFormatAction !== undefined;
           const isOpen = activeKey === formatKey;
           const descriptionId = descriptionIds[formatKey];
           const chipClass = [BASE_CHIP_CLASS, stateClasses(entry)]
@@ -477,12 +486,20 @@ export function CampaignFormatChips({
                 <button
                   ref={setChipRef}
                   type="button"
-                  aria-expanded={isOpen}
-                  aria-controls={isOpen ? popoverId : undefined}
+                  aria-expanded={hasAction ? undefined : isOpen}
+                  aria-controls={!hasAction && isOpen ? popoverId : undefined}
+                  aria-haspopup={hasAction ? "dialog" : undefined}
                   aria-label={label}
                   aria-describedby={descriptionId}
                   className={chipClass}
-                  onClick={() => handleToggle(formatKey)}
+                  onClick={() => {
+                    if (hasAction) {
+                      closeAll();
+                      onFormatAction?.(formatKey);
+                      return;
+                    }
+                    handleToggle(formatKey);
+                  }}
                   onMouseEnter={() => handlePointerEnter(formatKey)}
                   onMouseLeave={handlePointerLeave}
                   onFocus={() => handleFocus(formatKey)}

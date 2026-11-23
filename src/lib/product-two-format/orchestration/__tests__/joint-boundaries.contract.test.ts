@@ -123,6 +123,13 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
       ...C4_PRODUCTION_CONSUMERS,
       "src/app/api/campaign/[id]/continue/__tests__/route.test.ts",
       "src/app/api/campaign/generation-status/__tests__/route.test.ts",
+      // F62/62-05 — jornada autorizada da adição vertical.
+      "src/app/(app)/campanhas/[id]/page.tsx",
+      "src/app/(app)/campanhas/[id]/client.tsx",
+      "src/components/campaign/add-vertical-dialog.tsx",
+      "src/components/campaign/campaign-format-chips.tsx",
+      "src/app/api/campaign/[id]/format-additions/",
+      "src/app/api/campaign/[id]/format-additions/route.ts",
     ]);
     const changed = gitStatus(["src/app", "src/components"])
       .split(/\r?\n/)

@@ -674,4 +674,29 @@ describe("F61 — chip único de formato (sem '?')", () => {
     expect(source).not.toMatch(/infoAria/);
     expect(source).not.toMatch(/role="group"\s+aria-label/);
   });
+
+  it("onFormatAction transforma o chip 9:16 em ação do detalhe sem abrir ajuda", () => {
+    const onFormatAction = vi.fn();
+    render(
+      <CampaignFormatChips
+        presentation={individual("delivered")}
+        messages={ptBRCampaignFormatMessages}
+        hrefs={{ "1:1": "/campanhas/c1?format=1:1" }}
+        onFormatAction={onFormatAction}
+      />,
+    );
+
+    const vertical = screen.getByRole("button", { name: /Vertical 9:16/ });
+    expect(vertical).not.toHaveAttribute("aria-expanded");
+    fireEvent.click(vertical);
+    expect(onFormatAction).toHaveBeenCalledWith("9:16");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it("sem onFormatAction o chip 9:16 mantém apenas a ajuda local", () => {
+    renderChips(individual("delivered"));
+    const vertical = screen.getByRole("button", { name: /Vertical 9:16/ });
+    fireEvent.click(vertical);
+    expect(screen.getByRole("note")).toBeInTheDocument();
+  });
 });

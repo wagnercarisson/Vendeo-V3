@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
 import { CampaignFormatChips } from "@/components/campaign/campaign-format-chips";
+import { AddVerticalDialog } from "@/components/campaign/add-vertical-dialog";
 import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
 import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { CopyRecoveryPanel } from "@/components/flow/copy-recovery-panel";
@@ -103,7 +104,13 @@ function jointNoteFor(
  * há fetch, geração, recuperação ou polling novo; a única interação é a
  * explicação local do chip. `lang="es-419"` cobre APENAS esta região traduzida.
  */
-function PageFormatChips({ props }: { readonly props: CampaignPageClientProps }) {
+function PageFormatChips({
+  props,
+  onFormatAction,
+}: {
+  readonly props: CampaignPageClientProps;
+  readonly onFormatAction?: (format: "1:1" | "9:16") => void;
+}) {
   const jointNote = jointNoteFor(props);
   return (
     <div
@@ -115,6 +122,7 @@ function PageFormatChips({ props }: { readonly props: CampaignPageClientProps })
         messages={props.messages.formats}
         hrefs={props.formatHrefs}
         helpLang={props.locale === "es-419" ? "es-419" : undefined}
+        onFormatAction={onFormatAction}
       />
       {jointNote ? (
         <p className="mt-2 text-xs text-text-muted font-body">{jointNote}</p>
@@ -152,6 +160,15 @@ function newRequestToken(): string | null {
 
 export default function CampaignPageClient(props: CampaignPageClientProps) {
   const router = useRouter();
+  const [additionOpen, setAdditionOpen] = useState(false);
+  const openAddition = useCallback(() => setAdditionOpen(true), []);
+  const closeAddition = useCallback(() => setAdditionOpen(false), []);
+  const handleAdditionDelivered = useCallback(() => {
+    setAdditionOpen(false);
+    router.replace(`/campanhas/${props.campaignId}?format=9:16`);
+    router.refresh();
+  }, [props.campaignId, router]);
+  const formatAction = props.joint ? undefined : openAddition;
 
   // F60.7 C3 — polling read-only do conjunto. Status não contém URL: em
   // QUALQUER transição relevante (entregue, estornado/ausente, unknown) um único
@@ -251,7 +268,7 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
           breadcrumbs={breadcrumbs}
         />
 
-        <PageFormatChips props={props} />
+        <PageFormatChips props={props} onFormatAction={formatAction} />
 
         {props.newFlow.state === "running" && <GeneratingView />}
         {props.newFlow.state === "delivered" && <NewFlowDeliveredView {...props} />}
@@ -274,6 +291,14 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
             }
           />
         )}
+        <AddVerticalDialog
+          campaignId={props.campaignId}
+          messages={props.messages.formatAddition}
+          locale={props.locale}
+          open={additionOpen}
+          onClose={closeAddition}
+          onDelivered={handleAdditionDelivered}
+        />
       </div>
     );
   }
@@ -286,7 +311,7 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
         breadcrumbs={breadcrumbs}
       />
 
-      <PageFormatChips props={props} />
+      <PageFormatChips props={props} onFormatAction={formatAction} />
 
       {props.displayStatus === "generating" && <GeneratingView />}
       {props.displayStatus === "stale" && (
@@ -312,6 +337,14 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
       ) : surface === "ready" ? (
         <ReadyView {...props} />
       ) : null}
+      <AddVerticalDialog
+        campaignId={props.campaignId}
+        messages={props.messages.formatAddition}
+        locale={props.locale}
+        open={additionOpen}
+        onClose={closeAddition}
+        onDelivered={handleAdditionDelivered}
+      />
     </div>
   );
 }

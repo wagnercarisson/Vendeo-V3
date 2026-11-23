@@ -197,7 +197,12 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
     expect(screen.queryByRole("button", { name: /baixar/i })).toBeNull();
   });
 
-  it("F61 — o próprio chip abre ajuda flutuante fora do fluxo com lang es-419, sem navegar", () => {
+  it("F62 — o chip 9:16 do detalhe abre o modal de adição (lang es-419)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ state: "eligible", confirmationToken: "token" }),
+    } as Response);
     render(
       <CampaignPageClient
         {...BASE_PROPS}
@@ -207,14 +212,10 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
     );
 
     const chip = screen.getByRole("button", { name: /Vertical 9:16/ });
-
     fireEvent.click(chip);
 
-    const note = screen.getByRole("note");
-    expect(note).toHaveAttribute("lang", "es-419");
-    expect(note.parentElement).toBe(document.body);
-    // O popover não entra no fluxo dos chips nem da arte.
-    expect(chip.closest("li")?.querySelector('[role="note"]')).toBeNull();
-    expect(chip).toHaveAttribute("aria-expanded", "true");
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveAttribute("lang", "es-419");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 });

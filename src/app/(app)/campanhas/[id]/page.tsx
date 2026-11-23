@@ -36,8 +36,11 @@ import {
   individualLifecycleFromStatus,
   type CampaignFormatKey,
   type CampaignFormatPresentation,
+  type FormatAdditionPresentationInput,
   type IndividualFormatLifecycle,
 } from "@/lib/campaign/format-presentation";
+import { readFormatAdditionByCampaign } from "@/lib/campaign/format-addition/delivery-reader";
+import { CompositionVerticalProbe } from "@/lib/product-9-16-two-stage/orchestration/vertical-probe";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import {
   applyTwoFormatDurableOutcomes,
@@ -88,6 +91,53 @@ function parseJointFormatRequest(
   return { kind: "invalid" };
 }
 
+function additionPresentation(
+  read: Awaited<ReturnType<typeof readFormatAdditionByCampaign>>,
+): FormatAdditionPresentationInput | null {
+  if (read.kind === "read_failed") {
+    return { format: "9:16", state: "unknown" };
+  }
+  if (read.kind !== "found") return null;
+  switch (read.addition.state) {
+    case "delivered":
+      return { format: "9:16", state: "delivered" };
+    case "processing":
+      return { format: "9:16", state: "processing" };
+    case "unknown":
+      return { format: "9:16", state: "unknown" };
+    case "refunded":
+      return { format: "9:16", state: "absent", refunded: true };
+  }
+}
+
+async function additionSignedUrls(
+  storeId: string,
+  campaignId: string,
+  operationId: string,
+): Promise<{ previewUrl: string | null; downloadUrl: string | null }> {
+  const probe = new CompositionVerticalProbe({ client: supabaseAdmin });
+  const vertical = await probe.probeVerticalArtifact({
+    storeId,
+    campaignId,
+    operationId,
+  });
+  if (vertical.kind !== "integral") {
+    return { previewUrl: null, downloadUrl: null };
+  }
+  const preview = await supabaseAdmin.storage
+    .from(COMPOSITION_ARTIFACT_BUCKET)
+    .createSignedUrl(vertical.storagePath, 300);
+  const download = await supabaseAdmin.storage
+    .from(COMPOSITION_ARTIFACT_BUCKET)
+    .createSignedUrl(vertical.storagePath, 300, {
+      download: `campanha-${campaignId}-9x16.jpg`,
+    });
+  return {
+    previewUrl: preview.data?.signedUrl ?? null,
+    downloadUrl: download.data?.signedUrl ?? null,
+  };
+}
+
 export default async function CampaignDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
 
@@ -119,6 +169,19 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
   // RPC financeira individual.
   const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
   const jointClassification = classifyTwoFormatCampaign(campaign.input_snapshot);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  // F62 — leitura SOMENTE-LEITURA da adição no detalhe. Nunca prepara, reserva,
+  // gera ou consulta saldo. Em campanha conjunta a autoridade é o leitor conjunto.
+  const additionRead =
+    jointClassification.kind === "not_two_format"
+      ? await readFormatAdditionByCampaign(
+          { storeId: campaign.store_id, campaignId: id },
+          { client: supabaseAdmin },
+        )
+      : ({ kind: "none" } as const);
+  const individualFormatRequest = parseJointFormatRequest(
+    resolvedSearchParams?.format,
+  );
 
   const renderUnknownJoint = (
     operationId: string | null,
@@ -188,7 +251,6 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
       controlOperationId: control.operationId,
     });
 
-    const resolvedSearchParams = searchParams ? await searchParams : undefined;
     const formatRequest = parseJointFormatRequest(
       resolvedSearchParams?.format,
     );
@@ -481,15 +543,53 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
           : newFlowState === "refunded"
             ? "refunded"
             : "unknown";
+    const addition = additionPresentation(additionRead);
+    const additionOperationId =
+      additionRead.kind === "found" ? additionRead.addition.operationId : null;
+    const additionDelivered = addition?.state === "delivered";
+    let verticalSelected = false;
+    if (
+      newFlowState === "delivered" &&
+      individualFormatRequest.kind === "valid" &&
+      individualFormatRequest.format === "9:16" &&
+      additionDelivered &&
+      additionOperationId !== null
+    ) {
+      try {
+        const urls = await additionSignedUrls(
+          campaign.store_id,
+          id,
+          additionOperationId,
+        );
+        if (urls.previewUrl !== null) {
+          props.imageUrl = urls.previewUrl;
+          props.newFlowFormat = "9:16";
+          if (urls.downloadUrl !== null) props.downloadUrl = urls.downloadUrl;
+          verticalSelected = true;
+        }
+      } catch {
+        // Fail-closed: sem preview comprovado, mantém o quadrado.
+      }
+    }
+    const formatHrefs: Partial<Record<CampaignFormatKey, string>> = {};
+    if (additionDelivered) {
+      if (newFlowState === "delivered" && formatResolution.kind === "1:1") {
+        formatHrefs["1:1"] = `/campanhas/${id}?format=1:1`;
+      }
+      formatHrefs["9:16"] = `/campanhas/${id}?format=9:16`;
+    }
     props = {
       ...props,
+      ...(Object.keys(formatHrefs).length > 0 ? { formatHrefs } : {}),
       formatPresentation: buildIndividualFormatPresentation(
-        { resolution: formatResolution, lifecycle: newFlowLifecycle },
-        newFlowState === "delivered" &&
-          props.imageUrl !== null &&
-          formatResolution.kind !== "unavailable"
-          ? formatResolution.kind
-          : null,
+        { resolution: formatResolution, lifecycle: newFlowLifecycle, addition },
+        verticalSelected
+          ? "9:16"
+          : newFlowState === "delivered" &&
+              props.imageUrl !== null &&
+              formatResolution.kind !== "unavailable"
+            ? formatResolution.kind
+            : null,
       ),
     };
     return (
@@ -609,11 +709,61 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
     !hasApprovalCandidate
       ? legacyFormatResolution.kind
       : null;
+  const legacyAddition = additionPresentation(additionRead);
+  const legacyAdditionOperationId =
+    additionRead.kind === "found" ? additionRead.addition.operationId : null;
+  const legacyAdditionDelivered = legacyAddition?.state === "delivered";
+  const legacyVerticalAllowed =
+    props.displayStatus === "ready" &&
+    legacyLifecycle === "delivered" &&
+    legacyApprovalStatus !== "regenerating" &&
+    !hasApprovalCandidate;
+  let legacyVerticalSelected = false;
+  if (
+    legacyVerticalAllowed &&
+    individualFormatRequest.kind === "valid" &&
+    individualFormatRequest.format === "9:16" &&
+    legacyAdditionDelivered &&
+    legacyAdditionOperationId !== null
+  ) {
+    try {
+      const urls = await additionSignedUrls(
+        campaign.store_id,
+        id,
+        legacyAdditionOperationId,
+      );
+      if (urls.previewUrl !== null) {
+        props.imageUrl = urls.previewUrl;
+        props.newFlowFormat = "9:16";
+        if (urls.downloadUrl !== null) props.downloadUrl = urls.downloadUrl;
+        legacyVerticalSelected = true;
+      }
+    } catch {
+      // Fail-closed: sem preview comprovado, mantém o quadrado.
+    }
+  }
+  const legacyFormatHrefs: Partial<Record<CampaignFormatKey, string>> = {};
+  if (legacyAdditionDelivered) {
+    if (
+      legacyFormatResolution.kind === "1:1" &&
+      legacyLifecycle === "delivered"
+    ) {
+      legacyFormatHrefs["1:1"] = `/campanhas/${id}?format=1:1`;
+    }
+    legacyFormatHrefs["9:16"] = `/campanhas/${id}?format=9:16`;
+  }
   props = {
     ...props,
+    ...(Object.keys(legacyFormatHrefs).length > 0
+      ? { formatHrefs: legacyFormatHrefs }
+      : {}),
     formatPresentation: buildIndividualFormatPresentation(
-      { resolution: legacyFormatResolution, lifecycle: legacyLifecycle },
-      legacyActiveFormat,
+      {
+        resolution: legacyFormatResolution,
+        lifecycle: legacyLifecycle,
+        addition: legacyAddition,
+      },
+      legacyVerticalSelected ? "9:16" : legacyActiveFormat,
     ),
   };
 

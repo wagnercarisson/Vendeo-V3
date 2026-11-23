@@ -431,12 +431,22 @@ describe("F60.4 boundaries — migrations, rotas e UI intocadas", () => {
       "src/app/api/campaign/generate-image/route.ts",
       "src/app/api/campaign/[id]/continue/route.ts",
     ]);
+    // F62/62-05 — jornada autorizada da adição vertical.
+    const allowedF62 = new Set([
+      "src/app/(app)/campanhas/[id]/__tests__/format-addition.test.tsx",
+      "src/app/(app)/campanhas/[id]/__tests__/format-presentation.test.tsx",
+      "src/app/api/campaign/[id]/format-additions/",
+      "src/app/api/campaign/[id]/format-additions/route.ts",
+      "src/app/api/campaign/[id]/format-additions/__tests__/route.test.ts",
+    ]);
     const changed = status.stdout
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => line.replace(/^\S+\s+/, ""));
-    expect(changed.filter((file) => !allowedC2.has(file))).toEqual([]);
+    expect(
+      changed.filter((file) => !allowedC2.has(file) && !allowedF62.has(file)),
+    ).toEqual([]);
   });
 
   it('nenhuma referência a "square-base" em src/app', () => {

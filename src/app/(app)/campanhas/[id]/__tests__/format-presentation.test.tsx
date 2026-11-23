@@ -134,6 +134,11 @@ vi.mock("@/lib/campaign/correction-reports", () => ({
   getCorrectionReport: async () => null,
 }));
 
+// F62 — o detalhe lê a adição; a matriz F61 não mede essa leitura adicional.
+vi.mock("@/lib/campaign/format-addition/delivery-reader", () => ({
+  readFormatAdditionByCampaign: async () => ({ kind: "none" }),
+}));
+
 vi.mock("@/lib/product-1-1/snapshot/persist-snapshot", () => ({
   readProductOneToOneBackgroundDirection: async () => null,
 }));

@@ -68,6 +68,12 @@ const AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE =
 const AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE =
   "src/app/api/campaign/[id]/image-recovery/route.ts";
 
+// F62 (Plano 62-05) — a rota da adição vertical precisa da decisão REAL de
+// autorização do fluxo de produto e do pilot gate. Três pares EXATOS, sem
+// prefixo genérico e sem liberar `product-1-1` para outros caminhos.
+const AUTHORIZED_CAMPAIGN_FORMAT_ADDITIONS_ROUTE =
+  "src/app/api/campaign/[id]/format-additions/route.ts";
+
 // F56.2b1b (Plano 07 — reconciliação G-NA, ÚLTIMO escritor da sequência
 // 01 → 04 → 06 → 07): as superfícies admin de resolução introduzem importadores
 // legados. SÓ pares EXPLÍCITOS importador+módulo — nunca `@/lib/product-1-1/**`
@@ -204,6 +210,14 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/orchestration/attempt-start-client",
       "@/lib/product-1-1/orchestration/project-delivered-campaign",
       "@/lib/product-1-1/authorization/authorization-service",
+      "@/lib/product-1-1/submission/eligibility-context",
+    ],
+  },
+  [AUTHORIZED_CAMPAIGN_FORMAT_ADDITIONS_ROUTE]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/authorization/authorization-service",
+      "@/lib/product-1-1/pilot/resolve-pilot-spend-gate",
       "@/lib/product-1-1/submission/eligibility-context",
     ],
   },
