@@ -1,9 +1,16 @@
-# 62-04 — Tasks 3–4 — Evidência de gates (execução + correções C1–C4)
+# 62-04 — Tasks 3–4 — Evidência de gates (execução + correções C1–C5)
 
 **Data:** 2026-11-23 (UTC)
 **Branch:** `feat/campaign-add-vertical`
 **Baseline:** `17635075` (execução original das Tasks 3–4)
-**Escopo:** Tasks 3–4 do 62-04, incluindo as correções da revisão final (C1–C4). Tasks 1–2 permanecem aceitas em separado; o plano inteiro aguarda o novo Review Stop. Sem banco, Storage, provider, geração, migration aplicada, flag em ambiente, merge, push, deploy, sync ou archive. `62-05` não iniciado.
+**Escopo:** Tasks 3–4 do 62-04, incluindo as correções C1–C5. Tasks 1–2 permanecem aceitas em separado. Sem banco, Storage, provider, geração, migration aplicada, flag em ambiente, merge, push, deploy, sync ou archive. `62-05` não iniciado antes deste aceite.
+
+## Aceite final (2026-11-23)
+
+- **Aprovado tecnicamente, local/offline.**
+- Reexecução do revisor: **7 arquivos / 163 testes PASS**, OpenSpec strict **1/0**, `git diff --check` limpo.
+- Gates do executor permanecem separados; o histórico das Tasks 1–2 e C1–C5 foi preservado.
+- Limitações: tudo offline com fakes; sem prova de locks/RLS/concorrência/PostgREST/Storage/provider/estorno financeiro reais.
 
 ## Commits
 

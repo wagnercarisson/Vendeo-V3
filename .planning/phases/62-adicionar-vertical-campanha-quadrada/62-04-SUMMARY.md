@@ -45,11 +45,25 @@ completed: 2026-11-23
 
 **Orquestração recuperável da adição vertical 9:16, com economia congelada, entrega sem projeção e estorno exclusivo da adição**
 
-> **Status: TASKS 3–4 EXECUTADAS, CORRIGIDAS APÓS AS REVISÕES (C1–C5) E REAPRESENTADAS EM 2026-11-23 — LOCAL/OFFLINE; AGUARDANDO NOVO REVIEW STOP; NÃO ACEITAS; PLANO 62-04 NÃO CONCLUÍDO.**
-> Tasks 1–2 foram aceitas tecnicamente em separado. O plano inteiro depende da
-> revisão final. A migration do 62-02 não foi aplicada. Nenhum banco, Storage,
+> **Status: TASKS 3–4 ACEITAS TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.** As
+> Tasks 1–2 seguem aceitas em separado. O aceite cobre o plano 62-04 com as
+> correções C1–C5. A migration do 62-02 não foi aplicada. Nenhum banco, Storage,
 > provider, geração, flag em ambiente, merge, push, deploy, sync ou archive.
-> `62-05` não foi iniciado.
+> `62-05` não foi iniciado antes deste aceite.
+
+## Aceite final do revisor (2026-11-23)
+
+- **Veredito:** `62-04` **aprovado tecnicamente, local/offline**.
+- **Reexecução do revisor:** **7 arquivos / 163 testes PASS**, OpenSpec strict
+  **1/0** e `git diff --check` limpo.
+- **Separação de evidências:** a reexecução do revisor e os gates do executor
+  permanecem registros distintos; o executor não reivindica a aprovação.
+- **Histórico preservado:** aceite intermediário das Tasks 1–2 e correções
+  C1–C5 permanecem documentados, sem reescrever os vereditos anteriores.
+- **Limitações de prova:** tudo offline, com fakes declarados; sem prova de
+  locks/RLS/concorrência/PostgREST/Storage/provider/estorno financeiro reais.
+  `authorizeProductFlow` e `pilotSpendResolver` continuam a cargo da rota do
+  `62-05`; ausentes ⇒ fail-closed.
 
 ## Performance
 
@@ -134,13 +148,9 @@ completed: 2026-11-23
 - `confirmedSourceChecksumSha256` continua server-side e será extraído do token validado no `62-05`.
 - A entrega/miniatura e o estorno são exercitados com fakes declarados; a suíte não substitui prova de produção.
 - O gate real do piloto é exercitado com fake nos testes offline; a resolução server-side real continua coberta pelos testes existentes do Produto 1:1.
-- Tasks 1–2 aceitas isoladamente; o plano 62-04 inteiro não está aceito. `62-05`+ e qualquer merge/push/deploy/sync/archive não foram iniciados.
+- Tasks 1–2 aceitas isoladamente; o plano 62-04 foi aceito local/offline com as Tasks 3–4. `62-05`+ e qualquer merge/push/deploy/sync/archive não foram iniciados.
 
-## Next
-
-Novo Review Stop final do `62-04` após as correções C1–C4. Não iniciar `62-05` sem aprovação explícita.
-
-## Self-Check: PASSED (execução + correções; aceite pendente)
+## Self-Check: PASSED (aceito local/offline)
 
 - [x] Preparação usa fonte e destino distintos; defaults existentes preservados.
 - [x] `base = done` não dispensa `square_prepared`; preparação idempotente roda antes de expansão nova/retry e reutiliza prepared íntegro.
@@ -154,9 +164,13 @@ Novo Review Stop final do `62-04` após as correções C1–C4. Não iniciar `62
 - [x] Retomada/replay não abrem nova operação nem reservam novo crédito.
 - [x] Testes exclusivamente offline, com fakes e contadores declarados.
 - [x] Typecheck/lint/build/global/OpenSpec/diff-check verdes.
-- [ ] Aceite final do revisor — pendente.
+- [x] Aceite final do revisor — **aprovado tecnicamente, local/offline (7 arquivos / 163 testes)**.
+
+## Next
+
+`62-05` autorizado explicitamente após o aceite final. Não iniciar `62-06` sem novo Review Stop.
 
 ---
 
 *Phase: 62-adicionar-vertical-campanha-quadrada*
-*Partial: Tasks 3–4 executadas, Review Stop final pendente, 2026-11-23*
+*Completed: Tasks 1–4 aceitas local/offline, 2026-11-23*
