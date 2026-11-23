@@ -30,7 +30,7 @@
 - [ ] 3.4 Garantir que a ponte use os bytes reais, recalcule tamanho/checksum, valide o readback F60.1 e nunca sobrescreva o artefato original ou a linha existente; concorrência/aberturas recusadas devem convergir para a mesma ponte.
 - [ ] 3.5 Implementar a leitura do vínculo da adição por identidade explícita e por campanha, com estados sanitizados, origem da fonte e distinção de leitura indisponível.
 - [ ] 3.6 Criar o cliente server-only das RPCs de abertura, entrega e estorno, com envelopes fechados, validação de UUIDs, motivos permitidos e erros tipados.
-- [ ] 3.7 Implementar o congelamento da seleção de expansão e dos parâmetros econômicos na abertura, com validação de pricing/catálogo antes da reserva.
+- [ ] 3.7 Implementar o congelamento da seleção de expansão e dos parâmetros econômicos na abertura, com validação de pricing/catálogo antes da reserva; em campanha `legacy_campaign`, usar a seleção atual `configured` com versão válida, nunca `legacy`/`legacy_sunburst_low`.
 - [ ] 3.8 Implementar leitores congelados de catálogo e pricing para retomadas/retries e falhar fechado quando o congelado estiver ausente, malformado ou incompatível.
 - [ ] 3.9 Adicionar testes de contrato para fonte legada 1024 sem crédito original, ponte estável, proveniência divergente, concorrência, replay, checksum, origem e economia congelada, incluindo ausência de efeitos financeiros na ponte.
 
