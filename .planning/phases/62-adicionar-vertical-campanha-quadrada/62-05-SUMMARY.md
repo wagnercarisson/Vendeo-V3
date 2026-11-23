@@ -70,6 +70,8 @@ completed: 2026-11-23
 | `c6c69bf9` | retomada idempotente, polling contínuo, download seguro e incerteza da fonte |
 | `eb1f7f3a` | plano: correção C10 (sessões da modal) |
 | `e61926a5` | isolamento de sessão e descarte de respostas obsoletas |
+| `2dca1d31` | plano: correção C11 (submitting por identidade do POST) |
+| `f9e2f866` | liberação do submitting independente da sequência de respostas |
 
 ## Correções C6–C9 (revisão final)
 
@@ -78,6 +80,7 @@ completed: 2026-11-23
 - **C8 — download:** preview vertical OK + falha da assinatura de download ⇒ `downloadDisabled=true` e nenhuma URL do quadrado, nos caminhos novo e legado.
 - **C9 — fonte:** ranking preserva `indeterminate`/leitura incerta sobre rejeição de path da outra origem.
 - **C10 — sessão:** cada abertura é uma sessão; fechar/desmontar/trocar campanha invalida GET/POST, callbacks, timers e `finally`. Respostas antigas são ignoradas, terminal não regride e entrega é concluída uma única vez. Nada é cancelado/estornado no servidor.
+- **C11 — submitting:** a identidade do POST em andamento é separada da sequência de aplicação; o POST atual libera seu próprio botão mesmo após um GET posterior, e um POST antigo nunca libera o de outro POST/sessão.
 
 ## Contrato implementado
 
@@ -105,13 +108,13 @@ completed: 2026-11-23
 
 | Gate | Resultado |
 |---|---|
-| Foco 62-05 (rota/token/página/legado/modal/chip/guard) | **7 arquivos / 145 testes PASS** |
+| Foco 62-05 (rota/token/página/legado/modal/chip/guard) | **7 arquivos / 146 testes PASS** |
 | Boundaries reconciliados (square-base + joint) | **2 arquivos / 13 testes PASS** |
-| Diretórios afetados (rota, format-addition, detalhe, campanha, guards) | **23 arquivos / 413 testes PASS** |
+| Diretórios afetados (rota, format-addition, detalhe, campanha, guards) | **23 arquivos / 414 testes PASS** |
 | `typecheck` | exit **0** |
 | `lint` | exit **0** |
 | `build` | exit **0** — 102/102 páginas |
-| Suíte global | **exit 0** — 860 arquivos + 2 skipped (862); **10.737 testes PASS** + 10 skipped |
+| Suíte global | **exit 0** — 860 arquivos + 2 skipped (862); **10.738 testes PASS** + 10 skipped |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
@@ -132,6 +135,7 @@ completed: 2026-11-23
 - **Polling:** consultas consecutivas `processing` são reagendadas; sem prova de longa duração em produção.
 - **Download:** sem URL de download válida para o vertical, o botão fica indisponível; não herda a URL do quadrado.
 - **Sessão:** respostas de GET/POST de uma sessão fechada/desmontada são ignoradas; a modal não cancela/estorna no servidor.
+- **Submitting:** o POST libera seu próprio botão mesmo se um GET posterior já atualizou o estado; não fica preso.
 
 ## Next
 
