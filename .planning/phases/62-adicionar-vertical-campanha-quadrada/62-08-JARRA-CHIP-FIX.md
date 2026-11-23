@@ -116,3 +116,15 @@ Nenhum POST de confirmação, geração ou cobrança foi executado.
 - Confirmação **disponível**, não enviada automaticamente; geração não
   executada.
 - `62-08` segue **não concluído**.
+
+## Ressalva sobre a captura anterior
+
+A correção da ajuda do chip **não explica, por si só,** a mensagem de
+indisponibilidade observada na captura anterior. O GET atual responde `eligible`
+e permite nova tentativa, mas o estado daquele momento não foi preservado nesta
+evidência: não há registro do status/`state`/`reason` daquela execução.
+
+Portanto, não se atribui a falha anterior apenas ao texto do chip, nem se afirma
+outra causa específica sem evidência. A correção documentada aqui cobre o
+rótulo/orientação atuais; a causa da indisponibilidade anterior permanece **não
+comprovada**.
