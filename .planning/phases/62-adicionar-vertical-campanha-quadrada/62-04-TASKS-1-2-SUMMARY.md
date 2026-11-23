@@ -56,6 +56,7 @@ completed: 2026-11-23
 | Commit | Conteúdo |
 |---|---|
 | `d0291d24` | portas + composition root + abertura/replay + preparação direta + testes |
+| `73712ac7` | cobertura de saldo 1/zero e continuação sem saldo |
 
 ## Contrato implementado (Tasks 1–2)
 
@@ -76,11 +77,11 @@ completed: 2026-11-23
 
 | Gate | Resultado |
 |---|---|
-| Tasks 1–2 (2 arquivos) | **17 testes PASS** |
+| Tasks 1–2 (2 arquivos) | **18 testes PASS** |
 | `typecheck` | exit **0** |
 | `lint` | exit **0** (não cobre TS — limitação preexistente) |
 | `build` | exit **0** — 102/102 páginas |
-| Suíte global | **exit 0**; **853 arquivos PASS + 2 skipped (855)**; **10.650 testes PASS + 10 skipped (10.660)** |
+| Suíte global | **exit 0**; **853 arquivos PASS + 2 skipped (855)**; **10.651 testes PASS + 10 skipped (10.661)** |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 

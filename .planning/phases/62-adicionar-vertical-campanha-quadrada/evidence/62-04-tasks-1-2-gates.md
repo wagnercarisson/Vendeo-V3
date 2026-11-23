@@ -10,6 +10,7 @@
 | Commit | Conteúdo |
 |---|---|
 | `d0291d24` | portas, composition root, abertura/replay e preparação direta + testes |
+| `73712ac7` | cobertura de saldo 1/zero e continuação sem saldo |
 
 ## Gates dirigidos
 
@@ -17,7 +18,7 @@
 |---|---|---|
 | Preparação (regressão) | `npx vitest run src/lib/product-9-16-two-stage/orchestration/__tests__/preparation-step.contract.test.ts` | PASS |
 | Abertura/replay | `npx vitest run src/lib/campaign/format-addition/orchestration/__tests__/run-addition.contract.test.ts` | PASS |
-| Combinado | os dois arquivos | **2 arquivos / 17 testes PASS** |
+| Combinado | os dois arquivos | **2 arquivos / 18 testes PASS** |
 
 ## Gates gerais
 
@@ -26,7 +27,7 @@
 | `npm.cmd run typecheck` | exit **0** |
 | `npm.cmd run lint` | exit **0** (não cobre TypeScript) |
 | `npm.cmd run build` | exit **0**; 102/102 páginas |
-| Suíte global (reexecução) | **exit 0**; **853 arquivos PASS + 2 skipped (855)**; **10.650 testes PASS + 10 skipped (10.660)** |
+| Suíte global (reexecução) | **exit 0**; **853 arquivos PASS + 2 skipped (855)**; **10.651 testes PASS + 10 skipped (10.661)** |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
