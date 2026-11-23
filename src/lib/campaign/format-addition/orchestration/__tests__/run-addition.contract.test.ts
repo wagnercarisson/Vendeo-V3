@@ -5,14 +5,18 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import type { ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
+import type { TwoStageOperationView } from "@/lib/product-9-16-two-stage/types";
 
 import type { FrozenEconomics } from "../../frozen-economics";
 import type {
+  FormatAdditionExecutionDeps,
   FormatAdditionOpeningDeps,
   OpenFormatAdditionInput,
+  RunFormatAdditionInput,
 } from "../types";
 import {
   prepareAdditionSource,
+  runFormatAddition,
   runFormatAdditionOpening,
 } from "../run-addition";
 
@@ -169,6 +173,140 @@ function baseDeps(
       );
     }),
   } as unknown as FormatAdditionOpeningDeps;
+}
+
+function view(overrides: Partial<TwoStageOperationView> = {}): TwoStageOperationView {
+  return {
+    campaignId: CAMPAIGN,
+    operationId: OPERATION,
+    origin: "9_16_two_stage",
+    contractVersion: 2,
+    frozenSelection: null,
+    credit: {
+      status: "reserved",
+      terminal: false,
+      delivered: false,
+      refunded: false,
+      reserved: true,
+    },
+    base: {
+      stage: "base",
+      status: "done",
+      attemptsUsed: 0,
+      failureClass: null,
+      attemptNumber: null,
+      claimedAt: null,
+    },
+    expansion: {
+      stage: "expansion",
+      status: "pending",
+      attemptsUsed: 0,
+      failureClass: null,
+      attemptNumber: null,
+      claimedAt: null,
+    },
+    unknown: false,
+    failedOutcome: false,
+    supportReference: null,
+    nextAction: "acquire_expansion",
+    canContinue: true,
+    processingPhase: null,
+    ...overrides,
+  };
+}
+
+function durable() {
+  return {
+    kind: "found" as const,
+    context: {
+      operationId: OPERATION,
+      requestId: REQUEST,
+      sourceOrigin: "new_flow_1_1" as const,
+      sourceRegistrationOperationId: PRIMARY,
+      sourceArtifactId: ARTIFACT,
+      sourceChecksumSha256: CHECKSUM,
+      selection: FROZEN.selection,
+      frozenEconomics: {
+        pricingVersionId: FROZEN.pricingVersionId,
+        pricing: FROZEN.pricing,
+        usdBrlRateAtGeneration: FROZEN.usdBrlRateAtGeneration,
+        creditValueBrlAtGeneration: FROZEN.creditValueBrlAtGeneration,
+        capturedAt: FROZEN.capturedAt,
+      },
+    },
+  };
+}
+
+function executionDeps(
+  options: {
+    viewResult?: unknown;
+    prepareResult?: unknown;
+    expansionResult?: unknown;
+    deliveryResult?: unknown;
+    finalizeResult?: unknown;
+    calls?: Calls;
+  } = {},
+): {
+  deps: FormatAdditionExecutionDeps;
+  calls: Calls;
+  expansionInputs: unknown[];
+} {
+  const calls = options.calls ?? [];
+  const expansionInputs: unknown[] = [];
+  const control = {
+    acquire: vi.fn(),
+    finish: vi.fn(),
+    recordOutcome: vi.fn(),
+    resume: vi.fn(),
+    getOperationView: vi.fn(async () => {
+      calls.push("getOperationView");
+      return options.viewResult ?? { kind: "found" as const, view: view() };
+    }),
+  } as unknown as FormatAdditionExecutionDeps["control"];
+
+  const deps = {
+    readDurableContext: vi.fn(async () => {
+      calls.push("readDurableContext");
+      return durable();
+    }),
+    prepare: vi.fn(async () => {
+      calls.push("prepare");
+      return (
+        options.prepareResult ?? {
+          kind: "prepared",
+          artifact: {} as never,
+          bytes: Buffer.alloc(0),
+          persistence: "created",
+        }
+      );
+    }),
+    control,
+    runExpansion: vi.fn(async (input) => {
+      calls.push("runExpansion");
+      expansionInputs.push(input);
+      return options.expansionResult ?? { kind: "completed" };
+    }),
+    deliverVertical: vi.fn(async () => {
+      calls.push("deliverVertical");
+      return options.deliveryResult ?? { kind: "delivered", idempotent: false };
+    }),
+    finalizeFailure: vi.fn(async () => {
+      calls.push("finalizeFailure");
+      return options.finalizeResult ?? { kind: "refunded" };
+    }),
+    clock: () => 1_000,
+    callId: () => "9c0d1e2f-9c0d-4e2f-8a1b-9c0d1e2f3a4b",
+  } as unknown as FormatAdditionExecutionDeps;
+  return { deps, calls, expansionInputs };
+}
+
+function runInput(overrides: Partial<RunFormatAdditionInput> = {}): RunFormatAdditionInput {
+  return {
+    ...INPUT,
+    deadlineAtMs: 10_000,
+    allowNewPaidStep: true,
+    ...overrides,
+  };
 }
 
 describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
@@ -677,5 +815,209 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
     );
 
     expect(result).toMatchObject({ ok: false, reason: "source_unavailable" });
+  });
+});
+
+describe("F62-04 — preparação/expansão/entrega (Tasks 3–4)", () => {
+  function combined(
+    opening: ReturnType<typeof baseDeps>,
+    execution: ReturnType<typeof executionDeps>,
+  ) {
+    return { ...opening, ...execution.deps } as unknown as Parameters<
+      typeof runFormatAddition
+    >[1];
+  }
+
+  it("abertura nova prepara, expande com o congelado e entrega", async () => {
+    const opening = baseDeps({ calls: [] });
+    const execution = executionDeps({});
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "delivered" });
+    expect(execution.calls).toEqual([
+      "readDurableContext",
+      "prepare",
+      "getOperationView",
+      "runExpansion",
+      "deliverVertical",
+    ]);
+    expect(execution.expansionInputs[0]).toMatchObject({
+      selection: {
+        model: FROZEN.selection.model,
+        quality: FROZEN.selection.quality,
+        configVersionId: FROZEN.selection.configVersionId,
+        origin: "configured",
+      },
+      frozen: FROZEN,
+      attemptTarget: "initial",
+      deadlineAtMs: 10_000,
+      allowNewPaidStep: true,
+    });
+  });
+
+  it("replay processing retoma sem gate/ponte/economia/RPC de abertura", async () => {
+    const openingCalls: Calls = [];
+    const opening = baseDeps({
+      linkResult: link({ state: "processing" }),
+      calls: openingCalls,
+    });
+    const execution = executionDeps({});
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "delivered" });
+    expect(openingCalls).toEqual(["readLinkByRequest", "readLink"]);
+    expect(execution.calls).toContain("prepare");
+    expect(execution.calls).toContain("runExpansion");
+    expect(execution.calls).toContain("deliverVertical");
+  });
+
+  it("replay delivered não prepara, expande nem entrega", async () => {
+    const opening = baseDeps({
+      linkResult: link({ state: "delivered" }),
+    });
+    const execution = executionDeps({});
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "delivered",
+      idempotent: true,
+    });
+    expect(execution.calls).toEqual([]);
+  });
+
+  it("expansão unknown não estorna nem regenera", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      expansionResult: { kind: "unknown", reason: "provider_timeout" },
+    });
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "unknown",
+      reason: "provider_timeout",
+    });
+    expect(execution.calls).not.toContain("finalizeFailure");
+    expect(execution.calls).not.toContain("deliverVertical");
+  });
+
+  it("expansão definitiva estorna apenas a adição", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      expansionResult: { kind: "definitive", reason: "invalid_output" },
+      finalizeResult: { kind: "refunded" },
+    });
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "refunded" });
+    expect(execution.calls).toContain("finalizeFailure");
+  });
+
+  it("entrega ausente finaliza e estorna", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      deliveryResult: { kind: "absent" },
+      finalizeResult: { kind: "refunded" },
+    });
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "refunded" });
+    expect(execution.calls).toContain("finalizeFailure");
+  });
+
+  it("artefato íntegro recuperado é entregue sem nova expansão", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      deliveryResult: { kind: "absent" },
+      finalizeResult: { kind: "delivered", reason: "artifact_present" },
+    });
+    (execution.deps.deliverVertical as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ kind: "absent" })
+      .mockResolvedValueOnce({ kind: "delivered", idempotent: true });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "delivered",
+      idempotent: true,
+    });
+    expect(execution.calls.filter((call) => call === "runExpansion")).toHaveLength(1);
+  });
+
+  it("preparação definitiva estorna antes da expansão", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      prepareResult: { kind: "source_unavailable", reason: "absent" },
+      finalizeResult: { kind: "refunded" },
+    });
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "refunded" });
+    expect(execution.calls).toContain("finalizeFailure");
+    expect(execution.calls).not.toContain("runExpansion");
+  });
+
+  it("retry de expansão usa o alvo explícito", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          expansion: {
+            stage: "expansion",
+            status: "failed",
+            attemptsUsed: 1,
+            failureClass: "transient",
+            attemptNumber: 1,
+            claimedAt: null,
+          },
+          nextAction: "retry_expansion",
+        }),
+      },
+    });
+    await runFormatAddition(runInput(), combined(opening, execution));
+
+    expect(execution.expansionInputs[0]).toMatchObject({
+      attemptTarget: "retry",
+      expansionStatus: "failed",
+    });
+  });
+
+  it("não importa nem usa o snapshot econômico da campanha original", async () => {
+    const fs = await import("node:fs");
+    for (const file of ["deps.ts", "resume-addition.ts"]) {
+      const source = fs.readFileSync(
+        `src/lib/campaign/format-addition/orchestration/${file}`,
+        "utf8",
+      );
+      expect(source).not.toContain("readExpansionEconomicSnapshot");
+      expect(source).not.toContain("economic-snapshot-reader");
+    }
   });
 });

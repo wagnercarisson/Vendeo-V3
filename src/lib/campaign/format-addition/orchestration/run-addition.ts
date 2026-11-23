@@ -5,12 +5,15 @@ import type { PrepareSquareResult } from "@/lib/campaign/square-preparation/type
 import type {
   FormatAdditionExecutionDeps,
   FormatAdditionOpeningDeps,
+  FormatAdditionRunResult,
   OpenFormatAdditionInput,
   OpenFormatAdditionResult,
   PrepareAdditionSourceInput,
   PrepareAdditionSourceResult,
+  RunFormatAdditionInput,
 } from "./types";
 import { openFormatAddition } from "./open-addition";
+import { continueFormatAddition } from "./resume-addition";
 
 /**
  * F62/62-04 (Tasks 1–2) — entrada pública do orquestrador dedicado.
@@ -24,6 +27,67 @@ export async function runFormatAdditionOpening(
   deps: FormatAdditionOpeningDeps,
 ): Promise<OpenFormatAdditionResult> {
   return openFormatAddition(input, deps);
+}
+
+/**
+ * Fluxo completo das Tasks 1–4: abertura/replay → preparação direta →
+ * expansão com congelado → entrega ou falha/unknown. A retomada reutiliza o
+ * vínculo durável e nunca recaptura economia nem reserva outro crédito.
+ */
+export async function runFormatAddition(
+  input: RunFormatAdditionInput,
+  deps: FormatAdditionOpeningDeps & FormatAdditionExecutionDeps,
+): Promise<FormatAdditionRunResult> {
+  const opened = await openFormatAddition(input, deps);
+  if (!opened.ok) {
+    return Object.freeze({
+      ok: false as const,
+      code: opened.code,
+      reason: opened.reason,
+      ...(opened.detail === undefined ? {} : { detail: opened.detail }),
+    });
+  }
+
+  if (opened.kind === "replay" && opened.state === "delivered") {
+    return Object.freeze({
+      ok: true as const,
+      kind: "delivered" as const,
+      operationId: opened.operationId,
+      requestId: opened.requestId,
+      idempotent: true,
+    });
+  }
+  if (opened.kind === "replay" && opened.state === "refunded") {
+    return Object.freeze({
+      ok: true as const,
+      kind: "refunded" as const,
+      operationId: opened.operationId,
+      requestId: opened.requestId,
+    });
+  }
+  if (opened.kind === "replay" && opened.state === "unknown") {
+    return Object.freeze({
+      ok: true as const,
+      kind: "unknown" as const,
+      operationId: opened.operationId,
+      requestId: opened.requestId,
+      reason: "operation_unknown",
+    });
+  }
+
+  return continueFormatAddition(
+    {
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: opened.operationId,
+      requestId: opened.requestId,
+      authorization: input.authorization,
+      deadlineAtMs: input.deadlineAtMs,
+      allowNewPaidStep: input.allowNewPaidStep,
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
+    },
+    deps,
+  );
 }
 
 function detailOf(result: Exclude<PrepareSquareResult, { kind: "prepared" }>): string | undefined {

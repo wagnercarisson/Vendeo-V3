@@ -14,24 +14,29 @@ import { requireLegalClearance } from "@/lib/legal/clearance";
 import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
 import { getStoreReadiness } from "@/lib/store-readiness";
 import { prepareSquareForExpansion } from "@/lib/campaign/square-preparation/prepare";
+import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
+import { probeExpansionTarget } from "@/lib/campaign/vertical-expansion/probe";
+import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
+import { reconcileExpansionArtifact } from "@/lib/product-9-16-two-stage/orchestration/reconciliation";
 import { runExpansionStep } from "@/lib/product-9-16-two-stage/orchestration/expansion-step";
 import { createNineSixteenDeps } from "@/lib/product-9-16-two-stage/orchestration/delivery-deps";
 import { CompositionVerticalProbe } from "@/lib/product-9-16-two-stage/orchestration/vertical-probe";
 import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-import {
-  readFormatAdditionByCampaign,
-  readFormatAdditionByIdentity,
-} from "../delivery-reader";
+import { readFormatAdditionByCampaign, readFormatAdditionByIdentity } from "../delivery-reader";
 import { ensureFormatAdditionSourceBridge } from "../source-registration";
-import { captureFrozenEconomics } from "../frozen-economics";
+import { captureFrozenEconomics, createFrozenExpansionReaders } from "../frozen-economics";
 import { FormatAdditionFinancialClient } from "../financial-client";
+import { deliverFormatAdditionVertical } from "./deliver-vertical";
+import { finalizeFormatAdditionFailure } from "./finalize-failure";
 import type {
   FormatAdditionDeps,
+  FormatAdditionExpansionInput,
   FormatAdditionOpeningGate,
   FormatAdditionOpeningGateInput,
 } from "./types";
+import type { StepExecutionOutcome } from "@/lib/product-9-16-two-stage/orchestration/types";
 
 /**
  * F62/62-04 — Composition root de produção.
@@ -131,6 +136,131 @@ export function createProductionFormatAdditionDeps(
   const client = options.client ?? (supabaseAdmin as SupabaseClient);
   const financial = new FormatAdditionFinancialClient(client);
   const nineDeps = createNineSixteenDeps({ client });
+  const control = new ProductTwoStageOperationClient(client);
+  const probe = new CompositionVerticalProbe({ client });
+
+  async function readDurableContext(input: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+  }) {
+    try {
+      const { data, error } = await client
+        .from("campaign_format_additions")
+        .select(
+          "operation_id, request_id, source_origin, source_registration_operation_id, source_artifact_id, source_checksum_sha256, selection, frozen_economics",
+        )
+        .eq("store_id", input.storeId.toLowerCase())
+        .eq("campaign_id", input.campaignId.toLowerCase())
+        .eq("operation_id", input.operationId.toLowerCase())
+        .maybeSingle();
+      if (error) {
+        return { kind: "read_failed" as const, reason: error.message };
+      }
+      if (data === null || typeof data !== "object") {
+        return { kind: "missing" as const };
+      }
+      const record = data as Record<string, unknown>;
+      if (
+        typeof record.operation_id !== "string" ||
+        typeof record.request_id !== "string" ||
+        (record.source_origin !== "new_flow_1_1" &&
+          record.source_origin !== "legacy_campaign") ||
+        typeof record.source_registration_operation_id !== "string" ||
+        typeof record.source_artifact_id !== "string" ||
+        typeof record.source_checksum_sha256 !== "string" ||
+        record.selection === undefined ||
+        record.frozen_economics === undefined
+      ) {
+        return { kind: "read_failed" as const, reason: "invalid_durable_context" };
+      }
+      return {
+        kind: "found" as const,
+        context: {
+          operationId: record.operation_id,
+          requestId: record.request_id,
+          sourceOrigin: record.source_origin as
+            | "new_flow_1_1"
+            | "legacy_campaign",
+          sourceRegistrationOperationId: record.source_registration_operation_id,
+          sourceArtifactId: record.source_artifact_id,
+          sourceChecksumSha256: record.source_checksum_sha256,
+          selection: record.selection,
+          frozenEconomics: record.frozen_economics,
+        },
+      };
+    } catch {
+      return { kind: "read_failed" as const, reason: "read_exception" };
+    }
+  }
+
+  async function runExpansionWithFrozen(
+    input: FormatAdditionExpansionInput,
+  ): Promise<StepExecutionOutcome> {
+    const readers = createFrozenExpansionReaders(input.frozen);
+    return runExpansionStep(
+      {
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        authorization: input.authorization,
+        acquisitionId: input.acquisitionId,
+        attemptReference: input.attemptReference,
+        attemptTarget: input.attemptTarget,
+        deadlineAtMs: input.deadlineAtMs,
+        expansionStatus: input.expansionStatus,
+        allowNewPaidStep: input.allowNewPaidStep,
+        selection: input.selection,
+        ...(input.signal === undefined ? {} : { signal: input.signal }),
+      },
+      {
+        control: {
+          acquire: (request) => control.acquire(request),
+          finish: (request) => control.finish(request),
+          getOperationView: (request) => control.getOperationView(request),
+        },
+        expand: (expandInput, nestedDeps) =>
+          expandVerticalToNineSixteen(expandInput, {
+            client,
+            ...(nestedDeps ?? {}),
+          }),
+        preflightFrozenExpansion: async (selection) => {
+          const preflight = await readers.preflightFrozenExpansion(selection);
+          if (preflight.ok) {
+            return { ok: true as const, selection };
+          }
+          return {
+            ok: false as const,
+            failure: preflight.failure,
+            reason: preflight.reason,
+            missing:
+              preflight.failure === "pricing_unavailable"
+                ? preflight.missing
+                : [],
+          };
+        },
+        retrieve: (retrieveInput, nestedDeps) =>
+          retrieveCompositionArtifact(retrieveInput, {
+            client,
+            ...(nestedDeps ?? {}),
+          }),
+        probe: (probeInput, nestedDeps) =>
+          probeExpansionTarget(probeInput, {
+            client,
+            ...(nestedDeps ?? {}),
+          }),
+        clock: () => Date.now(),
+        client,
+        readEconomicSnapshot: readers.readEconomicSnapshot,
+        reconcile: (reconcileInput, nestedDeps) =>
+          reconcileExpansionArtifact(reconcileInput, {
+            client,
+            ...(nestedDeps ?? {}),
+          }),
+      },
+    );
+  }
+
 
   const deps: FormatAdditionDeps = {
     readLink: (input) =>
@@ -152,13 +282,23 @@ export function createProductionFormatAdditionDeps(
     openAddition: (input) => financial.open(input),
 
     prepare: (input) => prepareSquareForExpansion(input, { client }),
-    control: new ProductTwoStageOperationClient(client),
-    expansion: runExpansionStep,
-    probe: new CompositionVerticalProbe({ client }),
-    publication: nineDeps.credit,
-    deliver: (input) => financial.deliver(input),
-    refund: (input) => financial.refund(input),
-    generateThumbnail: nineDeps.generateThumbnail,
+    readDurableContext,
+    runExpansion: runExpansionWithFrozen,
+    control,
+    deliverVertical: (input) =>
+      deliverFormatAdditionVertical(input, {
+        probe,
+        publication: nineDeps.credit,
+        deliver: (deliverInput) => financial.deliver(deliverInput),
+        generateThumbnail: nineDeps.generateThumbnail,
+      }),
+    finalizeFailure: (input) =>
+      finalizeFormatAdditionFailure(input, {
+        probe,
+        publication: nineDeps.credit,
+        control,
+        refund: (refundInput) => financial.refund(refundInput),
+      }),
     clock: () => Date.now(),
     callId: () => randomUUID(),
   };
