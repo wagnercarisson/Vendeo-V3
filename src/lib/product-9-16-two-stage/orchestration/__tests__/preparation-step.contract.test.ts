@@ -39,4 +39,37 @@ describe("runPreparationStep", () => {
     );
     expect(result).toEqual({ kind: "definitive", reason: "transform_failed" });
   });
+
+  it("F62/62-04: preserva fonte=destino no caller histórico", async () => {
+    const prepare = vi.fn(async () => ({
+      kind: "prepared",
+      artifact: {},
+      bytes: Buffer.alloc(0),
+      persistence: "created",
+    }) as never);
+
+    await runPreparationStep(
+      {
+        storeId: "s",
+        campaignId: "c",
+        operationId: "o",
+        authorization: { kind: "system" },
+      },
+      { prepare },
+    );
+
+    expect(prepare).toHaveBeenCalledWith(
+      {
+        source: {
+          storeId: "s",
+          campaignId: "c",
+          operationId: "o",
+          role: "square_original",
+        },
+        preparedOperationId: "o",
+        authorization: { kind: "system" },
+      },
+      {},
+    );
+  });
 });
