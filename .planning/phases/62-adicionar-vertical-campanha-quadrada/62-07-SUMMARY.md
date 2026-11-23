@@ -54,11 +54,14 @@ completed: 2026-11-23
 | `546f3be8` | runbook, gates offline, pacote de migration e checklist de release |
 | `9e519073` | reconciliação R3/R5/R6 e autorização estruturada do 62-08 |
 | `4e4a959f` | ordem de release, segredo de confirmação e aceite 10/110 do 62-06 |
+| `846d28e6` | plano: validação estruturada da autorização |
+| `df55f040` | validador JSON offline + testes de recusa |
 
 ## Entregas
 
 - **Runbook:** identifica adição por campanha/operação/request/artefato; distingue `open`, `processing`, `unknown`, `refunded`, `delivered` e falha definitiva; exige leitura e RPC idempotente; veda crédito manual, exclusão de vínculo, projeção em `campaigns.storage_path` e uso da flag compartilhada como rollback.
 - **Gates offline:** typecheck 0; lint 0; build 0 (102/102); **13 arquivos / 168 testes dirigidos**; global **863 arquivos + 2 skipped / 10.756 testes + 10 skipped**; OpenSpec 1/0; diff-check limpo; baseline `5572378b`.
+- **Revalidação R1:** validador offline **1 arquivo / 7 testes**; global atualizada **864 arquivos + 2 skipped / 10.763 testes + 10 skipped**; typecheck/lint 0; OpenSpec 1/0; diff-check limpo.
 - **Pacote de migration:** caminho `20261123130252_campaign_format_addition.sql`, SHA-256 `61c727…f5b878`, ledger esperado baseline+1, backup/restore-list, schema pré/pós, RLS/grants, guards, cenários, critérios de parada e rollback. **Não aplicada.**
 - **Checklist de release:** versão/hash/ledger/schema/backup, flags, provas PostgreSQL/Storage/provider/visual pendentes, rollback, monitoramento e autorização de publicação; separa a declaração F60.7 da conferência técnica.
 
@@ -74,6 +77,10 @@ completed: 2026-11-23
   item; nota de decomposição adicionada.
 - **R1/R2:** `62-08-PLAN.md` passou a exigir autorização estruturada e arquivo
   único `62-08-PROVIDER-AUTHORIZATION.md`; sentinelas de texto foram removidos.
+- **R1 — validador:** `scripts/verify/f62-authorization.mjs` extrai um único bloco
+  JSON e valida status/valores/datas/expiração/identidade/hash/booleanos. Testes
+  offline: **1 arquivo / 7 testes PASS**. Revalidação global: **864 arquivos + 2
+  skipped / 10.763 testes + 10 skipped**.
 - **62-06:** reexecução final do revisor corrigida para **10/110**; **8/92**
   permanece histórica.
 

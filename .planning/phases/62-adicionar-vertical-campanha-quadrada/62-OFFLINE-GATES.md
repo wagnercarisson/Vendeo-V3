@@ -43,6 +43,22 @@
 - A suíte global usa fakes/offline em vários fluxos; “verde” aqui não é prova de produção.
 - O HEAD documental muda após este arquivo; a evidência pertence ao commit de execução `5572378b`.
 
+## Revalidação R1 — autorização estruturada (2026-11-23)
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Validador offline | `npx vitest run scripts/verify/__tests__/f62-authorization.test.mjs` | **1 arquivo / 7 testes PASS** |
+| Typecheck | `npm.cmd run typecheck` | exit **0** |
+| Lint | `npm.cmd run lint` | exit **0** |
+| Suíte global | `npm.cmd test -- --reporter=dot` | **864 arquivos PASS + 2 skipped (866)**; **10.763 testes PASS + 10 skipped (10.773)**; exit **0** |
+| OpenSpec strict | `npx openspec validate --changes --strict` | **1 passed, 0 failed** |
+| `git diff --check` | — | limpo |
+
+O validador recusa bloco ausente/múltiplo, status negado, campos vazios,
+`max_calls`/custo inválidos, datas inválidas/expiradas, `no_retry`/`no_fallback`
+não booleanos `true` e identidade/branch/HEAD/hash divergentes. Nenhum arquivo
+de autorização real foi criado e nenhum ambiente foi acessado.
+
 ## Critério de leitura
 
 - Estes resultados comprovam apenas o estado offline do código e da documentação.
