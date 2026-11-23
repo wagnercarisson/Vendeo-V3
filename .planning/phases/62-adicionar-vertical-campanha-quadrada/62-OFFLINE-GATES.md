@@ -6,6 +6,14 @@
 **Escopo:** validação offline do conjunto F62 (62-01…62-06). Nenhum banco, Storage, provider, migration, ambiente, segredo/flag, merge, push, deploy, sync ou archive foi acionado.
 **Natureza:** evidência local/offline; não substitui PostgreSQL, Storage, provider, RLS, concorrência real, validação visual ou publicação.
 
+## Aceite final (2026-11-23)
+
+- **62-07 aprovado tecnicamente local/offline**; validador R1 aprovado.
+- Revisor: **13 arquivos / 168 testes dirigidos PASS** + **9 testes do validador**; OpenSpec/árvore/diff-check limpos.
+- Gates do executor: typecheck/lint **0**, build **0 (102/102)**, global **864 arquivos + 2 skipped / 10.765 testes + 10 skipped**.
+- Correção final: `$host` → `$f62ExpectedHost` nos dois verifies do 62-08.
+- Migration continua **não aplicada**; 62-08 **não iniciado**.
+
 ## Ordem executada e resultados reais
 
 | # | Comando | Escopo | Exit | Resultado |

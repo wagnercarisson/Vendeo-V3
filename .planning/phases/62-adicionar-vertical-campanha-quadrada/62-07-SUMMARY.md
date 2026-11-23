@@ -38,9 +38,25 @@ completed: 2026-11-23
 
 **Runbook seguro, evidência offline real, autorização de migration preparada (não concedida) e checklist com declaração separada**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE EM 2026-11-23 — AGUARDANDO O REVIEW STOP; NÃO ACEITO; `62-08` NÃO INICIADO.**
-> Nenhum banco, Storage, provider, migration, ambiente, segredo/flag, merge, push,
-> deploy, sync ou archive foi acionado.
+> **Status: ACEITO TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.** O plano 62-07
+> está concluído. O 62-08 **não foi iniciado**; somente um preflight read-only
+> poderá ser autorizado após a escolha do ambiente. Migration, prova paga e
+> produção continuam **não autorizadas**.
+
+## Aceite final do revisor (2026-11-23)
+
+- **Veredito:** `62-07` **aprovado tecnicamente, local/offline**; validador R1
+  aprovado.
+- **Reexecução do revisor:** **13 arquivos / 168 testes dirigidos PASS** e, na
+  rodada final do R1, **9 testes do validador PASS**; OpenSpec strict, árvore e
+  diff-check limpos.
+- **Gates do executor (separados):** typecheck **0**, lint **0**, build
+  **0 (102/102)**, global **864 arquivos + 2 skipped / 10.765 testes + 10
+  skipped**, OpenSpec **1/0** e diff-check limpo.
+- **Correção mecânica final:** `$host` substituído por `$f62ExpectedHost` nos
+  dois verifies do 62-08, incluindo `--expected-host`.
+- **Limitações preservadas:** tudo offline; sem PostgreSQL/Storage/provider,
+  restore, validação visual ou autorização de aplicação/publicação.
 
 ## Performance
 
@@ -58,6 +74,7 @@ completed: 2026-11-23
 | `df55f040` | validador JSON offline + testes de recusa |
 | `1bc8ae8d` | plano: janela atual + alvo esperado explícito |
 | `be8684ce` | validador: janela e comparação por campo do ambiente |
+| `263a0cac` | verify: `$f62ExpectedHost` no lugar de `$host` |
 
 ## Entregas
 
@@ -107,9 +124,11 @@ completed: 2026-11-23
 
 ## Next
 
-Review Stop do `62-07`. Não iniciar `62-08` sem autorização específica e revisão/aprovação.
+`62-07` aceito. Próximo passo: escolher o ambiente do primeiro preflight
+**read-only** (identificação, ledger e schema). Migration, prova paga e produção
+continuam não autorizadas; o `62-08` não foi iniciado.
 
 ---
 
 *Phase: 62-adicionar-vertical-campanha-quadrada*
-*Executed: 62-07, awaiting review, 2026-11-23*
+*Completed: 62-07 aceito local/offline, 2026-11-23*
