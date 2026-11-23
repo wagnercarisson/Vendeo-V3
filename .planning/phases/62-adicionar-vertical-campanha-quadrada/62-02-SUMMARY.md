@@ -62,8 +62,8 @@ completed: 2026-11-23
 
 **Migration autorada e não aplicada para vínculo/1 crédito/entrega/estorno da adição 9:16, com filtro da operação primária e flag dedicada fail-closed no painel existente**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE; AGUARDANDO REVISÃO; NÃO ACEITO.**
-> Review Stop de persistência/financeiro atingido. `62-03` **não iniciado**.
+> **Status: EXECUTADO LOCALMENTE/OFFLINE; CORREÇÕES DIRIGIDAS DA REVISÃO APLICADAS; AGUARDANDO NOVA REVISÃO; NÃO ACEITO.**
+> Review Stop de persistência/financeiro mantido. `62-03` **não iniciado**.
 > **A migration NÃO foi aplicada em nenhum banco, inclusive local.** Nenhum
 > Storage, provider, geração, alteração de flag em ambiente, merge, push,
 > deploy, sync ou archive.
@@ -92,6 +92,8 @@ completed: 2026-11-23
 1. **Tasks 1–3: migration, constraints, RPCs e suítes estáticas** — `958bbe6a` (feat).
 2. **Task 4: flag dedicada no serviço/painel existente** — `3944c77a` (feat).
 3. **Correção dirigida: entrega idempotente** — `202b22f4` (fix).
+4. **Correção dirigida da revisão: fonte corrente e caminho canônico** — `213e9df6` (fix).
+5. **Reconciliação documental: seleção configurada em campanha legada** — `2a882476` (docs).
 
 > **Desvio de processo:** a migration é um único arquivo e concentra tabela,
 > constraints, RPCs e filtro; por isso Tasks 1–3 foram commitadas juntas. Os
@@ -127,16 +129,25 @@ completed: 2026-11-23
 - **Filtro primário:** `product_1_1_get_campaign_operation_by_campaign` ignora operações de adição e preserva o envelope histórico.
 - **Flag:** default `false`, fail-closed, no serviço/painel existente, sem novo painel/RPC/pricing.
 
+## Correções dirigidas da revisão (2026-11-23)
+
+1. **Abertura comprova a fonte corrente.** Sob a trava da campanha, a RPC lê `campaigns.storage_path` e compara a procedência gravada na ponte (`sourceOrigin`, `sourceStoragePath`, `sourceChecksumSha256`, dimensão/MIME) com essa fonte. No fluxo novo, exige path canônico `{store}/{campaign}/product-1-1/{source_operation}/art-1024.jpg` — a operação informada precisa sustentar o arte atual. No legado, exige path histórico `{store}/{campaign}.jpg` ou `v2/v3.jpg`. Motivos fechados: `source_path_missing`, `source_operation_artifact_mismatch`, `source_path_mismatch`, `source_provenance_mismatch`. Replay/adição ativa continuam retornando antes dessa validação.
+2. **Entrega valida caminho/bucket/procedência.** O vertical precisa de `campaign-internal-artifacts`, path `{store}/{campaign}/{operation}/vertical.jpg`, `origin = ai_expansion`, 1080×1920 JPEG; precisa derivar do `square_prepared` da mesma operação (path canônico, `deterministic_preparation`, 1152×1152) e ter proveniência `composition_artifact` com `derivedFromArtifactId`/path/checksum do prepared. Falhas retornam `vertical_artifact_invalid`/`vertical_provenance_invalid` **antes** de mark/deliver, sem consumir crédito. A reconciliação de crédito já `delivered` continua antes da revalidação.
+3. **REVERT não é destrutivo.** O bloco agora separa **rollback operacional** (flag off; bloquear somente novas adições; preservar vínculos, créditos, operações, artefatos e auditoria) de **reversão estrutural** (procedimento separado, com pré-condições e sem `DROP TABLE` nesta migration). Não há remoção de histórico nem restauração prematura do CHECK antigo.
+
+**Seleção em campanha legada (reconciliado):** `legacy_campaign` é origem da fonte/campanha, não da seleção. A abertura nova usa `selectionOrigin = "configured"` com versão válida; `legacy`/`legacy_sunburst_low` não é aceito e o CHECK do F60.6 não foi ampliado. Contrato atualizado em `62-CONTEXT.md`, `design.md` e na delta spec; teste estático adicionado. R8 registrado em `62-REVIEW-RESIDUALS.md`.
+
 ## Gates reais
 
 | Gate | Resultado |
 |---|---|
-| Contratos (migration/RPC/filtro) | **3 arquivos / 47 testes PASS** (18 + 24 + 5) |
+| Contratos (migration/RPC/filtro) | **3 arquivos / 52 testes PASS** (18 + 29 + 5) |
 | Flag + painel | **2 arquivos / 37 testes PASS** |
+| Cinco arquivos da revisão | **5 arquivos / 89 testes PASS** |
 | `npm.cmd run typecheck` | exit **0** |
 | `npm.cmd run lint` | exit **0** (não cobre TS — limitação preexistente) |
 | `npm.cmd run build` | exit **0**; **102/102** páginas; shared **102 kB** |
-| Suíte global local | exit **0**; **848 arquivos PASS + 2 skipped (850)**; **10.580 testes PASS + 10 skipped (10.590)** |
+| Suíte global local | exit **0**; **848 arquivos PASS + 2 skipped (850)**; **10.585 testes PASS + 10 skipped (10.595)** |
 | OpenSpec `--changes --strict` | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
@@ -162,18 +173,19 @@ Gates de PostgreSQL, Storage, provider e app-env **não executados** por exigire
 ## Issues Encountered
 
 - **Primeira suíte global:** 3 falhas em 2 suítes de fronteira porque a migration e o painel autorizados estavam **não commitados** (`git status`). Nenhum guard foi enfraquecido; após os commits obrigatórios, as 2 suítes passaram (13/13) e a suíte global passou integralmente.
-- **Seleção `legacy` não suportada pela abertura:** o controle F60.6 exige `expansion_selection_origin = 'configured'` e `config_version_id` não nulo. A RPC rejeita `selectionOrigin != 'configured'` com `invalid_selection_origin`. O `62-CONTEXT` citava `configured|legacy`; a resolução de seleção legada precisa ser tratada antes de `62-03/04` se for exigida. **Limitação registrada; não contornada.**
+- **Seleção `legacy` reconciliada (não é origem da campanha):** o controle F60.6 exige `expansion_selection_origin = 'configured'` e `config_version_id` não nulo. A RPC rejeita `selectionOrigin != 'configured'` com `invalid_selection_origin`; campanha legada usa a configuração atual `configured`. Contrato atualizado em CONTEXT/OpenSpec e R8 registrado; o CHECK consolidado **não** foi ampliado.
 - **Flag fora da RPC:** a RPC de abertura não lê `campaign_format_addition_enabled`; o gate está previsto para a rota/serviço do `62-05`. O RPC é `service_role`-only, mas a defesa em profundidade depende da rota. **Limitação de escopo do plano, registrada.**
 - **Sem inventário manual:** a migration é descoberta pelo sufixo `_campaign_format_addition.sql`; não há lista central de migrations a atualizar. O teste falha se houver zero/duas migrations com o sufixo.
 
 ## Limitações explícitas (não provadas)
 
-- **Nenhum SQL foi executado.** Sintaxe, constraints, FKs, índices, RLS/grants e triggers não foram provados em PostgreSQL real.
+- **Nenhum SQL foi executado.** Sintaxe, constraints, FKs, índices, RLS/grants, triggers, regex de path e comparação de proveniência não foram provados em PostgreSQL real.
 - **Atomicidade, locks, deadlocks, isolamento e concorrência** não foram provados; testes estáticos não substituem o Gate de banco.
 - **A migration não foi aplicada**, inclusive localmente. O ledger/hash não mudou.
 - **Nenhuma flag foi alterada em ambiente**; apenas serviço/painel e seed autorado.
 - **Nenhum Storage/provider/campanha** foi acessado ou gerado.
 - A unicidade do timestamp foi conferida nos refs locais listados; deve ser reconferida no conjunto integrado antes do release (R3 de `62-REVIEW-RESIDUALS.md`).
+- A reversão estrutural não está incluída nesta migration; o rollback operacional é a flag desligada, preservando histórico/créditos/artefatos.
 
 ## Ajustes residuais ainda pendentes
 
@@ -193,7 +205,9 @@ None — nenhum serviço externo, banco, migration aplicada ou configuração de
 
 - [x] Migration existe, é única por sufixo e tem prefixo UTC de 14 dígitos único nos refs conferidos.
 - [x] Migration declara `LOCAL-ONLY`, `NÃO APLICADA` e `-- REVERT`.
-- [x] Commits de código existem (`958bbe6a`, `3944c77a`, `202b22f4`).
+- [x] Commits de código existem (`958bbe6a`, `3944c77a`, `202b22f4`, `213e9df6`, `2a882476`).
+- [x] Correções dirigidas da revisão aplicadas: fonte corrente/proveniência na abertura, path/bucket/procedência na entrega e REVERT não destrutivo.
+- [x] Contrato de seleção legada reconciliado em CONTEXT/OpenSpec e R8 registrado.
 - [x] Testes dirigidos, typecheck, lint, build e suíte global reexecutados com resultados reais.
 - [x] Nenhum banco/Storage/provider/migration aplicada/flag em ambiente/merge/push/deploy/sync/archive.
 

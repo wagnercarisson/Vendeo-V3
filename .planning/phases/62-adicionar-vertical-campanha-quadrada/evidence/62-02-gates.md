@@ -33,20 +33,29 @@
 | `958bbe6a` | feat: migration autorada (tabela, constraints, RLS/grants, ponte, RPCs, filtro primário, seed da flag) + 3 suítes estáticas |
 | `3944c77a` | feat: flag dedicada no serviço e no painel existente + testes |
 | `202b22f4` | fix: reconciliação idempotente da entrega antes de revalidar o arte vertical |
+| `213e9df6` | fix: fonte corrente/proveniência na abertura + path/bucket/procedência na entrega + REVERT não destrutivo |
+| `2a882476` | docs: reconciliação da seleção configurada em campanha legada |
+
+## Correções dirigidas da revisão (2026-11-23)
+
+1. **Abertura:** lê `campaigns.storage_path` sob trava e compara origem/path/checksum/dimensão/MIME da ponte com a fonte corrente; no fluxo novo exige path canônico da operação-fonte; no legado exige path histórico. Novos motivos: `source_path_missing`, `source_operation_artifact_mismatch`, `source_path_mismatch`, `source_provenance_mismatch`.
+2. **Entrega:** valida bucket/path canônicos do vertical e do `square_prepared`, origem `ai_expansion`/`deterministic_preparation`, derivação e proveniência allowlistada antes de mark/deliver; falha não consome crédito e a reconciliação de crédito já `delivered` é preservada.
+3. **REVERT:** rollback operacional por flag, sem apagar vínculos/créditos/artefatos; reversão estrutural é procedimento separado com pré-condições e não contém `DROP TABLE` nesta migration.
 
 ## Gates dirigidos
 
 | Gate | Comando | Resultado real |
 |---|---|---|
 | Migration | `npx vitest run src/lib/campaign/format-addition/__tests__/migration.contract.test.ts` | **18/18 PASS** |
-| RPCs | `npx vitest run src/lib/campaign/format-addition/__tests__/rpc-contracts.test.ts` | **24/24 PASS** |
+| RPCs | `npx vitest run src/lib/campaign/format-addition/__tests__/rpc-contracts.test.ts` | **29/29 PASS** |
 | Filtro primário | `npx vitest run src/lib/campaign/format-addition/__tests__/primary-operation-filter.contract.test.ts` | **5/5 PASS** |
-| Combinado | os três arquivos | **3 arquivos / 47 testes PASS** |
+| Combinado | os três arquivos | **3 arquivos / 52 testes PASS** |
 | Flag + painel | `npx vitest run src/lib/feature-flags/__tests__/feature-flag-service.test.ts "src/app/(app)/admin/feature-flags/__tests__/page.test.tsx"` | **2 arquivos / 37 testes PASS** |
+| Cinco arquivos da revisão | os cinco arquivos | **5 arquivos / 89 testes PASS** |
 | Typecheck | `npm.cmd run typecheck` | exit **0** |
 | Lint | `npm.cmd run lint` | exit **0** (limitação preexistente: não cobre TypeScript) |
 | Build | `npm.cmd run build` | exit **0**; `102/102` páginas; shared `102 kB` |
-| Suíte global local | `npm.cmd test -- --reporter=dot` | exit **0**; **848 arquivos PASS + 2 skipped (850)**; **10.580 testes PASS + 10 skipped (10.590)**; 108,08 s |
+| Suíte global local | `npm.cmd test -- --reporter=dot` | exit **0**; **848 arquivos PASS + 2 skipped (850)**; **10.585 testes PASS + 10 skipped (10.595)**; 98,44 s |
 | OpenSpec | `npx openspec validate --changes --strict` | **1 passed, 0 failed** |
 | Diff-check | `git diff --check` | limpo |
 
