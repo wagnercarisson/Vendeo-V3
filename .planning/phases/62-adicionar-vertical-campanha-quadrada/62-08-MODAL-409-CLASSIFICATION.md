@@ -1,5 +1,10 @@
 # 62-08 — Modal da Jarra na aba real: GET 200 e 409 no POST
 
+> **SUPERSEDIDA (2026-11-23).** O POST manual real retornou **403
+> `confirmation_expired`**, sem operação/reserva. Ver
+> `62-08-MODAL-POST-403-CONFIRMATION-EXPIRED.md`. O 409 do console era de uma
+> tentativa anterior e o corpo não foi preservado.
+
 **Status:** **INVESTIGADO NA ABA REAL; GET 200 `eligible`; 409 CLASSIFICADO NO RAMO DO POST; RETRY DE 401 REMOVIDO; `62-08` NÃO CONCLUÍDO.**
 **Data:** 2026-11-23.
 **Aba afetada:** Microsoft Edge, aba ativa

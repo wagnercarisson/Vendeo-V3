@@ -405,6 +405,52 @@ describe("F62-05 — modal de adição vertical", () => {
     vi.useRealTimers();
   });
 
+  it("F62-08: 403 confirmation_expired orienta reabrir e preserva o código", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-1",
+          expiresAt: new Date(Date.now() + 600000).toISOString(),
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            error: {
+              code: "confirmation_expired",
+              message: "Confirmação inválida ou expirada.",
+            },
+          },
+          403,
+        ),
+      );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(messages.cost);
+    fireEvent.click(screen.getByRole("button", { name: messages.confirm }));
+
+    await screen.findByText(messages.conflict.confirmationExpired);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("data-state", "unavailable");
+    expect(dialog).toHaveAttribute("data-reason", "confirmation_expired");
+    expect(
+      screen.queryByRole("button", { name: messages.confirm }),
+    ).not.toBeInTheDocument();
+  });
+
   it("F62-08: 409 operation_exists preserva o código e mostra conflito específico", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

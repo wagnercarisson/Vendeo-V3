@@ -91,6 +91,8 @@ export interface CampaignDetailFormatAdditionMessages {
     readonly retryNotAllowed: string;
     readonly sourceChanged: string;
     readonly sourceNotEligible: string;
+    readonly confirmationExpired: string;
+    readonly invalidConfirmation: string;
     readonly confirmationFailed: string;
   };
   readonly selection: string;

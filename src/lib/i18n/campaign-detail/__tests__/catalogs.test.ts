@@ -43,6 +43,8 @@ const EXPECTED_PT_KEYS = [
   "formatAddition.cancel",
   "formatAddition.confirm",
   "formatAddition.conflict.confirmationFailed",
+  "formatAddition.conflict.confirmationExpired",
+  "formatAddition.conflict.invalidConfirmation",
   "formatAddition.conflict.operationExists",
   "formatAddition.conflict.retryNotAllowed",
   "formatAddition.conflict.sourceChanged",

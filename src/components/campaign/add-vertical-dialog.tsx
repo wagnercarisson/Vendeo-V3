@@ -72,6 +72,8 @@ function reasonMessage(
     retry_not_allowed: "retryNotAllowed",
     source_changed: "sourceChanged",
     source_not_eligible: "sourceNotEligible",
+    confirmation_expired: "confirmationExpired",
+    invalid_confirmation: "invalidConfirmation",
     confirmation_failed: "confirmationFailed",
   };
   const mappedConflict = conflictKey[dto.reason];

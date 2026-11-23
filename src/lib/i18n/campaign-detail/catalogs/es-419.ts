@@ -71,6 +71,10 @@ export const es419CampaignDetailMessages = Object.freeze({
       sourceChanged: "El arte original cambió. Cierra y abre la modal nuevamente.",
       sourceNotEligible:
         "El arte original no es compatible con el formato vertical.",
+      confirmationExpired:
+        "La confirmación expiró. Cierra y abre la modal nuevamente para generar una nueva confirmación.",
+      invalidConfirmation:
+        "La confirmación ya no es válida. Cierra y abre la modal nuevamente.",
       confirmationFailed:
         "No fue posible confirmar la adición ahora. Inténtalo de nuevo.",
     }),

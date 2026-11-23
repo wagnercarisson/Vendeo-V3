@@ -71,6 +71,10 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
       sourceChanged: "A arte original mudou. Feche e abra a modal novamente.",
       sourceNotEligible:
         "A arte original não é compatível com o formato vertical.",
+      confirmationExpired:
+        "A confirmação expirou. Feche e abra a modal novamente para gerar uma nova confirmação.",
+      invalidConfirmation:
+        "A confirmação não é mais válida. Feche e abra a modal novamente.",
       confirmationFailed:
         "Não foi possível confirmar a adição agora. Tente novamente.",
     }),
