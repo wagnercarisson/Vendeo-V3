@@ -4,6 +4,13 @@
 **Branch:** `feat/campaign-add-vertical`
 **Escopo:** `62-05` apenas. `62-06` não iniciado. Sem banco/Storage/provider/migration/ambiente/merge/push/deploy/sync/archive.
 
+## Aceite final (2026-11-23)
+
+- **Aprovado tecnicamente, local/offline.**
+- Reexecução do revisor: **9 arquivos / 158 testes PASS**, OpenSpec strict válido, diff-check limpo.
+- Gates do executor permanecem separados: foco 7/146, boundaries 2/13, afetados 23/414, global 10.738, build 0.
+- Histórico C6–C11 e limitações offline preservados.
+
 ## Commits
 
 | Commit | Conteúdo |

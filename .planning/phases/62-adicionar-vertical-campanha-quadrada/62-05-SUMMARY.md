@@ -51,9 +51,23 @@ completed: 2026-11-23
 
 **Preflight read-only, confirmação com token server-issued, acompanhamento no modal e seleção segura do vertical 9:16**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE EM 2026-11-23 — AGUARDANDO O REVIEW STOP; NÃO ACEITO; `62-06` NÃO INICIADO.**
-> A migration do 62-02 não foi aplicada. Nenhum banco, Storage, provider, geração,
-> flag em ambiente, merge, push, deploy, sync ou archive foi acionado.
+> **Status: ACEITO TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.** O plano 62-05
+> está concluído com as correções C6–C11. A migration do 62-02 não foi aplicada.
+> Nenhum banco, Storage, provider, geração, flag em ambiente, merge, push, deploy,
+> sync ou archive foi acionado. `62-06` foi autorizado separadamente e para no seu
+> Review Stop.
+
+## Aceite final do revisor (2026-11-23)
+
+- **Veredito:** `62-05` **aprovado tecnicamente, local/offline**.
+- **Reexecução do revisor:** **9 arquivos / 158 testes PASS**, OpenSpec strict
+  válido e `git diff --check` limpo.
+- **Gates do executor (separados):** foco **7 arquivos / 146 testes**, boundaries
+  **2 arquivos / 13 testes**, afetados **23 arquivos / 414 testes**, typecheck/lint
+  **0**, build **0 (102/102)**, global **860 arquivos + 2 skipped / 10.738 testes
+  + 10 skipped**, OpenSpec **1/0** e diff-check limpo.
+- **Histórico preservado:** C6–C11, o aceite do 62-04 e as limitações de prova
+  offline permanecem documentados, sem reescrever os vereditos anteriores.
 
 ## Performance
 
@@ -139,9 +153,9 @@ completed: 2026-11-23
 
 ## Next
 
-Review Stop do `62-05`. Não iniciar `62-06` sem aprovação explícita.
+`62-06` autorizado explicitamente após o aceite final. Não iniciar `62-07` sem novo Review Stop.
 
 ---
 
 *Phase: 62-adicionar-vertical-campanha-quadrada*
-*Executed: 62-05, awaiting review, 2026-11-23*
+*Completed: 62-05 aceito local/offline, 2026-11-23*
