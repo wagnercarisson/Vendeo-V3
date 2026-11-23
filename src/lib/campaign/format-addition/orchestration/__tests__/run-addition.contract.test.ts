@@ -342,6 +342,48 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
     });
   });
 
+  it("saldo 1 abre; saldo 0 bloqueia; após reserva a continuação não consulta saldo", async () => {
+    let balance = 1;
+    let reserved = false;
+    const calls: Calls = [];
+    const deps = baseDeps({ calls });
+    (deps.checkOpeningGate as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      calls.push("gate");
+      return balance >= 1
+        ? { allowed: true as const }
+        : { allowed: false as const, code: "insufficient_credits", reason: "balance_below_one" };
+    });
+    (deps.readLink as ReturnType<typeof vi.fn>).mockImplementation(async () =>
+      reserved ? link({ state: "processing" }) : { kind: "none" },
+    );
+    (deps.openAddition as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      reserved = true;
+      balance = 0;
+      return opened();
+    });
+
+    const first = await runFormatAdditionOpening(INPUT, deps);
+    expect(first).toMatchObject({ ok: true, kind: "opened" });
+    expect(balance).toBe(0);
+
+    const continuation = await runFormatAdditionOpening(INPUT, deps);
+    expect(continuation).toMatchObject({ ok: true, kind: "replay", state: "processing" });
+    expect(calls.filter((call) => call === "gate")).toHaveLength(1);
+
+    const blockedDeps = baseDeps({ calls: [] });
+    (blockedDeps.checkOpeningGate as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      allowed: false,
+      code: "insufficient_credits",
+      reason: "balance_below_one",
+    });
+    await expect(
+      runFormatAdditionOpening(
+        { ...INPUT, requestId: OTHER_REQUEST, operationId: PRIMARY },
+        blockedDeps,
+      ),
+    ).resolves.toMatchObject({ ok: false, code: "insufficient_credits" });
+  });
+
   it("duas abas: uma abre; a outra converge para o vencedor", async () => {
     const calls: Calls = [];
     let openCount = 0;
