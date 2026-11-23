@@ -86,6 +86,13 @@ export interface CampaignDetailFormatAdditionMessages {
   readonly unknown: string;
   readonly failed: string;
   readonly unavailable: string;
+  readonly conflict: {
+    readonly operationExists: string;
+    readonly retryNotAllowed: string;
+    readonly sourceChanged: string;
+    readonly sourceNotEligible: string;
+    readonly confirmationFailed: string;
+  };
   readonly selection: string;
   readonly incompatible: CampaignDetailFormatAdditionIncompatibleMessages;
   readonly readUnavailable: CampaignDetailFormatAdditionReadUnavailableMessages;

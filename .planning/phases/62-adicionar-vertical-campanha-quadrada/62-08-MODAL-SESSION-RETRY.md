@@ -1,5 +1,10 @@
 # 62-08 — Modal da Jarra: 401 transitório e releitura read-only
 
+> **SUPERSEDIDA (2026-11-23).** A hipótese de 401 transitório **não se confirmou**
+> na aba real: o GET disparado pelo clique respondeu **200 `eligible`** e o erro
+> observado foi **409 no POST**. O retry de 401 foi removido. Ver
+> `62-08-MODAL-409-CLASSIFICATION.md`.
+
 **Status:** **CORRIGIDO E VALIDADO EM CHROME REAL; CLIQUE ABRE CUSTO + CONFIRMAÇÃO; `62-08` NÃO CONCLUÍDO.**
 **Data:** 2026-11-23.
 **Campanha:** `c06b16f5-f126-429c-b5b0-9567fe4adb95` — Jarra Finesse 1l.

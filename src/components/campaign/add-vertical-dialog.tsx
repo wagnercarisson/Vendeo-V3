@@ -37,6 +37,7 @@ export interface AddVerticalDialogProps {
 function reasonMessage(
   dto: AdditionDto | null,
   messages: CampaignDetailFormatAdditionMessages,
+  failed: boolean,
 ): string | null {
   if (!dto?.reason) return null;
   const incompatible = messages.incompatible as unknown as Record<string, string>;
@@ -65,14 +66,47 @@ function reasonMessage(
   };
   const mappedReadReason = readKey[dto.reason] ?? dto.reason;
   if (readUnavailable[mappedReadReason]) return readUnavailable[mappedReadReason];
+  const conflict = messages.conflict as unknown as Record<string, string>;
+  const conflictKey: Record<string, string> = {
+    operation_exists: "operationExists",
+    retry_not_allowed: "retryNotAllowed",
+    source_changed: "sourceChanged",
+    source_not_eligible: "sourceNotEligible",
+    confirmation_failed: "confirmationFailed",
+  };
+  const mappedConflict = conflictKey[dto.reason];
+  if (mappedConflict && conflict[mappedConflict]) return conflict[mappedConflict];
   if (dto.reason === "failed_outcome" || dto.reason === "definitive_failure") {
     return messages.failed;
   }
   if (dto.reason === "addition_disabled") return messages.unavailable;
+  if (dto.state === "unavailable" && failed) {
+    return messages.conflict.confirmationFailed;
+  }
   return messages.unavailable;
 }
 
-const TRANSIENT_401_RETRY_DELAY_MS = 250;
+const REJECTION_CODE_RE = /^[a-z0-9_]{1,64}$/;
+
+/**
+ * Preserva apenas o CÓDIGO técnico seguro da rejeição — nunca a mensagem crua
+ * do servidor. O código permanece no estado/DOM para diagnóstico.
+ */
+function rejectionReason(json: unknown): string | null {
+  if (json === null || typeof json !== "object") return null;
+  const record = json as Record<string, unknown>;
+  const error = record.error;
+  const errorCode =
+    error !== null && typeof error === "object"
+      ? (error as Record<string, unknown>).code
+      : null;
+  for (const candidate of [errorCode, record.reason]) {
+    if (typeof candidate === "string" && REJECTION_CODE_RE.test(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
 
 /**
  * F62/62-05 — modal do detalhe. Confirma com 1 crédito, acompanha por polling
@@ -144,34 +178,17 @@ export function AddVerticalDialog({
       abortRef.current = controller;
       if (!options.silent) setLoading(true);
       try {
-        const requestOnce = async () => {
-          const response = await fetch(
-            `/api/campaign/${campaignId}/format-additions`,
-            {
-              method: "GET",
-              cache: "no-store",
-              signal: controller.signal,
-            },
-          );
-          const json = (await response.json().catch(() => null)) as
-            | AdditionDto
-            | null;
-          return { response, json };
-        };
-
-        let outcome = await requestOnce();
-        // F62-08 — o middleware pode responder 401 durante a renovação
-        // concorrente da sessão. Uma única releitura read-only, depois que a
-        // resposta copia os cookies renovados, recupera o clique sem afrouxar
-        // o gate.
-        if (!options.silent && outcome.response.status === 401) {
-          await new Promise<void>((resolve) => {
-            setTimeout(resolve, TRANSIENT_401_RETRY_DELAY_MS);
-          });
-          if (controller.signal.aborted || session !== sessionRef.current) return;
-          outcome = await requestOnce();
-        }
-        const { response, json } = outcome;
+        const response = await fetch(
+          `/api/campaign/${campaignId}/format-additions`,
+          {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+        const json = (await response.json().catch(() => null)) as
+          | AdditionDto
+          | null;
         if (controller.signal.aborted || session !== sessionRef.current) return;
         if (seq < appliedSeqRef.current) return;
         if (terminalRef.current && json?.state !== "delivered") return;
@@ -303,9 +320,10 @@ export function AddVerticalDialog({
       }
       appliedSeqRef.current = seq;
       if (!response.ok || json === null || !("state" in json)) {
+        const reason = rejectionReason(json) ?? "confirmation_failed";
         setFailed(true);
         setDto((prev) =>
-          prev ? { ...prev, state: "unavailable", reason: "failed" } : prev,
+          prev ? { ...prev, state: "unavailable", reason } : prev,
         );
         return;
       }
@@ -339,7 +357,7 @@ export function AddVerticalDialog({
       appliedSeqRef.current = seq;
       setFailed(true);
       setDto((prev) =>
-        prev ? { ...prev, state: "unavailable", reason: "failed" } : prev,
+        prev ? { ...prev, state: "unavailable", reason: "confirmation_failed" } : prev,
       );
       clearTimer();
     } finally {
@@ -363,7 +381,7 @@ export function AddVerticalDialog({
 
   if (!open) return null;
 
-  const reason = reasonMessage(dto, messages);
+  const reason = reasonMessage(dto, messages, failed);
   const retryable =
     dto?.state === "refunded" &&
     typeof dto.confirmationToken === "string" &&
@@ -391,6 +409,8 @@ export function AddVerticalDialog({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         lang={locale === "es-419" ? "es-419" : undefined}
+        data-state={dto?.state ?? undefined}
+        data-reason={dto?.reason ?? undefined}
         className="w-full max-w-md rounded-xl border border-border bg-bg-surface p-5 shadow-xl"
       >
         <h2

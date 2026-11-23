@@ -64,6 +64,16 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
     failed:
       "Não foi possível criar o formato vertical. O crédito foi devolvido.",
     unavailable: "A adição está indisponível no momento. Tente mais tarde.",
+    conflict: Object.freeze({
+      operationExists:
+        "Já existe uma adição para esta campanha. Atualize a página para acompanhar.",
+      retryNotAllowed: "Esta adição não permite nova tentativa.",
+      sourceChanged: "A arte original mudou. Feche e abra a modal novamente.",
+      sourceNotEligible:
+        "A arte original não é compatível com o formato vertical.",
+      confirmationFailed:
+        "Não foi possível confirmar a adição agora. Tente novamente.",
+    }),
     selection: "Escolha acima o formato que deseja ver.",
     incompatible: Object.freeze({
       unsupportedDimensions:

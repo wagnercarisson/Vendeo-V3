@@ -405,11 +405,9 @@ describe("F62-05 — modal de adição vertical", () => {
     vi.useRealTimers();
   });
 
-  it("F62-08: 401 transitório do middleware é relido uma vez e abre a confirmação", async () => {
-    vi.useFakeTimers();
+  it("F62-08: 409 operation_exists preserva o código e mostra conflito específico", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse({ error: "Unauthorized" }, 401))
       .mockResolvedValueOnce(
         jsonResponse({
           state: "eligible",
@@ -417,6 +415,17 @@ describe("F62-05 — modal de adição vertical", () => {
           costCredits: 1,
           confirmationToken: "token-1",
         }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            error: {
+              code: "operation_exists",
+              message: "Já existe uma adição para esta campanha.",
+            },
+          },
+          409,
+        ),
       );
 
     render(
@@ -430,25 +439,33 @@ describe("F62-05 — modal de adição vertical", () => {
       />,
     );
 
-    await act(async () => {
-      await Promise.resolve();
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(300);
-    });
+    await screen.findByText(messages.cost);
+    fireEvent.click(screen.getByRole("button", { name: messages.confirm }));
 
-    expect(screen.getByText(messages.cost)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: messages.confirm }),
-    ).toBeEnabled();
+    await screen.findByText(messages.conflict.operationExists);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("data-state", "unavailable");
+    expect(dialog).toHaveAttribute("data-reason", "operation_exists");
+    expect(screen.queryByText(messages.failed)).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("F62-08: 401 persistente limita a releitura e não oferece confirmação", async () => {
-    vi.useFakeTimers();
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(jsonResponse({ error: "Unauthorized" }, 401));
+  it("F62-08: 409 de gate preserva o reason técnico sem prometer estorno", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-1",
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { state: "unavailable", reason: "pilot_gate_blocked" },
+          409,
+        ),
+      );
 
     render(
       <AddVerticalDialog
@@ -461,17 +478,45 @@ describe("F62-05 — modal de adição vertical", () => {
       />,
     );
 
-    await act(async () => {
-      await Promise.resolve();
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(300);
-    });
+    await screen.findByText(messages.cost);
+    fireEvent.click(screen.getByRole("button", { name: messages.confirm }));
 
-    expect(
-      screen.queryByRole("button", { name: messages.confirm }),
-    ).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await screen.findByText(messages.conflict.confirmationFailed);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("data-reason", "pilot_gate_blocked");
+    expect(screen.queryByText(messages.failed)).toBeNull();
+  });
+
+  it("F62-08: falha sem código preserva confirmation_failed e não promete estorno", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-1",
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ error: "internal" }, 500));
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(messages.cost);
+    fireEvent.click(screen.getByRole("button", { name: messages.confirm }));
+
+    await screen.findByText(messages.conflict.confirmationFailed);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("data-reason", "confirmation_failed");
+    expect(screen.queryByText(messages.failed)).toBeNull();
   });
 
   it("incompatível mostra explicação sem prometer confirmação", async () => {

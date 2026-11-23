@@ -64,6 +64,16 @@ export const es419CampaignDetailMessages = Object.freeze({
     failed:
       "No fue posible crear el formato vertical. El crédito se devolvió.",
     unavailable: "La adición no está disponible en este momento. Inténtalo más tarde.",
+    conflict: Object.freeze({
+      operationExists:
+        "Ya existe una adición para esta campaña. Actualiza la página para seguirla.",
+      retryNotAllowed: "Esta adición no permite un nuevo intento.",
+      sourceChanged: "El arte original cambió. Cierra y abre la modal nuevamente.",
+      sourceNotEligible:
+        "El arte original no es compatible con el formato vertical.",
+      confirmationFailed:
+        "No fue posible confirmar la adición ahora. Inténtalo de nuevo.",
+    }),
     selection: "Elige arriba el formato que quieres ver.",
     incompatible: Object.freeze({
       unsupportedDimensions:
