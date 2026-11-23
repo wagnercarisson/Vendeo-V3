@@ -68,6 +68,8 @@ completed: 2026-11-23
 | `1c20029b` | rota/token/modal/detalhe + testes e reconciliação de guards |
 | `96bcec61` | plano: correções C6–C9 (retomada, polling, download, fonte) |
 | `c6c69bf9` | retomada idempotente, polling contínuo, download seguro e incerteza da fonte |
+| `eb1f7f3a` | plano: correção C10 (sessões da modal) |
+| `e61926a5` | isolamento de sessão e descarte de respostas obsoletas |
 
 ## Correções C6–C9 (revisão final)
 
@@ -75,6 +77,7 @@ completed: 2026-11-23
 - **C7 — polling:** o modal reagenda a consulta após cada resposta `processing`/`unknown`, sem sobreposição, parando em terminal/fechar/desmontar; oferece ação de retomada quando há token.
 - **C8 — download:** preview vertical OK + falha da assinatura de download ⇒ `downloadDisabled=true` e nenhuma URL do quadrado, nos caminhos novo e legado.
 - **C9 — fonte:** ranking preserva `indeterminate`/leitura incerta sobre rejeição de path da outra origem.
+- **C10 — sessão:** cada abertura é uma sessão; fechar/desmontar/trocar campanha invalida GET/POST, callbacks, timers e `finally`. Respostas antigas são ignoradas, terminal não regride e entrega é concluída uma única vez. Nada é cancelado/estornado no servidor.
 
 ## Contrato implementado
 
@@ -102,13 +105,13 @@ completed: 2026-11-23
 
 | Gate | Resultado |
 |---|---|
-| Foco 62-05 (rota/token/página/legado/modal/chip/guard) | **7 arquivos / 141 testes PASS** |
+| Foco 62-05 (rota/token/página/legado/modal/chip/guard) | **7 arquivos / 145 testes PASS** |
 | Boundaries reconciliados (square-base + joint) | **2 arquivos / 13 testes PASS** |
-| Diretórios afetados (rota, format-addition, detalhe, campanha, guards) | **23 arquivos / 409 testes PASS** |
+| Diretórios afetados (rota, format-addition, detalhe, campanha, guards) | **23 arquivos / 413 testes PASS** |
 | `typecheck` | exit **0** |
 | `lint` | exit **0** |
 | `build` | exit **0** — 102/102 páginas |
-| Suíte global | **exit 0** — 860 arquivos + 2 skipped (862); **10.733 testes PASS** + 10 skipped |
+| Suíte global | **exit 0** — 860 arquivos + 2 skipped (862); **10.737 testes PASS** + 10 skipped |
 | OpenSpec strict | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
@@ -128,6 +131,7 @@ completed: 2026-11-23
 - **Retomada:** o GET emite token de retomada para operações abertas; o POST usa a continuação durável. O modal pode ser reaberto/fechado sem cancelar ou estornar.
 - **Polling:** consultas consecutivas `processing` são reagendadas; sem prova de longa duração em produção.
 - **Download:** sem URL de download válida para o vertical, o botão fica indisponível; não herda a URL do quadrado.
+- **Sessão:** respostas de GET/POST de uma sessão fechada/desmontada são ignoradas; a modal não cancela/estorna no servidor.
 
 ## Next
 
