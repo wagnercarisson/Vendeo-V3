@@ -47,17 +47,18 @@
 
 | Gate | Comando | Resultado |
 |---|---|---|
-| Validador offline | `npx vitest run scripts/verify/__tests__/f62-authorization.test.mjs` | **1 arquivo / 7 testes PASS** |
+| Validador offline | `npx vitest run scripts/verify/__tests__/f62-authorization.test.mjs` | **1 arquivo / 9 testes PASS** |
 | Typecheck | `npm.cmd run typecheck` | exit **0** |
 | Lint | `npm.cmd run lint` | exit **0** |
-| Suíte global | `npm.cmd test -- --reporter=dot` | **864 arquivos PASS + 2 skipped (866)**; **10.763 testes PASS + 10 skipped (10.773)**; exit **0** |
+| Suíte global | `npm.cmd test -- --reporter=dot` | **864 arquivos PASS + 2 skipped (866)**; **10.765 testes PASS + 10 skipped (10.775)**; exit **0** |
 | OpenSpec strict | `npx openspec validate --changes --strict` | **1 passed, 0 failed** |
 | `git diff --check` | — | limpo |
 
 O validador recusa bloco ausente/múltiplo, status negado, campos vazios,
-`max_calls`/custo inválidos, datas inválidas/expiradas, `no_retry`/`no_fallback`
-não booleanos `true` e identidade/branch/HEAD/hash divergentes. Nenhum arquivo
-de autorização real foi criado e nenhum ambiente foi acessado.
+`max_calls`/custo inválidos, datas inválidas/expiradas, janela futura/encerrada,
+`no_retry`/`no_fallback` não booleanos `true`, identidade/branch/HEAD/hash
+divergentes e divergência de cada campo do ambiente esperado. Nenhum arquivo de
+autorização real foi criado e nenhum ambiente foi acessado.
 
 ## Critério de leitura
 
