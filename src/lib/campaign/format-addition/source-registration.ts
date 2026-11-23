@@ -22,7 +22,6 @@ import type {
   ResolveSquareSourceReason,
 } from "@/lib/campaign/composition-artifacts/types";
 import type { SourceValidationFailureReason } from "@/lib/campaign/composition-artifacts/source-validation";
-import { artifactStoragePath } from "@/lib/product-1-1/artifact/artifact-path";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { computeChecksumSha256 } from "@/lib/campaign/composition-artifacts/integrity";
@@ -119,6 +118,19 @@ function fail(
   if (extra?.detail !== undefined) result.detail = extra.detail;
   if (extra?.existing !== undefined) result.existing = extra.existing;
   return Object.freeze(result);
+}
+
+/**
+ * Caminho canônico da arte 1:1 do fluxo novo. Duplicação DELIBERADA do contrato
+ * `{store}/{campaign}/product-1-1/{operation}/art-1024.jpg` para não importar o
+ * runtime do Produto 1:1 neste módulo legado (guard de não-ativação).
+ */
+function newFlowArtifactPath(
+  storeId: string,
+  campaignId: string,
+  operationId: string,
+): string {
+  return `${storeId}/${campaignId}/product-1-1/${operationId}/art-1024.jpg`;
 }
 
 /**
@@ -320,7 +332,7 @@ export async function ensureFormatAdditionSourceBridge(
     }
     sourceRegistrationOperationId = primary.operationId.toLowerCase();
 
-    const expectedPath = artifactStoragePath(
+    const expectedPath = newFlowArtifactPath(
       storeId,
       campaignId,
       sourceRegistrationOperationId,
