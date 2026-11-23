@@ -65,6 +65,7 @@ const INPUT: OpenFormatAdditionInput = {
   sourceOrigin: "new_flow_1_1",
   authorization: { kind: "owner", userId: "user-1" },
   selection: SELECTION,
+  confirmedSourceChecksumSha256: CHECKSUM,
 };
 
 type Calls = string[];
@@ -72,8 +73,8 @@ type Calls = string[];
 function link(
   overrides: {
     state?: "delivered" | "processing" | "unknown" | "refunded";
-    requestId?: string;
-    operationId?: string;
+    requestId?: string | null;
+    operationId?: string | null;
     refunded?: boolean;
   } = {},
 ) {
@@ -83,8 +84,10 @@ function link(
       state: overrides.state ?? "delivered",
       sourceOrigin: "new_flow_1_1" as const,
       refunded: overrides.refunded ?? false,
-      operationId: overrides.operationId ?? OPERATION,
-      requestId: overrides.requestId ?? REQUEST,
+      operationId:
+        overrides.operationId === undefined ? OPERATION : overrides.operationId,
+      requestId:
+        overrides.requestId === undefined ? REQUEST : overrides.requestId,
       sourceArtifactId: ARTIFACT,
       sourceRegistrationOperationId: PRIMARY,
       createdAt: "2026-11-23T12:00:00.000Z",
@@ -124,6 +127,7 @@ function opened(overrides: Record<string, unknown> = {}) {
 function baseDeps(
   options: {
     linkResult?: unknown;
+    requestLinkResult?: unknown;
     gateAllowed?: boolean;
     bridgeResult?: unknown;
     frozenResult?: unknown;
@@ -133,6 +137,10 @@ function baseDeps(
 ): FormatAdditionOpeningDeps {
   const calls = options.calls ?? [];
   return {
+    readLinkByRequest: vi.fn(async () => {
+      calls.push("readLinkByRequest");
+      return options.requestLinkResult ?? { kind: "none" };
+    }),
     readLink: vi.fn(async () => {
       calls.push("readLink");
       return options.linkResult ?? { kind: "none" };
@@ -179,14 +187,14 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
         state,
         requestId: REQUEST,
       });
-      expect(calls).toEqual(["readLink"]);
+      expect(calls).toEqual(["readLinkByRequest", "readLink"]);
     }
   });
 
   it("mesmo request refundado retorna estado terminal sem nova operação", async () => {
     const calls: Calls = [];
     const deps = baseDeps({
-      linkResult: link({ state: "refunded", refunded: true }),
+      requestLinkResult: link({ state: "refunded", refunded: true }),
       calls,
     });
 
@@ -198,7 +206,7 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
       state: "refunded",
       refunded: true,
     });
-    expect(calls).toEqual(["readLink"]);
+    expect(calls).toEqual(["readLinkByRequest"]);
   });
 
   it("abertura nova segue a ordem gate → ponte → economia → RPC e usa o congelado capturado", async () => {
@@ -218,6 +226,7 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
       squareArtifactId: ARTIFACT,
     });
     expect(calls).toEqual([
+      "readLinkByRequest",
       "readLink",
       "gate",
       "registerSource",
@@ -262,7 +271,7 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
     const result = await runFormatAdditionOpening(INPUT, deps);
 
     expect(result).toMatchObject({ ok: false, code: "addition_disabled" });
-    expect(calls).toEqual(["readLink", "gate"]);
+    expect(calls).toEqual(["readLinkByRequest", "readLink", "gate"]);
   });
 
   it("fonte alterada falha antes da economia/RPC", async () => {
@@ -282,7 +291,12 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
       code: "source_bridge_failed",
       reason: "source_operation_artifact_mismatch",
     });
-    expect(calls).toEqual(["readLink", "gate", "registerSource"]);
+    expect(calls).toEqual([
+      "readLinkByRequest",
+      "readLink",
+      "gate",
+      "registerSource",
+    ]);
   });
 
   it("economia inválida bloqueia antes da RPC", async () => {
@@ -304,6 +318,7 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
       reason: "pricing_unavailable",
     });
     expect(calls).toEqual([
+      "readLinkByRequest",
       "readLink",
       "gate",
       "registerSource",
@@ -421,7 +436,7 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
 
     await runFormatAdditionOpening(INPUT, deps);
 
-    expect(calls).toEqual(["readLink"]);
+    expect(calls).toEqual(["readLinkByRequest", "readLink"]);
   });
 
   it("request novo após estorno é permitido; request antigo é terminal", async () => {
@@ -439,6 +454,177 @@ describe("F62-04 — abertura/replay (Tasks 1–2)", () => {
     expect(result).toMatchObject({ ok: true, kind: "opened" });
     expect(calls).toContain("gate");
     expect(calls).toContain("openAddition");
+  });
+
+  it("R1 estornado → R2 estornado → replay de R1 retorna R1, não R2", async () => {
+    const calls: Calls = [];
+    const r1 = link({
+      state: "refunded",
+      refunded: true,
+      operationId: OPERATION,
+      requestId: REQUEST,
+    });
+    const r2 = link({
+      state: "refunded",
+      refunded: true,
+      operationId: PRIMARY,
+      requestId: OTHER_REQUEST,
+    });
+    const deps = baseDeps({
+      requestLinkResult: r1,
+      linkResult: r2,
+      calls,
+    });
+
+    const result = await runFormatAdditionOpening(INPUT, deps);
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "replay",
+      state: "refunded",
+      operationId: OPERATION,
+      requestId: REQUEST,
+      refunded: true,
+    });
+    expect(calls).toEqual(["readLinkByRequest"]);
+  });
+
+  it("replay de R1 enquanto R2 está ativo retorna R1, não a tentativa ativa", async () => {
+    const calls: Calls = [];
+    const deps = baseDeps({
+      requestLinkResult: link({
+        state: "refunded",
+        refunded: true,
+        operationId: OPERATION,
+        requestId: REQUEST,
+      }),
+      linkResult: link({
+        state: "processing",
+        operationId: PRIMARY,
+        requestId: OTHER_REQUEST,
+      }),
+      calls,
+    });
+
+    const result = await runFormatAdditionOpening(INPUT, deps);
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "replay",
+      state: "refunded",
+      operationId: OPERATION,
+      requestId: REQUEST,
+    });
+    expect(calls).toEqual(["readLinkByRequest"]);
+  });
+
+  it("checksum confirmado divergente da ponte bloqueia antes de economia/RPC", async () => {
+    const calls: Calls = [];
+    const deps = baseDeps({
+      calls,
+      bridgeResult: {
+        ...bridge(),
+        artifact: { id: ARTIFACT, checksumSha256: "b".repeat(64) } as never,
+      },
+    });
+
+    const result = await runFormatAdditionOpening(INPUT, deps);
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "confirmed_source_checksum_mismatch",
+    });
+    expect(calls).toEqual([
+      "readLinkByRequest",
+      "readLink",
+      "gate",
+      "registerSource",
+    ]);
+  });
+
+  it("identidade durável incompleta falha fechado sem usar identidade da entrada", async () => {
+    const calls: Calls = [];
+    const deps = baseDeps({
+      requestLinkResult: link({
+        state: "refunded",
+        refunded: true,
+        operationId: null,
+        requestId: null,
+      }),
+      calls,
+    });
+
+    const result = await runFormatAdditionOpening(INPUT, deps);
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "link_identity_incomplete",
+    });
+    expect(calls).toEqual(["readLinkByRequest"]);
+  });
+
+  it("root propaga o client injetado para leitura por campanha e por request", async () => {
+    const { createProductionFormatAdditionDeps } = await import("../deps");
+    const dbCalls: string[] = [];
+    const row = {
+      operation_id: OPERATION,
+      store_id: STORE,
+      campaign_id: CAMPAIGN,
+      source_origin: "new_flow_1_1",
+      source_artifact_id: ARTIFACT,
+      source_registration_operation_id: PRIMARY,
+      status: "delivered",
+      request_id: REQUEST,
+      created_at: "2026-11-23T12:00:00.000Z",
+    };
+    const client = {
+      from(table: string) {
+        dbCalls.push(table);
+        const filters: [string, unknown][] = [];
+        const builder = {
+          select: () => builder,
+          eq(column: string, value: unknown) {
+            filters.push([column, value]);
+            return builder;
+          },
+          order: async () => ({
+            data: [row].filter((entry) =>
+              filters.every(
+                ([column, value]) =>
+                  (entry as Record<string, unknown>)[column] === value,
+              ),
+            ),
+            error: null,
+          }),
+        };
+        return builder;
+      },
+    };
+
+    const deps = createProductionFormatAdditionDeps({
+      client: client as never,
+    });
+
+    await expect(
+      deps.readLink({ storeId: STORE, campaignId: CAMPAIGN }),
+    ).resolves.toMatchObject({
+      kind: "found",
+      addition: { operationId: OPERATION, requestId: REQUEST },
+    });
+    await expect(
+      deps.readLinkByRequest({
+        storeId: STORE,
+        campaignId: CAMPAIGN,
+        requestId: REQUEST,
+      }),
+    ).resolves.toMatchObject({
+      kind: "found",
+      addition: { operationId: OPERATION },
+    });
+    expect(dbCalls).toEqual([
+      "campaign_format_additions",
+      "campaign_format_additions",
+    ]);
   });
 
   it("preparação direta usa fonte e destino distintos", async () => {

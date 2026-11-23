@@ -60,6 +60,11 @@ export interface OpenFormatAdditionInput {
   readonly sourceOrigin: "new_flow_1_1" | "legacy_campaign";
   readonly authorization: AuthorizationContext;
   readonly selection: ExpansionSelection;
+  /**
+   * Checksum da fonte confirmado pelo token server-side. Nunca é declaração
+   * livre do navegador; é comparado com a ponte antes de captura/reserva.
+   */
+  readonly confirmedSourceChecksumSha256: string;
 }
 
 export interface PrepareAdditionSourceInput {
@@ -84,6 +89,11 @@ export interface FormatAdditionOpeningDeps {
   readonly readLink: (input: {
     readonly storeId: string;
     readonly campaignId: string;
+  }) => Promise<FormatAdditionReadResult>;
+  readonly readLinkByRequest: (input: {
+    readonly storeId: string;
+    readonly campaignId: string;
+    readonly requestId: string;
   }) => Promise<FormatAdditionReadResult>;
   readonly checkOpeningGate: (
     input: FormatAdditionOpeningGateInput,
@@ -163,6 +173,9 @@ export type OpenFormatAdditionResult =
 
 export const FORMAT_ADDITION_OPEN_REASON = Object.freeze({
   linkReadFailed: "link_read_failed",
+  linkIdentityIncomplete: "link_identity_incomplete",
+  invalidConfirmedChecksum: "invalid_confirmed_checksum",
+  confirmedChecksumMismatch: "confirmed_source_checksum_mismatch",
   gateBlocked: "gate_blocked",
   sourceBridgeFailed: "source_bridge_failed",
   frozenEconomicsFailed: "frozen_economics_failed",

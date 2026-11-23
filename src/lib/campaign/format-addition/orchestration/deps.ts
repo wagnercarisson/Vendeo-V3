@@ -20,7 +20,10 @@ import { CompositionVerticalProbe } from "@/lib/product-9-16-two-stage/orchestra
 import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-import { readFormatAdditionByCampaign } from "../delivery-reader";
+import {
+  readFormatAdditionByCampaign,
+  readFormatAdditionByIdentity,
+} from "../delivery-reader";
 import { ensureFormatAdditionSourceBridge } from "../source-registration";
 import { captureFrozenEconomics } from "../frozen-economics";
 import { FormatAdditionFinancialClient } from "../financial-client";
@@ -130,7 +133,17 @@ export function createProductionFormatAdditionDeps(
   const nineDeps = createNineSixteenDeps({ client });
 
   const deps: FormatAdditionDeps = {
-    readLink: (input) => readFormatAdditionByCampaign(input),
+    readLink: (input) =>
+      readFormatAdditionByCampaign(input, { client }),
+    readLinkByRequest: (input) =>
+      readFormatAdditionByIdentity(
+        {
+          storeId: input.storeId,
+          campaignId: input.campaignId,
+          requestId: input.requestId,
+        },
+        { client },
+      ),
     checkOpeningGate: (input) => defaultOpeningGate(client, input, options),
     registerSource: (input) =>
       ensureFormatAdditionSourceBridge(input, { client }),

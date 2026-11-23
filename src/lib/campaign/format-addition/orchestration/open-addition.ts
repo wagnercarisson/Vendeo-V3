@@ -20,11 +20,59 @@ export async function openFormatAddition(
   input: OpenFormatAdditionInput,
   deps: FormatAdditionOpeningDeps,
 ): Promise<OpenFormatAdditionResult> {
+  if (!/^[0-9a-f]{64}$/.test(input.confirmedSourceChecksumSha256)) {
+    return Object.freeze({
+      ok: false as const,
+      code: FORMAT_ADDITION_OPEN_REASON.invalidConfirmedChecksum,
+      reason: "confirmed_source_checksum_invalid",
+    });
+  }
+
+  const replayFrom = (
+    addition: Extract<
+      Awaited<ReturnType<FormatAdditionOpeningDeps["readLink"]>>,
+      { kind: "found" }
+    >["addition"],
+  ): OpenFormatAdditionResult => {
+    if (addition.operationId === null || addition.requestId === null) {
+      return Object.freeze({
+        ok: false as const,
+        code: FORMAT_ADDITION_OPEN_REASON.linkIdentityIncomplete,
+        reason: "durable_identity_incomplete",
+      });
+    }
+    return Object.freeze({
+      ok: true as const,
+      kind: "replay" as const,
+      state: addition.state,
+      operationId: addition.operationId,
+      requestId: addition.requestId,
+      refunded: addition.refunded,
+    });
+  };
+
+  // (0a) Replay do MESMO request_id, independente de outra tentativa ativa.
+  const byRequest = await deps.readLinkByRequest({
+    storeId: input.storeId,
+    campaignId: input.campaignId,
+    requestId: input.requestId,
+  });
+  if (byRequest.kind === "read_failed") {
+    return Object.freeze({
+      ok: false as const,
+      code: FORMAT_ADDITION_OPEN_REASON.linkReadFailed,
+      reason: "format_addition_link_unavailable",
+    });
+  }
+  if (byRequest.kind === "found") {
+    return replayFrom(byRequest.addition);
+  }
+
+  // (0b) Operação ativa da campanha. `refunded` não bloqueia nova tentativa.
   const link = await deps.readLink({
     storeId: input.storeId,
     campaignId: input.campaignId,
   });
-
   if (link.kind === "read_failed") {
     return Object.freeze({
       ok: false as const,
@@ -32,28 +80,15 @@ export async function openFormatAddition(
       reason: "format_addition_link_unavailable",
     });
   }
-
   if (link.kind === "found") {
     const addition = link.addition;
-    const sameRequest = addition.requestId === input.requestId;
     const active =
       addition.state === "delivered" ||
       addition.state === "processing" ||
       addition.state === "unknown";
-
-    if (sameRequest || active) {
-      return Object.freeze({
-        ok: true as const,
-        kind: "replay" as const,
-        state: addition.state,
-        operationId: addition.operationId ?? input.operationId,
-        requestId: addition.requestId ?? input.requestId,
-        refunded: addition.refunded,
-      });
+    if (active || addition.requestId === input.requestId) {
+      return replayFrom(addition);
     }
-
-    // `refunded` com request novo é uma nova tentativa explícita: segue para
-    // abertura. O mesmo request já retornou acima, sem nova cobrança.
   }
 
   const userId =
@@ -83,6 +118,17 @@ export async function openFormatAddition(
       code: FORMAT_ADDITION_OPEN_REASON.sourceBridgeFailed,
       reason: bridge.reason,
       ...(bridge.detail === undefined ? {} : { detail: bridge.detail }),
+    });
+  }
+
+  if (
+    bridge.artifact.checksumSha256.toLowerCase() !==
+    input.confirmedSourceChecksumSha256.toLowerCase()
+  ) {
+    return Object.freeze({
+      ok: false as const,
+      code: FORMAT_ADDITION_OPEN_REASON.confirmedChecksumMismatch,
+      reason: "confirmed_source_checksum_mismatch",
     });
   }
 
