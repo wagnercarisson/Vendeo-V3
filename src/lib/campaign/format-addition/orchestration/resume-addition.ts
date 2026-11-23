@@ -134,26 +134,6 @@ export async function continueFormatAddition(
   const reconciled = await reconcileTerminalView(input, deps, view);
   if (reconciled !== null) return reconciled;
 
-  if (view.base.status !== "done") {
-    const prepared = await deps.prepare({
-      source: {
-        storeId: input.storeId,
-        campaignId: input.campaignId,
-        operationId: durable.context.sourceRegistrationOperationId,
-        role: "square_original",
-      },
-      preparedOperationId: input.operationId,
-      authorization: input.authorization,
-    });
-    if (prepared.kind !== "prepared") {
-      const disposition = classifyPreparationFailure(prepared);
-      if (disposition.kind === "retry") {
-        return processing(input, "preparation_retry", disposition.reason);
-      }
-      return finalize(input, deps, disposition.reason);
-    }
-  }
-
   if (view.expansion.status === "done" || view.nextAction === "deliver") {
     return deliverOrFinalize(input, deps);
   }
@@ -165,6 +145,31 @@ export async function continueFormatAddition(
   }
   if (!input.allowNewPaidStep) {
     return processing(input, "suspended");
+  }
+  if (view.base.status === "in_progress") {
+    return processing(input, "preparation_in_progress");
+  }
+
+  // C5: `base = done` significa apenas que o quadrado original foi reutilizado,
+  // NÃO que o `square_prepared` exista. A preparação idempotente garante/reutiliza
+  // o prepared antes de qualquer expansão nova/retry; se ele já for íntegro, a
+  // própria preparação o reutiliza sem transformação/upload duplicados.
+  const prepared = await deps.prepare({
+    source: {
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: durable.context.sourceRegistrationOperationId,
+      role: "square_original",
+    },
+    preparedOperationId: input.operationId,
+    authorization: input.authorization,
+  });
+  if (prepared.kind !== "prepared") {
+    const disposition = classifyPreparationFailure(prepared);
+    if (disposition.kind === "retry") {
+      return processing(input, "preparation_retry", disposition.reason);
+    }
+    return finalize(input, deps, disposition.reason);
   }
 
   // C1: o gate do piloto é resolvido somente no limite da chamada paga. Uma

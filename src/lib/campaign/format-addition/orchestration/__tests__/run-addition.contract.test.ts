@@ -191,7 +191,7 @@ function view(overrides: Partial<TwoStageOperationView> = {}): TwoStageOperation
     },
     base: {
       stage: "base",
-      status: "pending",
+      status: "done",
       attemptsUsed: 0,
       failureClass: null,
       attemptNumber: null,
@@ -1039,7 +1039,7 @@ describe("F62-04 — preparação/expansão/entrega (Tasks 3–4)", () => {
     }
   });
 
-  it("base já done não refaz preparação e segue para expansão", async () => {
+  it("base done ainda garante o prepared antes de expandir", async () => {
     const opening = baseDeps({});
     const execution = executionDeps({
       viewResult: {
@@ -1063,14 +1063,70 @@ describe("F62-04 — preparação/expansão/entrega (Tasks 3–4)", () => {
     );
 
     expect(result).toMatchObject({ ok: true, kind: "delivered" });
-    expect(execution.calls).not.toContain("prepare");
     expect(execution.calls).toEqual([
       "readDurableContext",
       "getOperationView",
+      "prepare",
       "resolvePilotSpend",
       "runExpansion",
       "deliverVertical",
     ]);
+  });
+
+  it("prepared reutilizado segue para expansão sem novo prepared", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      prepareResult: {
+        kind: "prepared",
+        artifact: {} as never,
+        bytes: Buffer.alloc(0),
+        persistence: "reused",
+      },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "delivered" });
+    expect(
+      execution.calls.filter((call) => call === "prepare"),
+    ).toHaveLength(1);
+    expect(execution.calls).toContain("runExpansion");
+  });
+
+  it("expansão em andamento não refaz a preparação", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          expansion: {
+            stage: "expansion",
+            status: "in_progress",
+            attemptsUsed: 1,
+            failureClass: null,
+            attemptNumber: 1,
+            claimedAt: null,
+          },
+          nextAction: "wait",
+        }),
+      },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "processing",
+      state: "expansion_in_progress",
+    });
+    expect(execution.calls).not.toContain("prepare");
+    expect(execution.calls).not.toContain("runExpansion");
   });
 
   it("unknown com arte íntegra confirma entrega sem nova chamada paga", async () => {
