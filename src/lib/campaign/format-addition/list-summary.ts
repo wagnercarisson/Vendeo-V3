@@ -10,10 +10,11 @@ import type { FormatAdditionSourceOrigin } from "./types";
 /**
  * F62/62-06 — leitura em LOTE das adições para lista/dashboard.
  *
- * Três consultas fixas por página (`campaign_format_additions`, crédito e
- * artefato vertical), independentemente do número de cards. Nunca há consulta
- * por card. O DTO do cliente recebe apenas `formatAddition` sanitizado; a
- * identidade interna (`operationId`) permanece server-only.
+ * Até quatro consultas em lote por página (`campaign_format_additions`, crédito,
+ * artefato vertical e outcome), independentemente do número de cards. Retornos
+ * antecipados (sem candidatos/sem operações) podem executar menos consultas; o
+ * caminho completo nunca faz N+1. O DTO do cliente recebe apenas
+ * `formatAddition` sanitizado; `operationId` permanece server-only.
  */
 
 export type FormatAdditionListState =

@@ -33,7 +33,7 @@ key-files:
     - src/lib/campaign/square-base/__tests__/boundaries.contract.test.ts
 
 key-decisions:
-  - "Lista/dashboard leem as adições em três consultas fixas por página; nunca por card."
+  - "Lista/dashboard leem as adições em lote (até quatro consultas por página; retornos antecipados podem executar menos); nunca por card."
   - "O DTO do cliente recebe apenas `formatAddition` sanitizado (estado/refunded); operationId/path/URL ficam server-only."
   - "A miniatura continua a quadrada; a adição não cria card/linha nem repointa storage_path."
   - "Download 1:1 com adição aceita ?format estrito; 9:16 só serve o vertical entregue, sem fallback."
@@ -50,9 +50,23 @@ completed: 2026-11-23
 
 **Adição visível em lote, sem duplicar campanha, sem ação em lista/dashboard e com download estrito por formato**
 
-> **Status: EXECUTADO LOCALMENTE/OFFLINE EM 2026-11-23 — AGUARDANDO O REVIEW STOP; NÃO ACEITO; `62-07` NÃO INICIADO.**
-> Nenhum banco, Storage, provider, migration, ambiente, segredo/flag, merge, push,
-> deploy, sync ou archive foi acionado.
+> **Status: ACEITO TECNICAMENTE EM 2026-11-23 — LOCAL/OFFLINE.** O plano 62-06
+> está concluído com as correções C12–C14. Nenhum banco, Storage, provider,
+> migration, ambiente, segredo/flag, merge, push, deploy, sync ou archive foi
+> acionado. `62-07` foi autorizado separadamente e para no seu Review Stop.
+
+## Aceite final do revisor (2026-11-23)
+
+- **Veredito:** `62-06` **aprovado tecnicamente, local/offline**, após a
+  reconciliação textual das consultas em lote.
+- **Reexecução do revisor:** **8 arquivos / 92 testes PASS**, OpenSpec strict
+  válido, árvore e diff-check limpos (registro da revisão; correções C12–C14
+  aplicadas e reapresentadas).
+- **Gates do executor (separados):** foco **10 arquivos / 110 testes**, typecheck
+  **0**, lint **0**, build **0 (102/102)**, global **863 arquivos + 2 skipped /
+  10.756 testes + 10 skipped**, OpenSpec **1/0** e diff-check limpo.
+- **Reconciliação textual:** referências a “3 consultas” corrigidas para “até 4
+  consultas em lote; retornos antecipados podem executar menos”.
 
 ## Performance
 
@@ -80,10 +94,11 @@ completed: 2026-11-23
 
 ## Contrato implementado
 
-- **Leitura em lote:** `readFormatAdditionListSummaries` faz 3 consultas fixas
-  (`campaign_format_additions`, crédito e artefato vertical) por página,
-  independentemente do número de cards. Deriva `delivered`/`processing`/
-  `unknown`/`absent(+refunded)` com `Map<campaignId, summary>`.
+- **Leitura em lote:** `readFormatAdditionListSummaries` faz até 4 consultas em
+  lote por página (`campaign_format_additions`, crédito, artefato vertical e
+  outcome), independentemente do número de cards; retornos antecipados podem
+  executar menos. Deriva `delivered`/`processing`/`unknown`/`absent(+refunded)`
+  com `Map<campaignId, summary>`.
 - **DTO lista/dashboard:** `formatAddition` carrega apenas
   `{format:"9:16", state, refunded}`. `operationId` permanece server-only;
   nenhum path/URL/snapshot é exposto.
@@ -126,9 +141,9 @@ completed: 2026-11-23
 
 ## Next
 
-Review Stop do `62-06`. Não iniciar `62-07` sem aprovação explícita.
+`62-07` autorizado explicitamente após o aceite final. Não iniciar `62-08` sem autorização específica.
 
 ---
 
 *Phase: 62-adicionar-vertical-campanha-quadrada*
-*Executed: 62-06, awaiting review, 2026-11-23*
+*Completed: 62-06 aceito local/offline, 2026-11-23*

@@ -2,7 +2,13 @@
 
 **Data:** 2026-11-23 (UTC)
 **Branch:** `feat/campaign-add-vertical`
-**Escopo:** `62-06` apenas, parando no Review Stop. `62-07` não iniciado. Sem banco/Storage/provider/migration/ambiente/segredo/flag/merge/push/deploy/sync/archive.
+**Escopo:** `62-06` apenas. `62-07` não iniciado. Sem banco/Storage/provider/migration/ambiente/segredo/flag/merge/push/deploy/sync/archive.
+
+## Aceite final (2026-11-23)
+
+- **Aprovado tecnicamente, local/offline**, após reconciliação textual (até 4 consultas em lote).
+- Reexecução do revisor: **8 arquivos / 92 testes PASS**, OpenSpec strict válido, árvore e diff-check limpos.
+- Gates do executor separados: foco **10/110**, global **10.756**, build **0**, typecheck/lint **0**.
 
 ## Commit
 
@@ -46,7 +52,8 @@
 
 ## Provas
 
-- 3 consultas constantes com 1 ou 3 adições; nunca consulta por card.
+- Até 4 consultas em lote por página (retornos antecipados podem executar menos)
+  com 1 ou 3 adições; nunca consulta por card.
 - DTO sem `operationId`/path/URL/snapshot; `formatAddition` só com estado seguro.
 - Uma linha/card por campanha; miniatura quadrada preservada; `storage_path`
   inalterado.
