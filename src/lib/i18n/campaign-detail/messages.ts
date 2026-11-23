@@ -72,6 +72,8 @@ export interface CampaignDetailFormatAdditionMessages {
   readonly title: string;
   readonly description: string;
   readonly action: string;
+  readonly availableForGeneration: string;
+  readonly generateGuidance: string;
   readonly cost: string;
   readonly confirm: string;
   readonly cancel: string;

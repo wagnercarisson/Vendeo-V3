@@ -56,6 +56,10 @@ export interface CampaignFormatChipsProps {
    * preservado (apenas explicação local).
    */
   readonly onFormatAction?: (format: CampaignFormatKey) => void;
+  /** F62 — orientação de geração exibida quando a ação está disponível. */
+  readonly actionHelpText?: string;
+  /** F62 — rótulo de estado do chip acionável (ex.: "Disponível para gerar"). */
+  readonly actionStateLabel?: string;
 }
 
 const FORMAT_ORDER: readonly CampaignFormatKey[] = ["1:1", "9:16"];
@@ -189,6 +193,8 @@ export function CampaignFormatChips({
   hrefs,
   helpLang,
   onFormatAction,
+  actionHelpText,
+  actionStateLabel,
 }: CampaignFormatChipsProps): ReactElement {
   const [mounted, setMounted] = useState(false);
   const [activeKey, setActiveKey] = useState<CampaignFormatKey | null>(null);
@@ -424,6 +430,16 @@ export function CampaignFormatChips({
   useEffect(() => clearCloseTimer, [clearCloseTimer]);
 
   const activeEntry = activeKey ? presentation.formats[activeKey] : null;
+  const activeActionApplicable =
+    activeKey === "9:16" &&
+    onFormatAction !== undefined &&
+    activeEntry?.state === "absent" &&
+    activeEntry.reason === "not_requested";
+  const activeDescription = activeEntry
+    ? activeActionApplicable && actionHelpText
+      ? actionHelpText
+      : descriptionText(activeEntry, messages)
+    : "";
 
   return (
     <>
@@ -448,7 +464,18 @@ export function CampaignFormatChips({
           const chipClass = [BASE_CHIP_CLASS, stateClasses(entry)]
             .filter(Boolean)
             .join(" ");
-          const label = accessibleName(entry, name, messages);
+          const actionApplicable =
+            hasAction &&
+            entry.state === "absent" &&
+            entry.reason === "not_requested";
+          const label =
+            actionApplicable && actionStateLabel
+              ? `${name}: ${actionStateLabel}`
+              : accessibleName(entry, name, messages);
+          const description =
+            actionApplicable && actionHelpText
+              ? actionHelpText
+              : descriptionText(entry, messages);
 
           const setChipRef = (node: HTMLElement | null) => {
             chipRefs.current[formatKey] = node;
@@ -514,7 +541,7 @@ export function CampaignFormatChips({
                 hidden
                 className="text-xs font-body text-text-secondary"
               >
-                {descriptionText(entry, messages)}
+                {description}
               </p>
             </li>
           );
@@ -543,7 +570,7 @@ export function CampaignFormatChips({
               <p className="font-heading text-xs font-semibold text-text-primary">
                 {messages.formats[activeKey as CampaignFormatKey].name}
               </p>
-              <p className="mt-1">{descriptionText(activeEntry, messages)}</p>
+              <p className="mt-1">{activeDescription}</p>
             </div>,
             document.body,
           )

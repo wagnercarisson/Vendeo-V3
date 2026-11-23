@@ -47,6 +47,9 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
     description:
       "Crie uma versão vertical desta campanha sem alterar a arte quadrada.",
     action: "Adicionar vertical 9:16",
+    availableForGeneration: "Disponível para gerar",
+    generateGuidance:
+      "Clique para gerar o formato vertical. Custo: 1 crédito.",
     cost: "Custo: 1 crédito",
     confirm: "Confirmar adição",
     cancel: "Cancelar",

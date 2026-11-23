@@ -10,7 +10,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
-import { buildIndividualFormatPresentation } from "@/lib/campaign/format-presentation";
+import {
+  buildIndividualFormatPresentation,
+} from "@/lib/campaign/format-presentation";
+import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import { ptBRCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
 import { es419CampaignDetailMessages } from "@/lib/i18n/campaign-detail/catalogs/es-419";
 
@@ -45,6 +48,14 @@ const BASE_PROPS = {
     restoredForm: null,
   },
 };
+
+const SQUARE_WITH_VERTICAL_ACTION = buildIndividualFormatPresentation(
+  {
+    resolution: resolveCampaignFormat({}),
+    lifecycle: "delivered",
+  },
+  "1:1",
+);
 
 describe("F59/59-08 — detalhe da campanha por formato", () => {
   it("9:16 entrega com arte integral usa container vertical e object-contain", () => {
@@ -119,6 +130,44 @@ describe("F61 — chips de formato no nível da página do detalhe", () => {
     expect(screen.queryByText("Selecionado")).toBeNull();
     expect(screen.queryByText("Não gerado")).toBeNull();
     expect(screen.queryByText("+")).toBeNull();
+  });
+
+  it("F62: clique no chip vertical abre a confirmação de 1 crédito", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          state: "eligible",
+          costCredits: 1,
+          confirmationToken: "test-token",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        formatPresentation={SQUARE_WITH_VERTICAL_ACTION}
+        formatHrefs={undefined}
+        newFlowFormat="1:1"
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Vertical 9:16: Disponível para gerar",
+      }),
+    );
+
+    expect(
+      await screen.findByText(ptBRCampaignDetailMessages.formatAddition.cost),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(ptBRCampaignDetailMessages.formatAddition.title),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it("mantém os chips nos estados generating/stale/error", () => {

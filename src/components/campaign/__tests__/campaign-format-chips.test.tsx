@@ -18,6 +18,7 @@ import {
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import { es419CampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/es-419";
 import { ptBRCampaignFormatMessages } from "@/lib/i18n/campaign-formats/catalogs/pt-BR";
+import { ptBRCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
 import type { CampaignFormatPresentationMessages } from "@/lib/i18n/campaign-formats/messages";
 
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
@@ -195,6 +196,40 @@ describe("F61 — chip único de formato (sem '?')", () => {
     for (const chip of allChips()) {
       expect(chip.querySelector("svg")).toBeNull();
     }
+  });
+
+  it("F62: chip vertical acionável no detalhe usa a orientação de geração e executa a ação", () => {
+    const onAction = vi.fn();
+    render(
+      <CampaignFormatChips
+        presentation={individual("delivered")}
+        messages={ptBRCampaignFormatMessages}
+        onFormatAction={onAction}
+        actionHelpText={ptBRCampaignDetailMessages.formatAddition.generateGuidance}
+        actionStateLabel={
+          ptBRCampaignDetailMessages.formatAddition.availableForGeneration
+        }
+      />,
+    );
+
+    const vertical = chipByLabel(/^Vertical 9:16/);
+    expect(vertical).toHaveAccessibleName(
+      `Vertical 9:16: ${ptBRCampaignDetailMessages.formatAddition.availableForGeneration}`,
+    );
+    expect(vertical).toHaveAccessibleDescription(
+      ptBRCampaignDetailMessages.formatAddition.generateGuidance,
+    );
+
+    fireEvent.click(vertical);
+    expect(onAction).toHaveBeenCalledWith("9:16");
+  });
+
+  it("F62: sem ação (lista/dashboard) mantém a explicação informativa de formato não incluído", () => {
+    renderChips(individual("delivered"));
+    const vertical = chipByLabel(/^Vertical 9:16: N/);
+    expect(vertical).toHaveAccessibleDescription(
+      `${ptBRCampaignFormatMessages.labels.notRequested}. ${ptBRCampaignFormatMessages.explanations.notRequested}`,
+    );
   });
 
   it("ativo usa borda/fundo distintos sem badge", () => {

@@ -123,6 +123,8 @@ function PageFormatChips({
         hrefs={props.formatHrefs}
         helpLang={props.locale === "es-419" ? "es-419" : undefined}
         onFormatAction={onFormatAction}
+        actionHelpText={props.messages.formatAddition.generateGuidance}
+        actionStateLabel={props.messages.formatAddition.availableForGeneration}
       />
       {jointNote ? (
         <p className="mt-2 text-xs text-text-muted font-body">{jointNote}</p>
