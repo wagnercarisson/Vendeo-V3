@@ -46,7 +46,7 @@
 | Typecheck | `npm.cmd run typecheck` | exit **0** |
 | Lint | `npm.cmd run lint` | exit **0** (limitação preexistente: não cobre TypeScript) |
 | Build | `npm.cmd run build` | exit **0**; `102/102` páginas; shared `102 kB` |
-| Suíte global local | `npm.cmd test -- --reporter=dot` | **848 arquivos PASS + 2 skipped (850)**; **10.580 testes PASS + 10 skipped (10.590)**; 106,58 s |
+| Suíte global local | `npm.cmd test -- --reporter=dot` | exit **0**; **848 arquivos PASS + 2 skipped (850)**; **10.580 testes PASS + 10 skipped (10.590)**; 108,08 s |
 | OpenSpec | `npx openspec validate --changes --strict` | **1 passed, 0 failed** |
 | Diff-check | `git diff --check` | limpo |
 

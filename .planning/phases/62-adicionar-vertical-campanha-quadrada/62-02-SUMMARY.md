@@ -136,7 +136,7 @@ completed: 2026-11-23
 | `npm.cmd run typecheck` | exit **0** |
 | `npm.cmd run lint` | exit **0** (não cobre TS — limitação preexistente) |
 | `npm.cmd run build` | exit **0**; **102/102** páginas; shared **102 kB** |
-| Suíte global local | **848 arquivos PASS + 2 skipped (850)**; **10.580 testes PASS + 10 skipped (10.590)** |
+| Suíte global local | exit **0**; **848 arquivos PASS + 2 skipped (850)**; **10.580 testes PASS + 10 skipped (10.590)** |
 | OpenSpec `--changes --strict` | **1 passed, 0 failed** |
 | `git diff --check` | limpo |
 
