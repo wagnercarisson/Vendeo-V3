@@ -973,3 +973,128 @@ describe("expand.ts — guard financeiro reconciliado", () => {
     expect(financialBoundaryViolations("reserve_credit")).toContain("credit");
   });
 });
+
+describe("expand.ts — pilot gate no limite da chamada paga (C1)", () => {
+  const HANDLE = {
+    callId: "7a8b9c0d-7a8b-4c0d-9e1f-7a8b9c0d1e2f",
+    ownerToken: "8b9c0d1e-8b9c-4d1e-8f0a-8b9c0d1e2f3a",
+    kind: "image_primary" as const,
+  };
+
+  function fakeGate(
+    decision:
+      | { acquired: true }
+      | {
+          acquired: false;
+          outcome: "existing_in_flight" | "closed" | "blocked";
+          reason: string;
+        },
+  ) {
+    return {
+      beginPaidCall: vi.fn(async () =>
+        decision.acquired
+          ? { acquired: true as const, handle: HANDLE }
+          : {
+              acquired: false as const,
+              outcome: decision.outcome,
+              reason: decision.reason as never,
+            },
+      ),
+      endPaidCall: vi.fn(async () => undefined),
+      markUnknown: vi.fn(async () => undefined),
+    };
+  }
+
+  it("armado: begin antes do provider e end no sucesso", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+    const gate = fakeGate({ acquired: true });
+
+    const result = await expandVerticalToNineSixteen(
+      expandInput(),
+      baseDeps(backend, invoker.invoker, { pilotSpend: gate }),
+    );
+
+    expect(result.kind).toBe("expanded");
+    expect(invoker.calls).toBe(1);
+    expect(gate.beginPaidCall).toHaveBeenCalledTimes(1);
+    expect(gate.beginPaidCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: CAMPAIGN_ID,
+        operationId: DEST_OPERATION_ID,
+        kind: "image_primary",
+        attemptSeq: 1,
+        estimatedUsd: 0.04,
+      }),
+    );
+    expect(gate.endPaidCall).toHaveBeenCalledTimes(1);
+    expect(gate.markUnknown).not.toHaveBeenCalled();
+  });
+
+  it("bloqueado: nenhum provider, nenhum end/markUnknown", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+    const gate = fakeGate({
+      acquired: false,
+      outcome: "blocked",
+      reason: "pilot_requires_reconciliation",
+    });
+
+    const result = await expandVerticalToNineSixteen(
+      expandInput(),
+      baseDeps(backend, invoker.invoker, { pilotSpend: gate }),
+    );
+
+    expect(result).toMatchObject({
+      kind: "blocked",
+      reason: "pilot_spend_blocked",
+      call: null,
+    });
+    expect(invoker.calls).toBe(0);
+    expect(gate.endPaidCall).not.toHaveBeenCalled();
+    expect(gate.markUnknown).not.toHaveBeenCalled();
+  });
+
+  it("inativo: sem gate, provider segue normalmente", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+    const gate = fakeGate({ acquired: true });
+
+    const result = await expandVerticalToNineSixteen(
+      expandInput(),
+      baseDeps(backend, invoker.invoker),
+    );
+
+    expect(result.kind).toBe("expanded");
+    expect(invoker.calls).toBe(1);
+    expect(gate.beginPaidCall).not.toHaveBeenCalled();
+  });
+
+  it("resultado desconhecido marca unknown sem liberar a chamada", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => {
+      throw new AiInvocationError({
+        kind: "timeout",
+        message: "provider timeout",
+        retryable: true,
+      });
+    });
+    const gate = fakeGate({ acquired: true });
+
+    const result = await expandVerticalToNineSixteen(
+      expandInput(),
+      baseDeps(backend, invoker.invoker, { pilotSpend: gate }),
+    );
+
+    expect(result.kind).toBe("unknown_result");
+    expect(gate.markUnknown).toHaveBeenCalledWith({
+      handle: HANDLE,
+      reason: "timeout_or_unknown",
+    });
+    expect(gate.endPaidCall).not.toHaveBeenCalled();
+  });
+});

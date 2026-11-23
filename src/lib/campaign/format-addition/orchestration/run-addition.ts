@@ -65,16 +65,9 @@ export async function runFormatAddition(
       requestId: opened.requestId,
     });
   }
-  if (opened.kind === "replay" && opened.state === "unknown") {
-    return Object.freeze({
-      ok: true as const,
-      kind: "unknown" as const,
-      operationId: opened.operationId,
-      requestId: opened.requestId,
-      reason: "operation_unknown",
-    });
-  }
 
+  // C3: replay `unknown` NÃO encerra: a continuação reconcilia o artefato,
+  // confirma entrega sem nova chamada paga ou permanece unknown sem estorno.
   return continueFormatAddition(
     {
       storeId: input.storeId,

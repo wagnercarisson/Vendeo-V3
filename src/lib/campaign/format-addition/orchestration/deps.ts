@@ -35,6 +35,7 @@ import type {
   FormatAdditionExpansionInput,
   FormatAdditionOpeningGate,
   FormatAdditionOpeningGateInput,
+  FormatAdditionPilotSpendResolution,
 } from "./types";
 import type { StepExecutionOutcome } from "@/lib/product-9-16-two-stage/orchestration/types";
 
@@ -55,6 +56,13 @@ export interface CreateFormatAdditionDepsOptions {
   readonly authorizeProductFlow?: (
     input: FormatAdditionOpeningGateInput,
   ) => Promise<FormatAdditionOpeningGate>;
+  /**
+   * Resolução server-side do pilot gate (Produto 1:1), injetada pela rota. Sem
+   * ela, o root falha fechado e NÃO presume piloto inativo. Injetável em testes.
+   */
+  readonly pilotSpendResolver?: (input: {
+    readonly storeId: string;
+  }) => Promise<FormatAdditionPilotSpendResolution>;
 }
 
 function gateFailure(code: string, reason: string): FormatAdditionOpeningGate {
@@ -130,6 +138,15 @@ async function defaultOpeningGate(
   }
 }
 
+function defaultResolvePilotSpend(): Promise<FormatAdditionPilotSpendResolution> {
+  // Sem resolvedor injetado pela rota, o caminho NÃO presume piloto inativo:
+  // falha fechado e não chama provider. A ativação injeta o resolver real.
+  return Promise.resolve({
+    kind: "blocked" as const,
+    reason: "pilot_gate_resolver_not_configured",
+  });
+}
+
 export function createProductionFormatAdditionDeps(
   options: CreateFormatAdditionDepsOptions = {},
 ): FormatAdditionDeps {
@@ -194,74 +211,6 @@ export function createProductionFormatAdditionDeps(
     }
   }
 
-  async function runExpansionWithFrozen(
-    input: FormatAdditionExpansionInput,
-  ): Promise<StepExecutionOutcome> {
-    const readers = createFrozenExpansionReaders(input.frozen);
-    return runExpansionStep(
-      {
-        storeId: input.storeId,
-        campaignId: input.campaignId,
-        operationId: input.operationId,
-        authorization: input.authorization,
-        acquisitionId: input.acquisitionId,
-        attemptReference: input.attemptReference,
-        attemptTarget: input.attemptTarget,
-        deadlineAtMs: input.deadlineAtMs,
-        expansionStatus: input.expansionStatus,
-        allowNewPaidStep: input.allowNewPaidStep,
-        selection: input.selection,
-        ...(input.signal === undefined ? {} : { signal: input.signal }),
-      },
-      {
-        control: {
-          acquire: (request) => control.acquire(request),
-          finish: (request) => control.finish(request),
-          getOperationView: (request) => control.getOperationView(request),
-        },
-        expand: (expandInput, nestedDeps) =>
-          expandVerticalToNineSixteen(expandInput, {
-            client,
-            ...(nestedDeps ?? {}),
-          }),
-        preflightFrozenExpansion: async (selection) => {
-          const preflight = await readers.preflightFrozenExpansion(selection);
-          if (preflight.ok) {
-            return { ok: true as const, selection };
-          }
-          return {
-            ok: false as const,
-            failure: preflight.failure,
-            reason: preflight.reason,
-            missing:
-              preflight.failure === "pricing_unavailable"
-                ? preflight.missing
-                : [],
-          };
-        },
-        retrieve: (retrieveInput, nestedDeps) =>
-          retrieveCompositionArtifact(retrieveInput, {
-            client,
-            ...(nestedDeps ?? {}),
-          }),
-        probe: (probeInput, nestedDeps) =>
-          probeExpansionTarget(probeInput, {
-            client,
-            ...(nestedDeps ?? {}),
-          }),
-        clock: () => Date.now(),
-        client,
-        readEconomicSnapshot: readers.readEconomicSnapshot,
-        reconcile: (reconcileInput, nestedDeps) =>
-          reconcileExpansionArtifact(reconcileInput, {
-            client,
-            ...(nestedDeps ?? {}),
-          }),
-      },
-    );
-  }
-
-
   const deps: FormatAdditionDeps = {
     readLink: (input) =>
       readFormatAdditionByCampaign(input, { client }),
@@ -283,7 +232,11 @@ export function createProductionFormatAdditionDeps(
 
     prepare: (input) => prepareSquareForExpansion(input, { client }),
     readDurableContext,
-    runExpansion: runExpansionWithFrozen,
+    runExpansion: createFormatAdditionExpansionRunner({ client, control }),
+    resolvePilotSpend: (input) =>
+      options.pilotSpendResolver
+        ? options.pilotSpendResolver(input)
+        : defaultResolvePilotSpend(),
     control,
     deliverVertical: (input) =>
       deliverFormatAdditionVertical(input, {
@@ -303,4 +256,100 @@ export function createProductionFormatAdditionDeps(
     callId: () => randomUUID(),
   };
   return Object.freeze(deps);
+}
+
+export interface FormatAdditionExpansionRunnerDeps {
+  readonly client?: SupabaseClient;
+  readonly control: FormatAdditionDeps["control"];
+  /** Costura de teste: expansor real por padrão. */
+  readonly expand?: typeof expandVerticalToNineSixteen;
+  readonly retrieve?: typeof retrieveCompositionArtifact;
+  readonly probe?: typeof probeExpansionTarget;
+  readonly reconcile?: typeof reconcileExpansionArtifact;
+  readonly clock?: () => number;
+}
+
+/**
+ * Adaptador de expansão do composition root (C2). Encaminha SEMPRE os leitores
+ * congelados ao expansor real; `catalog`/`pricing` de seams aninhados não podem
+ * substituí-los. O pilot gate (C1) é repassado ao limite da chamada paga.
+ */
+export function createFormatAdditionExpansionRunner(
+  deps: FormatAdditionExpansionRunnerDeps,
+): FormatAdditionDeps["runExpansion"] {
+  const expand = deps.expand ?? expandVerticalToNineSixteen;
+  const clock = deps.clock ?? (() => Date.now());
+  const client = deps.client;
+
+  return async function runExpansionWithFrozen(
+    input: FormatAdditionExpansionInput,
+  ): Promise<StepExecutionOutcome> {
+    const readers = createFrozenExpansionReaders(input.frozen);
+    return runExpansionStep(
+      {
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        authorization: input.authorization,
+        acquisitionId: input.acquisitionId,
+        attemptReference: input.attemptReference,
+        attemptTarget: input.attemptTarget,
+        deadlineAtMs: input.deadlineAtMs,
+        expansionStatus: input.expansionStatus,
+        allowNewPaidStep: input.allowNewPaidStep,
+        selection: input.selection,
+        ...(input.signal === undefined ? {} : { signal: input.signal }),
+      },
+      {
+        control: {
+          acquire: (request) => deps.control.acquire(request),
+          finish: (request) => deps.control.finish(request),
+          getOperationView: (request) => deps.control.getOperationView(request),
+        },
+        expand: (expandInput, nestedDeps) =>
+          expand(expandInput, {
+            ...(client === undefined ? {} : { client }),
+            ...(nestedDeps ?? {}),
+            catalog: readers.catalog,
+            pricing: readers.pricing,
+            ...(input.pilotSpend === undefined
+              ? {}
+              : { pilotSpend: input.pilotSpend }),
+          }),
+        preflightFrozenExpansion: async (selection) => {
+          const preflight = await readers.preflightFrozenExpansion(selection);
+          if (preflight.ok) {
+            return { ok: true as const, selection };
+          }
+          return {
+            ok: false as const,
+            failure: preflight.failure,
+            reason: preflight.reason,
+            missing:
+              preflight.failure === "pricing_unavailable"
+                ? preflight.missing
+                : [],
+          };
+        },
+        retrieve: (retrieveInput, nestedDeps) =>
+          (deps.retrieve ?? retrieveCompositionArtifact)(retrieveInput, {
+            ...(client === undefined ? {} : { client }),
+            ...(nestedDeps ?? {}),
+          }),
+        probe: (probeInput, nestedDeps) =>
+          (deps.probe ?? probeExpansionTarget)(probeInput, {
+            ...(client === undefined ? {} : { client }),
+            ...(nestedDeps ?? {}),
+          }),
+        clock,
+        ...(client === undefined ? {} : { client }),
+        readEconomicSnapshot: readers.readEconomicSnapshot,
+        reconcile: (reconcileInput, nestedDeps) =>
+          (deps.reconcile ?? reconcileExpansionArtifact)(reconcileInput, {
+            ...(client === undefined ? {} : { client }),
+            ...(nestedDeps ?? {}),
+          }),
+      },
+    );
+  };
 }

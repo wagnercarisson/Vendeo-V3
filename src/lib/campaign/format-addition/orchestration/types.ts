@@ -6,6 +6,7 @@ import type {
 import type { PrepareSquareResult } from "@/lib/campaign/square-preparation/types";
 import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import type { StepExecutionOutcome } from "@/lib/product-9-16-two-stage/orchestration/types";
+import type { ExpansionPilotSpendGate } from "@/lib/campaign/vertical-expansion/types";
 import type { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 
 import type {
@@ -136,8 +137,14 @@ export interface FormatAdditionExpansionInput {
   readonly deadlineAtMs: number;
   readonly expansionStatus: "pending" | "in_progress" | "done" | "failed" | "abandoned";
   readonly allowNewPaidStep: boolean;
+  readonly pilotSpend?: ExpansionPilotSpendGate;
   readonly signal?: AbortSignal;
 }
+
+export type FormatAdditionPilotSpendResolution =
+  | { readonly kind: "armed"; readonly gate: ExpansionPilotSpendGate }
+  | { readonly kind: "inactive" }
+  | { readonly kind: "blocked"; readonly reason: string };
 
 export type FormatAdditionDeliveryOutcome =
   | { readonly kind: "delivered"; readonly idempotent: boolean }
@@ -164,6 +171,9 @@ export interface FormatAdditionExecutionDeps {
   readonly runExpansion: (
     input: FormatAdditionExpansionInput,
   ) => Promise<StepExecutionOutcome>;
+  readonly resolvePilotSpend: (input: {
+    readonly storeId: string;
+  }) => Promise<FormatAdditionPilotSpendResolution>;
   readonly deliverVertical: (input: {
     readonly storeId: string;
     readonly campaignId: string;

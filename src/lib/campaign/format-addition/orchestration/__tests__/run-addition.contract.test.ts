@@ -191,7 +191,7 @@ function view(overrides: Partial<TwoStageOperationView> = {}): TwoStageOperation
     },
     base: {
       stage: "base",
-      status: "done",
+      status: "pending",
       attemptsUsed: 0,
       failureClass: null,
       attemptNumber: null,
@@ -244,6 +244,7 @@ function executionDeps(
     expansionResult?: unknown;
     deliveryResult?: unknown;
     finalizeResult?: unknown;
+    pilotResult?: unknown;
     calls?: Calls;
   } = {},
 ): {
@@ -285,6 +286,10 @@ function executionDeps(
       calls.push("runExpansion");
       expansionInputs.push(input);
       return options.expansionResult ?? { kind: "completed" };
+    }),
+    resolvePilotSpend: vi.fn(async () => {
+      calls.push("resolvePilotSpend");
+      return options.pilotResult ?? { kind: "inactive" };
     }),
     deliverVertical: vi.fn(async () => {
       calls.push("deliverVertical");
@@ -839,8 +844,9 @@ describe("F62-04 — preparação/expansão/entrega (Tasks 3–4)", () => {
     expect(result).toMatchObject({ ok: true, kind: "delivered" });
     expect(execution.calls).toEqual([
       "readDurableContext",
-      "prepare",
       "getOperationView",
+      "prepare",
+      "resolvePilotSpend",
       "runExpansion",
       "deliverVertical",
     ]);
@@ -1007,6 +1013,306 @@ describe("F62-04 — preparação/expansão/entrega (Tasks 3–4)", () => {
       attemptTarget: "retry",
       expansionStatus: "failed",
     });
+  });
+
+  it("falhas transitórias de preparação não estornam nem gravam desfecho", async () => {
+    for (const prepareResult of [
+      { kind: "persistence_failed", reason: "persistence_failure" },
+      { kind: "readback_failed", reason: "indeterminate" },
+      { kind: "indeterminate", stage: "persist" },
+    ]) {
+      const opening = baseDeps({});
+      const execution = executionDeps({ prepareResult });
+      const result = await runFormatAddition(
+        runInput(),
+        combined(opening, execution),
+      );
+
+      expect(result).toMatchObject({
+        ok: true,
+        kind: "processing",
+        state: "preparation_retry",
+      });
+      expect(execution.calls).not.toContain("finalizeFailure");
+      expect(execution.calls).not.toContain("runExpansion");
+      expect(execution.calls).not.toContain("deliverVertical");
+    }
+  });
+
+  it("base já done não refaz preparação e segue para expansão", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          base: {
+            stage: "base",
+            status: "done",
+            attemptsUsed: 1,
+            failureClass: null,
+            attemptNumber: 1,
+            claimedAt: null,
+          },
+        }),
+      },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "delivered" });
+    expect(execution.calls).not.toContain("prepare");
+    expect(execution.calls).toEqual([
+      "readDurableContext",
+      "getOperationView",
+      "resolvePilotSpend",
+      "runExpansion",
+      "deliverVertical",
+    ]);
+  });
+
+  it("unknown com arte íntegra confirma entrega sem nova chamada paga", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          unknown: true,
+          credit: {
+            status: "unknown",
+            terminal: true,
+            delivered: false,
+            refunded: false,
+            reserved: true,
+          },
+        }),
+      },
+      deliveryResult: { kind: "delivered", idempotent: true },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "delivered",
+      idempotent: true,
+    });
+    expect(execution.calls).not.toContain("prepare");
+    expect(execution.calls).not.toContain("runExpansion");
+    expect(execution.calls).not.toContain("finalizeFailure");
+  });
+
+  it("unknown sem arte permanece unknown, sem estorno", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          unknown: true,
+          credit: {
+            status: "unknown",
+            terminal: true,
+            delivered: false,
+            refunded: false,
+            reserved: true,
+          },
+        }),
+      },
+      deliveryResult: { kind: "absent" },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "unknown",
+      reason: "operation_unknown",
+    });
+    expect(execution.calls).not.toContain("finalizeFailure");
+    expect(execution.calls).not.toContain("runExpansion");
+  });
+
+  it("failed durável sem arte conclui o estorno na retomada", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          failedOutcome: true,
+          credit: {
+            status: "failed",
+            terminal: true,
+            delivered: false,
+            refunded: false,
+            reserved: true,
+          },
+        }),
+      },
+      deliveryResult: { kind: "absent" },
+      finalizeResult: { kind: "refunded" },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "refunded" });
+    expect(execution.calls).toContain("finalizeFailure");
+    expect(execution.calls).not.toContain("prepare");
+    expect(execution.calls).not.toContain("runExpansion");
+  });
+
+  it("failed durável com arte íntegra entrega sem estorno nem nova chamada", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          failedOutcome: true,
+          credit: {
+            status: "failed",
+            terminal: true,
+            delivered: false,
+            refunded: false,
+            reserved: true,
+          },
+        }),
+      },
+      deliveryResult: { kind: "delivered", idempotent: false },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "delivered" });
+    expect(execution.calls).not.toContain("finalizeFailure");
+    expect(execution.calls).not.toContain("runExpansion");
+  });
+
+  it("replay unknown pelo fluxo público reconcilia a arte sem nova cobrança", async () => {
+    const openingCalls: Calls = [];
+    const opening = baseDeps({
+      linkResult: link({ state: "unknown" }),
+      calls: openingCalls,
+    });
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          unknown: true,
+          credit: {
+            status: "unknown",
+            terminal: true,
+            delivered: false,
+            refunded: false,
+            reserved: true,
+          },
+        }),
+      },
+      deliveryResult: { kind: "delivered", idempotent: true },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "delivered",
+      idempotent: true,
+    });
+    expect(openingCalls).toEqual(["readLinkByRequest", "readLink"]);
+    expect(execution.calls).not.toContain("runExpansion");
+  });
+
+  it("interrupção entre failed e estorno é concluída na retomada", async () => {
+    const opening = baseDeps({
+      linkResult: link({ state: "processing" }),
+    });
+    const execution = executionDeps({
+      viewResult: {
+        kind: "found",
+        view: view({
+          failedOutcome: true,
+          credit: {
+            status: "failed",
+            terminal: true,
+            delivered: false,
+            refunded: false,
+            reserved: true,
+          },
+        }),
+      },
+      deliveryResult: { kind: "absent" },
+      finalizeResult: { kind: "refunded" },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({ ok: true, kind: "refunded" });
+    expect(execution.calls).not.toContain("runExpansion");
+  });
+
+  it("pilot bloqueado impede o provider sem desfecho nem estorno", async () => {
+    const opening = baseDeps({});
+    const execution = executionDeps({
+      pilotResult: {
+        kind: "blocked",
+        reason: "pilot_requires_reconciliation",
+      },
+    });
+
+    const result = await runFormatAddition(
+      runInput(),
+      combined(opening, execution),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      kind: "processing",
+      state: "pilot_blocked",
+      reason: "pilot_requires_reconciliation",
+    });
+    expect(execution.calls).not.toContain("runExpansion");
+    expect(execution.calls).not.toContain("finalizeFailure");
+  });
+
+  it("pilot armado repassa o gate à expansão; inativo não inventa gate", async () => {
+    const gate = {
+      beginPaidCall: vi.fn(),
+      endPaidCall: vi.fn(),
+      markUnknown: vi.fn(),
+    };
+    const armed = executionDeps({
+      pilotResult: { kind: "armed", gate },
+    });
+    await runFormatAddition(
+      runInput(),
+      combined(baseDeps({}), armed),
+    );
+    expect(armed.expansionInputs[0]).toMatchObject({ pilotSpend: gate });
+
+    const inactive = executionDeps({});
+    await runFormatAddition(
+      runInput(),
+      combined(baseDeps({}), inactive),
+    );
+    expect(inactive.expansionInputs[0]).not.toHaveProperty("pilotSpend");
   });
 
   it("não importa nem usa o snapshot econômico da campanha original", async () => {

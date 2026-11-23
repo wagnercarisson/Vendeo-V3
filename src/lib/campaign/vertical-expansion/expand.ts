@@ -83,6 +83,8 @@ import type {
   ExpandVerticalResult,
   ExpansionCallEvidence,
   ExpansionInvalidReason,
+  ExpansionPilotPaidCallHandle,
+  ExpansionPilotSpendGate,
 } from "./types";
 
 export interface ExpandVerticalDeps {
@@ -107,6 +109,13 @@ export interface ExpandVerticalDeps {
   readonly retrieve?: typeof retrieveCompositionArtifact;
   /** Costura de teste: gate pré-chamada. Default = probe linha/objeto real. */
   readonly probe?: typeof probeExpansionTarget;
+  /**
+   * Gate de gasto do piloto POR CHAMADA (F56.2b2c), opcional. Quando ausente, o
+   * piloto está INATIVO e o comportamento existente é preservado. Quando
+   * presente, só `acquired` autoriza o provider; resultado desconhecido vira
+   * `markUnknown` e falha conhecida vira `endPaidCall`.
+   */
+  readonly pilotSpend?: ExpansionPilotSpendGate;
 }
 
 /**
@@ -140,6 +149,31 @@ function blocked(): ExpandVerticalResult {
     reason: "pre_call_probe_indeterminate" as const,
     call: null,
   });
+}
+
+function pilotBlocked(): ExpandVerticalResult {
+  return Object.freeze({
+    kind: "blocked" as const,
+    reason: "pilot_spend_blocked" as const,
+    call: null,
+  });
+}
+
+async function settlePilotCall(
+  gate: ExpansionPilotSpendGate,
+  handle: ExpansionPilotPaidCallHandle,
+  outcome: { readonly kind: string },
+  estimatedUsd: number,
+): Promise<void> {
+  try {
+    if (outcome.kind === "unknown_result") {
+      await gate.markUnknown({ handle, reason: "timeout_or_unknown" });
+      return;
+    }
+    await gate.endPaidCall({ handle, actualEstimatedUsd: estimatedUsd });
+  } catch {
+    // Falha do gate nunca altera o resultado já conhecido da chamada paga.
+  }
 }
 
 /**
@@ -511,6 +545,37 @@ export async function expandVerticalToNineSixteen(
       };
 
       // (7) UMA chamada, sem laço e sem segunda tentativa.
+      const pilot = deps.pilotSpend;
+      const pilotEstimatedUsd = pricingResolution.imageUnitUsd;
+      let pilotHandle: ExpansionPilotPaidCallHandle | undefined;
+      if (pilot) {
+        if (
+          pilotEstimatedUsd === null ||
+          !Number.isFinite(pilotEstimatedUsd) ||
+          pilotEstimatedUsd <= 0
+        ) {
+          // Estimativa obrigatória quando o piloto está armado: sem estimativa
+          // válida, nenhuma chamada paga é autorizada.
+          return pilotBlocked();
+        }
+        let decision: Awaited<
+          ReturnType<ExpansionPilotSpendGate["beginPaidCall"]>
+        >;
+        try {
+          decision = await pilot.beginPaidCall({
+            campaignId: valid.source.campaignId,
+            operationId: valid.operationId,
+            kind: "image_primary",
+            attemptSeq: valid.attempt.number,
+            estimatedUsd: pilotEstimatedUsd,
+          });
+        } catch {
+          return pilotBlocked();
+        }
+        if (!decision.acquired) return pilotBlocked();
+        pilotHandle = decision.handle;
+      }
+
       const once = await invokeExpansionOnce({
         invoker: transport.invoker,
         prepared,
@@ -521,6 +586,14 @@ export async function expandVerticalToNineSixteen(
 
       if ("error" in once) {
         const classification = classifyExpansionFailure(once.error, once.sendEvidence);
+        if (pilot && pilotHandle) {
+          await settlePilotCall(
+            pilot,
+            pilotHandle,
+            classification,
+            pilotEstimatedUsd as number,
+          );
+        }
         pending = pendingFromClassification(classification);
         errorType = describeFailure(classification);
         callStatus =
@@ -528,6 +601,14 @@ export async function expandVerticalToNineSixteen(
             ? "timeout"
             : "failed";
       } else {
+        if (pilot && pilotHandle) {
+          await settlePilotCall(
+            pilot,
+            pilotHandle,
+            { kind: "success" },
+            pilotEstimatedUsd as number,
+          );
+        }
         callStatus = "success";
         usage = once.result.usage;
         returnedSize = readReturnedSize(once.result.metadata?.returnedSize);

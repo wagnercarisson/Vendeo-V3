@@ -127,6 +127,46 @@ export type ExpansionInvalidReason =
   | "prompt_not_accepted"
   | "size_not_accepted";
 
+export interface ExpansionPilotPaidCallHandle {
+  readonly callId: string;
+  readonly ownerToken: string;
+  readonly kind: string;
+}
+
+/**
+ * Contrato estrutural mínimo do gate de gasto do piloto (F56.2b2c). Declarado
+ * neste módulo neutro para que `vertical-expansion` e a orquestração da adição
+ * não importem runtime do Produto 1:1 (guarda de não-ativação). O gate real é
+ * injetado pela composição/rota e satisfaz esta forma.
+ */
+export interface ExpansionPilotSpendGate {
+  beginPaidCall(input: {
+    readonly campaignId: string;
+    readonly operationId: string;
+    readonly kind: string;
+    readonly attemptSeq: number;
+    readonly estimatedUsd: number;
+  }): Promise<
+    | {
+        readonly acquired: true;
+        readonly handle: ExpansionPilotPaidCallHandle;
+      }
+    | {
+        readonly acquired: false;
+        readonly outcome: string;
+        readonly reason: string;
+      }
+  >;
+  endPaidCall(input: {
+    readonly handle: ExpansionPilotPaidCallHandle;
+    readonly actualEstimatedUsd?: number | null;
+  }): Promise<void>;
+  markUnknown(input: {
+    readonly handle: ExpansionPilotPaidCallHandle;
+    readonly reason: string;
+  }): Promise<void>;
+}
+
 export type ExpandVerticalResult =
   | {
       readonly kind: "expanded";
@@ -250,6 +290,6 @@ export type ExpandVerticalResult =
     }
   | {
       readonly kind: "blocked";
-      readonly reason: "pre_call_probe_indeterminate";
+      readonly reason: "pre_call_probe_indeterminate" | "pilot_spend_blocked";
       readonly call: null;
     };
