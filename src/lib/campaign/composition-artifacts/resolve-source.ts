@@ -12,6 +12,7 @@ import {
   validateDeliveredCampaignSource,
   validateInternalArtifactSource,
   type SourceValidationFailureReason,
+  type SourceValidationOptions,
 } from "./source-validation";
 import type {
   ResolveSquareSourceInput,
@@ -49,6 +50,7 @@ function notReusable(
 export async function resolveReusableSquareSource(
   input: ResolveSquareSourceInput,
   deps: ResolveSquareSourceDeps = {},
+  options: SourceValidationOptions = {},
 ): Promise<ResolveSquareSourceResult> {
   const client = deps.client ?? supabaseAdmin;
 
@@ -96,6 +98,7 @@ export async function resolveReusableSquareSource(
       },
       input.authorization,
       { client },
+      options,
     );
     if (!validated.ok) {
       return notReusable(validated.reason);

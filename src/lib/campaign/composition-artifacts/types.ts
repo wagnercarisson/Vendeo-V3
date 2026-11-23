@@ -13,7 +13,8 @@ export type ArtifactFormat = "1:1" | "9:16";
 export type ArtifactOrigin =
   | "provider_generation"
   | "deterministic_preparation"
-  | "ai_expansion";
+  | "ai_expansion"
+  | "delivered_campaign_reuse";
 
 export type ArtifactSourceKind =
   | "none"
@@ -84,6 +85,12 @@ export interface PersistArtifactInput {
   readonly source: ArtifactSource;
   readonly sourceCampaignId?: string | null;
   readonly provenance?: Record<string, unknown>;
+  /**
+   * F62 — opt-in explícito da adição: aceita JPEG 1024×1024 de campanha
+   * `legacy_campaign` no path histórico. Ausente/false preserva o default 1080
+   * dos demais consumidores. Só tem efeito para fonte `delivered_campaign_source`.
+   */
+  readonly acceptLegacy1024?: true;
 }
 
 export interface ArtifactRecord {

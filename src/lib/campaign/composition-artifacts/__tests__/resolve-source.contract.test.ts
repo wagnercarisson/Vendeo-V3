@@ -675,6 +675,116 @@ describe("resolveReusableSquareSource — delivered campaigns", () => {
     });
   });
 
+  it("aceita legado 1024 somente com o opt-in explícito da adição", async () => {
+    const state = createFakeState({
+      campaign: {
+        status: "ready",
+        storage_path: LEGACY_PATH,
+        input_snapshot: {},
+      },
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, LEGACY_PATH, newFlow);
+
+    const withoutOptIn = await resolveReusableSquareSource(
+      {
+        kind: "legacy_campaign",
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        authorization: SYSTEM,
+      },
+      { client: state.client },
+    );
+    expect(withoutOptIn).toEqual({
+      kind: "not_reusable",
+      reason: "unsupported_dimensions",
+    });
+
+    const withOptIn = await resolveReusableSquareSource(
+      {
+        kind: "legacy_campaign",
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        authorization: SYSTEM,
+      },
+      { client: state.client },
+      { acceptLegacy1024: true },
+    );
+    expect(withOptIn.kind).toBe("reusable");
+    if (withOptIn.kind === "reusable") {
+      expect(withOptIn.source.origin).toBe("legacy_campaign");
+      expect(withOptIn.source.width).toBe(1024);
+      expect(withOptIn.source.height).toBe(1024);
+      expect(withOptIn.source.checksumSha256).toBe(computeChecksumSha256(newFlow));
+    }
+  });
+
+  it("modo da adição recusa legado 1080 e o default continua aceitando", async () => {
+    const state = createFakeState({
+      campaign: {
+        status: "ready",
+        storage_path: LEGACY_PATH,
+        input_snapshot: {},
+      },
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, LEGACY_PATH, legacy);
+
+    expect(
+      await resolveReusableSquareSource(
+        {
+          kind: "legacy_campaign",
+          storeId: STORE_ID,
+          campaignId: CAMPAIGN_ID,
+          authorization: SYSTEM,
+        },
+        { client: state.client },
+        { acceptLegacy1024: true },
+      ),
+    ).toEqual({ kind: "not_reusable", reason: "unsupported_dimensions" });
+
+    const defaultMode = await resolveReusableSquareSource(
+      {
+        kind: "legacy_campaign",
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        authorization: SYSTEM,
+      },
+      { client: state.client },
+    );
+    expect(defaultMode.kind).toBe("reusable");
+    if (defaultMode.kind === "reusable") {
+      expect(defaultMode.source.width).toBe(1080);
+      expect(defaultMode.source.height).toBe(1080);
+    }
+  });
+
+  it("opt-in da adição não altera o fluxo novo 1024", async () => {
+    const state = createFakeState({
+      campaign: {
+        status: "ready",
+        storage_path: NEW_FLOW_PATH,
+        input_snapshot: {},
+      },
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, NEW_FLOW_PATH, newFlow);
+
+    const result = await resolveReusableSquareSource(
+      {
+        kind: "new_flow_1_1",
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        authorization: SYSTEM,
+      },
+      { client: state.client },
+      { acceptLegacy1024: true },
+    );
+
+    expect(result.kind).toBe("reusable");
+    if (result.kind === "reusable") {
+      expect(result.source.origin).toBe("new_flow_1_1");
+      expect(result.source.width).toBe(1024);
+    }
+  });
+
   it("rejects an arbitrary path before downloading", async () => {
     const state = createFakeState({
       campaign: {

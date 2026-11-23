@@ -697,6 +697,128 @@ describe("persistCompositionArtifact", () => {
     expect(provenance.sourceChecksumSha256).toBe(computeChecksumSha256(legacyImage));
   });
 
+  it("persiste ponte legada 1024 somente com acceptLegacy1024 da adição", async () => {
+    const state = createFakeState();
+    const legacyPath = `${STORE_ID}/${CAMPAIGN_ID}.jpg`;
+    state.updateCampaign({
+      status: "ready",
+      storage_path: legacyPath,
+      input_snapshot: {},
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, legacyPath, image);
+
+    const descriptor = {
+      origin: "legacy_campaign" as const,
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      bucket: CAMPAIGN_IMAGES_BUCKET,
+      storagePath: legacyPath,
+      width: 1024,
+      height: 1024,
+      mimeType: "image/jpeg",
+      byteSize: image.byteLength,
+      checksumSha256: computeChecksumSha256(image),
+    };
+
+    const bridgeInput = baseInput(image, {
+      identity: {
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        role: "square_original",
+      },
+      origin: "delivered_campaign_reuse",
+      source: { kind: "delivered_campaign_source", descriptor },
+    });
+
+    const withoutOptIn = await persistCompositionArtifact(bridgeInput, {
+      client: state.client,
+    });
+    expect(withoutOptIn).toEqual({
+      kind: "invalid_input",
+      reason: "unsupported_dimensions",
+    });
+    expect(state.handles.uploads).toHaveLength(0);
+
+    const withOptIn = await persistCompositionArtifact(
+      { ...bridgeInput, acceptLegacy1024: true },
+      { client: state.client },
+    );
+    expect(withOptIn).toEqual({ kind: "created" });
+    expect(state.handles.uploads).toHaveLength(1);
+
+    const row = state.rows.find(
+      (entry) => entry.__table === "campaign_composition_artifacts",
+    );
+    expect(row).toMatchObject({
+      origin: "delivered_campaign_reuse",
+      role: "square_original",
+      source_campaign_id: CAMPAIGN_ID,
+    });
+    const provenance = row!.provenance as Record<string, unknown>;
+    expect(provenance.sourceOrigin).toBe("legacy_campaign");
+    expect(provenance.sourceStoragePath).toBe(legacyPath);
+    expect(provenance.sourceChecksumSha256).toBe(computeChecksumSha256(image));
+    expect(provenance.sourceWidth).toBe(1024);
+  });
+
+  it("modo da adição recusa legado 1080 e o default continua aceitando", async () => {
+    const state = createFakeState();
+    const legacyPath = `${STORE_ID}/${CAMPAIGN_ID}.jpg`;
+    state.updateCampaign({
+      status: "ready",
+      storage_path: legacyPath,
+      input_snapshot: {},
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, legacyPath, legacyImage);
+
+    const descriptor = {
+      origin: "legacy_campaign" as const,
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      bucket: CAMPAIGN_IMAGES_BUCKET,
+      storagePath: legacyPath,
+      width: 1080,
+      height: 1080,
+      mimeType: "image/jpeg",
+      byteSize: legacyImage.byteLength,
+      checksumSha256: computeChecksumSha256(legacyImage),
+    };
+
+    const preparedIdentity = {
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      role: "square_prepared" as const,
+    };
+
+    const additionMode = await persistCompositionArtifact(
+      baseInput(preparedImage, {
+        identity: preparedIdentity,
+        origin: "deterministic_preparation",
+        source: { kind: "delivered_campaign_source", descriptor },
+        acceptLegacy1024: true,
+      }),
+      { client: state.client },
+    );
+    expect(additionMode).toEqual({
+      kind: "invalid_input",
+      reason: "unsupported_dimensions",
+    });
+    expect(state.handles.uploads).toHaveLength(0);
+
+    const defaultMode = await persistCompositionArtifact(
+      baseInput(preparedImage, {
+        identity: preparedIdentity,
+        origin: "deterministic_preparation",
+        source: { kind: "delivered_campaign_source", descriptor },
+      }),
+      { client: state.client },
+    );
+    expect(defaultMode).toEqual({ kind: "created" });
+    expect(state.handles.uploads).toHaveLength(1);
+  });
+
   it("rejects a delivered descriptor with divergent checksum without upload", async () => {
     const state = createFakeState();
     const legacyPath = `${STORE_ID}/${CAMPAIGN_ID}.jpg`;

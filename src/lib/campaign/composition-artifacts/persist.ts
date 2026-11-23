@@ -187,6 +187,7 @@ async function validatePersistSource(
     },
     authorization,
     { client },
+    input.acceptLegacy1024 === true ? { acceptLegacy1024: true } : {},
   );
   return validation.ok
     ? { ok: true, source: validation.source }

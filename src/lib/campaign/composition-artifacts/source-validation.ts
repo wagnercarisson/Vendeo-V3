@@ -59,6 +59,17 @@ export interface SourceValidationDeps {
   readonly client?: SupabaseClient;
 }
 
+/**
+ * F62 — opções explícitas da validação de fonte entregue.
+ *
+ * `acceptLegacy1024` é opt-in da adição: aceita JPEG 1024×1024 de campanha
+ * `legacy_campaign` no path histórico. Ausente/false mantém o default 1080 dos
+ * demais consumidores. Não afeta `new_flow_1_1` (sempre 1024).
+ */
+export interface SourceValidationOptions {
+  readonly acceptLegacy1024?: true;
+}
+
 const UUID =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
@@ -335,6 +346,7 @@ export async function validateDeliveredCampaignSource(
   candidate: DeliveredCampaignSourceCandidate,
   authorization: AuthorizationContext,
   deps: SourceValidationDeps = {},
+  options: SourceValidationOptions = {},
 ): Promise<SourceValidationResult> {
   const client = deps.client ?? supabaseAdmin;
 
@@ -412,7 +424,9 @@ export async function validateDeliveredCampaignSource(
 
   const expected =
     origin === "legacy_campaign"
-      ? { width: 1080, height: 1080 }
+      ? options.acceptLegacy1024 === true
+        ? { width: 1024, height: 1024 }
+        : { width: 1080, height: 1080 }
       : { width: 1024, height: 1024 };
   const inspection = await inspectDeliveredJpeg(download.bytes, expected);
   if (!inspection.ok) {
