@@ -140,7 +140,8 @@ A suíte global passou após a autorização dirigida do guard e a comparação 
 
 - **Veredito:** `62-03` **aprovado tecnicamente, local/offline**, sem bloqueadores.
 - **Reexecução do revisor antes da correção dirigida:** seis suítes do plano **93 testes PASS**; guard **7 PASS / 1 FAIL**, exatamente pelos seis caminhos previstos; OpenSpec strict válido; worktree limpo. O revisor não reexecutou a suíte global.
-- **Correção dirigida:** os seis caminhos exatos foram allowlisted com autorização F62/62-03 e a seleção completa passou a ser comparada; o revisor aprovou o resultado.
+- **Correção dirigida:** os seis caminhos exatos foram allowlisted com autorização F62/62-03 e a seleção completa passou a ser comparada.
+- **Reexecução do revisor APÓS a correção:** **7 arquivos / 101 testes PASS** (seis suítes do plano + guard), OpenSpec strict e diff-check limpos.
 - **Reexecução do executor após a correção:** seis suítes **93 PASS**; guard **8/8 PASS**; typecheck/lint/build **0**; suíte global **exit 0** (852 arquivos + 2 skipped; 10.635 testes + 10 skipped); OpenSpec **1/0**; diff-check limpo.
 - **Separação:** os números do revisor e do executor são evidências distintas; a suíte global é evidência do executor.
 - **Escopo do aceite:** `62-03`. `62-04` autorizado somente para as Tasks 1–2; Tasks 3–4 e `62-05`+ permanecem não autorizados.
