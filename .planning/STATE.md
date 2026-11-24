@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-24T19:35:02.000Z"
+last_updated: "2026-11-24T20:25:00.000Z"
 progress:
   total_phases: 20
   completed_phases: 15
@@ -13,6 +13,10 @@ progress:
 ---
 
 # Project State
+
+## Gate remoto F62 — atualização vigente 2026-11-24
+
+Migration `20261123130252` final (`56dc3423…`) aplicada e verificada em produção no projeto Supabase `Vendeo-V3`: ledger **158→159**, versão uma vez; conteúdo dos 11 conjuntos preservado. Backup de banco/Storage, restauração isolada e ensaio passaram. `FORMAT_ADDITION_CONFIRMATION_SECRET` cadastrado como Sensitive em Production na Vercel; flag dedicada **false**. Código/merge/push/deploy e ativação **não executados**. Próximo: responsável integra/publica, confere deploy e realiza smoke/ativação pós-deploy. Fonte vigente: `.planning/phases/62-adicionar-vertical-campanha-quadrada/62-08-RELEASE-GATE.md`. As menções anteriores a migration somente local são históricas, superadas por este gate.
 
 ## Project Reference
 
