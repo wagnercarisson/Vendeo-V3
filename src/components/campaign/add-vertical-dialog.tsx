@@ -148,7 +148,6 @@ export function AddVerticalDialog({
   const [failed, setFailed] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const abortRef = useRef<AbortController | null>(null);
-  const postAbortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadRef = useRef<
     ((options?: { readonly silent?: boolean }) => Promise<void>) | null
@@ -318,9 +317,7 @@ export function AddVerticalDialog({
     const postId = ++postIdRef.current;
     activePostRef.current = { session, id: postId };
     const seq = ++seqRef.current;
-    postAbortRef.current?.abort();
     const controller = new AbortController();
-    postAbortRef.current = controller;
     setSubmitting(true);
     setFailed(false);
     try {

@@ -178,6 +178,24 @@ Os gates de integração PostgreSQL/Storage que exigem `TEST_DATABASE_URL` /
 opt-in de escrita aparecem como “NÃO EXECUTADO” no runner global; as provas
 reais acima foram feitas separadamente na homologação e no descartável.
 
+## Remoção do cancelamento implícito do POST (2026-11-24)
+
+- `submit` não chama mais abort do POST anterior ao iniciar confirmação/retomada.
+  Cada POST mantém seu próprio `AbortController`/signal; ao iniciar B, o signal de
+  A permanece **não abortado**.
+- A concorrência de operações mutáveis é controlada por identificação, não por
+  abort: `sessionRef`, `postIdRef`/`activePostRef` e `appliedSeqRef` descartam
+  respostas antigas.
+- A resposta de A não altera a nova sessão de B nem libera o indicador de
+  `submitting` de B; o `finally` só limpa quando `activePostRef` ainda é o
+  próprio POST.
+- Regressão adicionada: POST A pendente → fechar → reabrir → GET `processing`
+  → retomar com POST B → A continua não abortado; A `delivered` é ignorado;
+  B `delivered` conclui uma única vez.
+- Nenhuma alteração de banco, migration, flags ou provider.
+- Conjunto afetado: **7 arquivos / 105 testes PASS**; typecheck, lint e
+  diff-check limpos.
+
 ## Limitações / parada
 
 - Nenhuma confirmação HTTP paga, provider, geração, merge, push ou deploy.

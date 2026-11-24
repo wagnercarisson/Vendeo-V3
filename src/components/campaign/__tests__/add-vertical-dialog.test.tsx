@@ -685,6 +685,101 @@ describe("F62-05 — modal de adição vertical", () => {
     });
   });
 
+  it("F62-08: POST anterior não é abortado ao retomar; resposta A não altera B", async () => {
+    const postA = deferred<Response>();
+    const postB = deferred<Response>();
+    let signalA: AbortSignal | undefined;
+    let signalB: AbortSignal | undefined;
+    const onDelivered = vi.fn();
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-a",
+        }),
+      )
+      .mockImplementationOnce((_input, init) => {
+        signalA = init?.signal ?? undefined;
+        return postA.promise;
+      })
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "processing",
+          confirmationToken: "token-b",
+        }),
+      )
+      .mockImplementationOnce((_input, init) => {
+        signalB = init?.signal ?? undefined;
+        return postB.promise;
+      });
+
+    const view = render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={onDelivered}
+      />,
+    );
+
+    await screen.findByText(messages.cost);
+    fireEvent.click(screen.getByRole("button", { name: messages.confirm }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(signalA?.aborted).toBe(false);
+
+    view.rerender(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open={false}
+        onClose={vi.fn()}
+        onDelivered={onDelivered}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(signalA?.aborted).toBe(false);
+
+    view.rerender(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={onDelivered}
+      />,
+    );
+    await screen.findByRole("button", { name: messages.continue });
+    fireEvent.click(screen.getByRole("button", { name: messages.continue }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(signalA?.aborted).toBe(false);
+    expect(signalB?.aborted).toBe(false);
+
+    postA.resolve(jsonResponse({ state: "delivered" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(onDelivered).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: messages.processing }),
+    ).toBeDisabled();
+
+    postB.resolve(jsonResponse({ state: "delivered" }));
+    await waitFor(() => expect(onDelivered).toHaveBeenCalledTimes(1));
+  });
+
   it("incompatível mostra explicação sem prometer confirmação", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       jsonResponse({
