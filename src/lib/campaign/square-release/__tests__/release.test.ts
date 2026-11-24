@@ -38,6 +38,11 @@ function deps(
     readArtifact: vi.fn(async () => artifact),
     readLedger: ledger as never,
     probeArtifact: vi.fn(async () => ({ kind: "integral" as const })),
+    readVerticalAccess: vi.fn(async () => ({
+      kind: "previewUrl" as const,
+      url: "https://signed/vertical",
+      expiresInSeconds: 300 as const,
+    })),
     credit: { reserveCredit },
     ...overrides,
   };
@@ -97,6 +102,7 @@ describe("releaseSquare — uma única dedução e recuperação", () => {
         deductionId: "tx-existing",
       })),
       probeArtifact: vi.fn(),
+      readVerticalAccess: vi.fn(),
     });
     await expect(release(injected)).resolves.toEqual({
       state: "delivered",
@@ -105,6 +111,7 @@ describe("releaseSquare — uma única dedução e recuperação", () => {
     });
     expect(injected.credit?.reserveCredit).not.toHaveBeenCalled();
     expect(injected.probeArtifact).not.toHaveBeenCalled();
+    expect(injected.readVerticalAccess).not.toHaveBeenCalled();
   });
 
   it("dedução estornada bloqueia nova compra sem chamar reserveCredit", async () => {
@@ -198,6 +205,59 @@ describe("releaseSquare — uma única dedução e recuperação", () => {
       reason: "operation_unavailable",
     });
     expect(injected.credit?.reserveCredit).toHaveBeenCalledTimes(1);
+  });
+
+  it("vertical ausente/indeterminado/origem histórica não cobra", async () => {
+    for (const reason of ["not_delivered", "origin_mismatch", "indeterminate"] as const) {
+      const injected = deps({
+        ledger: vi.fn(async () => ({ kind: "none" })),
+        readVerticalAccess: vi.fn(async () => ({
+          kind: "not_available" as const,
+          reason,
+        })),
+      });
+      const result = await release(injected);
+      expect(result.state).toBe(
+        reason === "indeterminate" ? "unknown" : "incompatible",
+      );
+      expect(injected.credit?.reserveCredit).not.toHaveBeenCalled();
+      expect(injected.probeArtifact).not.toHaveBeenCalled();
+    }
+  });
+
+  it("falha de releitura após saldo insuficiente permanece unknown", async () => {
+    const ledger = vi
+      .fn()
+      .mockResolvedValueOnce({ kind: "none" })
+      .mockResolvedValueOnce({ kind: "read_failed" });
+    const injected = deps({ ledger });
+    (
+      injected.credit as { reserveCredit: ReturnType<typeof vi.fn> }
+    ).reserveCredit.mockRejectedValueOnce(new Error("saldo_insuficiente"));
+
+    await expect(release(injected)).resolves.toMatchObject({
+      state: "unknown",
+      reason: "release_unknown",
+    });
+    expect(injected.credit?.reserveCredit).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha de releitura após 23505 permanece unknown", async () => {
+    const ledger = vi
+      .fn()
+      .mockResolvedValueOnce({ kind: "none" })
+      .mockResolvedValueOnce({ kind: "read_failed" });
+    const injected = deps({ ledger });
+    (
+      injected.credit as { reserveCredit: ReturnType<typeof vi.fn> }
+    ).reserveCredit.mockRejectedValueOnce(
+      Object.assign(new Error("duplicate key"), { code: "23505" }),
+    );
+
+    await expect(release(injected)).resolves.toMatchObject({
+      state: "unknown",
+      reason: "release_unknown",
+    });
   });
 
   it("leitura inicial falha ⇒ unknown e nenhuma cobrança", async () => {

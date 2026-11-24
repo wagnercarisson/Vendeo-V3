@@ -137,6 +137,37 @@ describe("liberação do quadrado — modal", () => {
     expect(onReleased).toHaveBeenCalledTimes(1);
   });
 
+  it("GET que recupera delivered também conclui a jornada uma única vez", async () => {
+    const onReleased = vi.fn();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "unknown", reason: "release_unknown" }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ state: "delivered" }));
+
+    render(
+      <ReleaseSquareDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onReleased={onReleased}
+      />,
+    );
+
+    await screen.findByText(messages.unknown);
+    fireEvent.click(screen.getByRole("button", { name: messages.retry }));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onReleased).toHaveBeenCalledTimes(1);
+  });
+
   it("fechar durante GET ignora a resposta posterior", async () => {
     const get = deferred<Response>();
     const onReleased = vi.fn();

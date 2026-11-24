@@ -1,12 +1,14 @@
 import "server-only";
 
 import { CreditService } from "@/lib/credit/credit-service";
+import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
 
 import { squareReleaseKey, squareReleaseMetadata } from "./identity";
 import {
   probeSquareReleaseArtifact,
   readSquareReleaseArtifact,
   readSquareReleaseLedger,
+  type SquareReleaseLedgerRead,
   type SquareReleaseProbeDeps,
 } from "./reader";
 import {
@@ -32,6 +34,7 @@ export interface SquareReleaseDeps extends SquareReleaseProbeDeps {
   readonly readArtifact?: typeof readSquareReleaseArtifact;
   readonly readLedger?: typeof readSquareReleaseLedger;
   readonly probeArtifact?: typeof probeSquareReleaseArtifact;
+  readonly readVerticalAccess?: typeof nineSixteenVerticalAccess;
 }
 
 function errorMessage(error: unknown): string {
@@ -69,26 +72,8 @@ function probeToResult(
 async function readAfterUncertainty(
   identity: SquareReleaseIdentity,
   deps: SquareReleaseDeps,
-): Promise<SquareReleaseResult | null> {
-  const ledger = await (deps.readLedger ?? readSquareReleaseLedger)(
-    identity,
-    deps,
-  );
-  switch (ledger.kind) {
-    case "delivered":
-      return { state: "delivered", reason: null, refunded: false };
-    case "refunded":
-      return {
-        state: "refunded",
-        reason: "release_refunded",
-        refunded: true,
-      };
-    case "invalid":
-      return { state: "unavailable", reason: "release_unknown", refunded: false };
-    case "none":
-    case "read_failed":
-      return null;
-  }
+): Promise<SquareReleaseLedgerRead> {
+  return (deps.readLedger ?? readSquareReleaseLedger)(identity, deps);
 }
 
 /**
@@ -143,6 +128,37 @@ export async function releaseSquare(
     return { state: "unknown", reason: "release_unknown", refunded: false };
   }
 
+  // Pré-voo OBRIGATÓRIO antes de qualquer débito: origem nova, operação de
+  // controle entregue e vertical íntegro. Uma liberação já paga retornou acima
+  // e não depende deste probe para ser recuperada.
+  let vertical;
+  try {
+    vertical = await (deps.readVerticalAccess ?? nineSixteenVerticalAccess)(
+      {
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.verticalOperationId,
+        mode: "preview",
+      },
+      { client: deps.client },
+    );
+  } catch {
+    return {
+      state: "unknown",
+      reason: "operation_unavailable",
+      refunded: false,
+    };
+  }
+  if (vertical.kind === "not_available") {
+    return vertical.reason === "indeterminate"
+      ? { state: "unknown", reason: "operation_unavailable", refunded: false }
+      : {
+          state: "incompatible",
+          reason: "operation_unavailable",
+          refunded: false,
+        };
+  }
+
   const probe = await (deps.probeArtifact ?? probeSquareReleaseArtifact)(
     identity,
     deps,
@@ -158,7 +174,19 @@ export async function releaseSquare(
     });
   } catch (error) {
     const recovered = await readAfterUncertainty(identity, deps);
-    if (recovered) return recovered;
+    switch (recovered.kind) {
+      case "delivered":
+        return { state: "delivered", reason: null, refunded: false };
+      case "refunded":
+        return { state: "refunded", reason: "release_refunded", refunded: true };
+      case "invalid":
+        return { state: "unavailable", reason: "release_unknown", refunded: false };
+      case "read_failed":
+        // Leitura indisponível NÃO prova saldo insuficiente. Mantém incerteza.
+        return { state: "unknown", reason: "release_unknown", refunded: false };
+      case "none":
+        break;
+    }
 
     const message = errorMessage(error);
     if (message.includes("saldo_insuficiente")) {

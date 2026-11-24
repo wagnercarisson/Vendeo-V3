@@ -113,14 +113,27 @@ function PageFormatChips({
   readonly onFormatAction?: (format: "1:1" | "9:16") => void;
 }) {
   const jointNote = jointNoteFor(props);
-  const releaseAction = props.squareRelease?.state === "eligible";
-  const actionFormat = releaseAction ? "1:1" : "9:16";
-  const actionHelpText = releaseAction
-    ? props.messages.squareRelease.actionHelp
-    : props.messages.formatAddition.generateGuidance;
-  const actionStateLabel = releaseAction
-    ? props.messages.squareRelease.available
+  const squareAction = props.squareRelease !== undefined;
+  const actionFormat: "1:1" | "9:16" = squareAction ? "1:1" : "9:16";
+  const squareState = props.squareRelease?.state;
+  const actionStateLabel = squareAction
+    ? squareState === "eligible"
+      ? props.messages.squareRelease.available
+      : squareState === "unknown"
+        ? props.messages.squareRelease.retry
+        : squareState === "refunded"
+          ? props.messages.squareRelease.refunded
+          : squareState === "incompatible"
+            ? props.messages.squareRelease.incompatible
+            : squareState === "unavailable"
+              ? props.messages.squareRelease.unavailable
+              : props.messages.squareRelease.delivered
     : props.messages.formatAddition.availableForGeneration;
+  const actionHelpText = squareAction
+    ? squareState === "eligible"
+      ? props.messages.squareRelease.actionHelp
+      : actionStateLabel
+    : props.messages.formatAddition.generateGuidance;
   return (
     <div
       className="mt-4 mb-6"
@@ -133,6 +146,7 @@ function PageFormatChips({
         helpLang={props.locale === "es-419" ? "es-419" : undefined}
         onFormatAction={onFormatAction}
         actionFormat={actionFormat}
+        actionAllStates={squareAction}
         actionHelpText={actionHelpText}
         actionStateLabel={actionStateLabel}
       />

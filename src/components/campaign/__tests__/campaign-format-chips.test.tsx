@@ -259,6 +259,38 @@ describe("F61 — chip único de formato (sem '?')", () => {
     expect(onAction).toHaveBeenCalledWith("1:1");
   });
 
+  it("261124-pmo: chip quadrado em unknown/unavailable abre a consulta, sem exigir estado elegível", () => {
+    for (const state of ["unknown", "unavailable"] as const) {
+      const onAction = vi.fn();
+      const presentation = buildIndividualFormatPresentation(
+        {
+          resolution: resolveCampaignFormat({
+            campaignFormat: "9:16",
+            formatContractVersion: "f59-vertical-9-16-v1",
+          }),
+          lifecycle: "delivered",
+          release: { format: "1:1", state },
+        },
+        "9:16",
+      );
+      const view = render(
+        <CampaignFormatChips
+          presentation={presentation}
+          messages={ptBRCampaignFormatMessages}
+          onFormatAction={onAction}
+          actionFormat="1:1"
+          actionAllStates
+          actionHelpText={ptBRCampaignDetailMessages.squareRelease.unavailable}
+          actionStateLabel={ptBRCampaignDetailMessages.squareRelease.retry}
+        />,
+      );
+      const square = chipByLabel(/^Quadrado 1:1/);
+      fireEvent.click(square);
+      expect(onAction).toHaveBeenCalledWith("1:1");
+      view.unmount();
+    }
+  });
+
   it("F62: sem ação (lista/dashboard) mantém a explicação informativa de formato não incluído", () => {    renderChips(individual("delivered"));
     const vertical = chipByLabel(/^Vertical 9:16: N/);
     expect(vertical).toHaveAccessibleDescription(

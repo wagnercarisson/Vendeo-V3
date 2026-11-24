@@ -58,6 +58,8 @@ export interface CampaignFormatChipsProps {
   readonly onFormatAction?: (format: CampaignFormatKey) => void;
   /** Formato que recebe a ação; default F62 `9:16`. */
   readonly actionFormat?: CampaignFormatKey;
+  /** Permite ação também em estados não-`absent` (recuperação/explicação). */
+  readonly actionAllStates?: boolean;
   /** F62 — orientação de geração exibida quando a ação está disponível. */
   readonly actionHelpText?: string;
   /** F62 — rótulo de estado do chip acionável (ex.: "Disponível para gerar"). */
@@ -198,6 +200,7 @@ export function CampaignFormatChips({
   actionHelpText,
   actionStateLabel,
   actionFormat = "9:16",
+  actionAllStates = false,
 }: CampaignFormatChipsProps): ReactElement {
   const [mounted, setMounted] = useState(false);
   const [activeKey, setActiveKey] = useState<CampaignFormatKey | null>(null);
@@ -436,8 +439,9 @@ export function CampaignFormatChips({
   const activeActionApplicable =
     activeKey === actionFormat &&
     onFormatAction !== undefined &&
-    activeEntry?.state === "absent" &&
-    activeEntry.reason === "not_requested";
+    (actionAllStates ||
+      (activeEntry?.state === "absent" &&
+        activeEntry.reason === "not_requested"));
   const activeDescription = activeEntry
     ? activeActionApplicable && actionHelpText
       ? actionHelpText
@@ -469,8 +473,9 @@ export function CampaignFormatChips({
             .join(" ");
           const actionApplicable =
             hasAction &&
-            entry.state === "absent" &&
-            entry.reason === "not_requested";
+            !hasLink &&
+            (actionAllStates ||
+              (entry.state === "absent" && entry.reason === "not_requested"));
           const label =
             actionApplicable && actionStateLabel
               ? `${name}: ${actionStateLabel}`

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
 import { createNodeHttpDownloadTransport } from "@/lib/campaign/composition-artifacts/node-http-download";
 import { downloadStorageObjectViaNodeHttp } from "@/lib/product-1-1/artifact/node-http-storage-download";
+import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { isValidSquareReleaseDeduction, squareReleaseKey } from "./identity";
@@ -45,6 +46,7 @@ export interface SquareReleaseReaderDeps {
 
 export interface SquareReleaseProbeDeps extends SquareReleaseReaderDeps {
   readonly downloadBytes?: ReturnType<typeof createNodeHttpDownloadTransport>;
+  readonly readVerticalAccess?: typeof nineSixteenVerticalAccess;
 }
 
 export async function readSquareReleaseArtifact(
@@ -228,6 +230,37 @@ export async function readSquareReleaseStateForApi(
   }
   if (ledger.kind === "read_failed") {
     return { state: "unknown", reason: "release_unknown", refunded: false };
+  }
+
+  // Consulta nova só fica elegível com a origem nova, o crédito vertical
+  // entregue e o vertical íntegro comprovados. Uma dedução já existente
+  // retornou acima e não depende deste probe.
+  let vertical;
+  try {
+    vertical = await (deps.readVerticalAccess ?? nineSixteenVerticalAccess)(
+      {
+        storeId: identity.storeId,
+        campaignId: identity.campaignId,
+        operationId: identity.verticalOperationId,
+        mode: "preview",
+      },
+      { client: deps.client },
+    );
+  } catch {
+    return {
+      state: "unknown",
+      reason: "operation_unavailable",
+      refunded: false,
+    };
+  }
+  if (vertical.kind === "not_available") {
+    return vertical.reason === "indeterminate"
+      ? { state: "unknown", reason: "operation_unavailable", refunded: false }
+      : {
+          state: "incompatible",
+          reason: "operation_unavailable",
+          refunded: false,
+        };
   }
 
   const probe = await probeSquareReleaseArtifact(identity, deps);

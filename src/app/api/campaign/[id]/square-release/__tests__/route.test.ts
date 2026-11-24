@@ -55,6 +55,8 @@ function campaign(format: "1:1" | "9:16") {
         ? {
             campaignFormat: "9:16",
             formatContractVersion: "f59-vertical-9-16-v1",
+            generationOrigin: "9_16_two_stage",
+            generationContractVersion: "f60.5-two-stage-9-16-v1",
           }
         : {},
   };

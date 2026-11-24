@@ -101,6 +101,7 @@ export function ReleaseSquareDialog({
   const sessionRef = useRef(0);
   const busyRef = useRef(false);
   const releasedRef = useRef(onReleased);
+  const deliveredNotifiedRef = useRef(false);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   const titleId = `square-release-title-${campaignId}`;
   const descriptionId = `square-release-description-${campaignId}`;
@@ -113,6 +114,12 @@ export function ReleaseSquareDialog({
   useEffect(() => {
     releasedRef.current = onReleased;
   }, [onReleased]);
+
+  const notifyDelivered = useCallback(() => {
+    if (deliveredNotifiedRef.current) return;
+    deliveredNotifiedRef.current = true;
+    releasedRef.current();
+  }, []);
 
   const load = useCallback(async () => {
     const session = sessionRef.current;
@@ -140,6 +147,9 @@ export function ReleaseSquareDialog({
       }
       setFailed(false);
       setDto(json);
+      if (json.state === "delivered") {
+        notifyDelivered();
+      }
     } catch (error) {
       if (
         controller.signal.aborted ||
@@ -155,11 +165,12 @@ export function ReleaseSquareDialog({
         setLoading(false);
       }
     }
-  }, [campaignId]);
+  }, [campaignId, notifyDelivered]);
 
   useEffect(() => {
     sessionRef.current += 1;
     const session = sessionRef.current;
+    deliveredNotifiedRef.current = false;
     if (!open) {
       abortRef.current?.abort();
       setDto(null);
@@ -216,7 +227,7 @@ export function ReleaseSquareDialog({
       }
       setDto(json);
       if (json.state === "delivered") {
-        releasedRef.current();
+        notifyDelivered();
       }
     } catch (error) {
       if (session !== sessionRef.current) return;
@@ -226,7 +237,7 @@ export function ReleaseSquareDialog({
     } finally {
       if (session === sessionRef.current) setSubmitting(false);
     }
-  }, [campaignId, dto]);
+  }, [campaignId, dto, notifyDelivered]);
 
   if (!open) return null;
 

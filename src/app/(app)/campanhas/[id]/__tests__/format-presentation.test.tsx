@@ -808,6 +808,26 @@ describe("F61 — detalhe do NOVO fluxo (individual)", () => {
     expect(props.formatHrefs).toBeUndefined();
   });
 
+  it("quadrado unknown/incompatible passa o estado ao chip sem inventar entrega", async () => {
+    for (const state of ["unknown", "incompatible"] as const) {
+      newFlowFixture(VERTICAL_EXPANSION_SNAPSHOT, "delivered");
+      h.squareReleaseSummary = {
+        campaignId: CAMPAIGN_ID,
+        state,
+        refunded: false,
+      };
+
+      const props = await renderProps();
+
+      expect(props.squareRelease).toMatchObject({ state });
+      expect(presentation(props).formats["1:1"]).toMatchObject({
+        state: state === "unknown" ? "unknown" : "absent",
+        reason: state === "unknown" ? null : "not_requested",
+      });
+      expect(props.formatHrefs).toBeUndefined();
+    }
+  });
+
   it("vertical 9:16 delivered sem arte ⇒ entregue sem ativo", async () => {
     newFlowFixture(NEW_FLOW_VERTICAL_SNAPSHOT, "delivered");
     h.probeKind = "missing";
