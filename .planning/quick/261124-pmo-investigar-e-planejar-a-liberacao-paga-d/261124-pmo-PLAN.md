@@ -14,6 +14,29 @@ approval:
 
 # Plano revisado 261124-pmo — liberação 1:1 pelo ledger
 
+## Correções pós-revisão (2026-11-24) — antes do código
+
+1. **Pré-condição da cobrança incompleta (alta).** A API checava formato 9:16 e
+   operação `delivered`, mas não comprovava origem nova, operação de controle e
+   vertical íntegro. Correção: pré-voo com `nineSixteenVerticalAccess`
+   (origem `two_stage_9_16`, crédito `delivered`, probe vertical integral) antes
+   de qualquer débito. Fonte ausente/inválida/indeterminada não cobra.
+   Liberação já paga continua recuperável pelo ledger sem repetir o pré-voo.
+2. **Chip perdia a recuperação.** A ação do chip era escolhida pelo estado
+   (`eligible`), voltando ao 9:16 em `unknown/unavailable/refunded/incompatible`.
+   Correção: escolher o formato da ação pela origem da campanha (campanha 9:16
+   ⇒ ação no 1:1), separando isso da permissão de compra; estados excepcionais
+   abrem a consulta/explicação e nunca oferecem cobrança.
+3. **GET `delivered` não atualizava a página.** Correção: GET que recupera
+   `delivered` conclui a jornada uma única vez por sessão, respeitando descarte
+   de respostas obsoletas; POST continua concluindo uma única vez.
+4. **Releitura financeira falha virava falso “saldo insuficiente”.** Correção:
+   distinguir `none` (ausência comprovada) de `read_failed` (incerteza). Após
+   `saldo_insuficiente`, `read_failed` retorna `unknown`, nunca insuficiência.
+
+**Validador F62:** tratar separadamente, com correção mínima autorizada, sem
+excluir a suíte nem enfraquecer verificações.
+
 ## Objetivo
 
 Liberar o quadrado 1:1 já armazenado de uma campanha entregue em 9:16,

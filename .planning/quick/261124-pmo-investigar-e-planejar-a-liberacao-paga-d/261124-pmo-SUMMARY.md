@@ -4,11 +4,28 @@ status: implementation-complete-pending-manual-review
 date: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
-commit: 89ea46a3
+commit: 2f205590
 scope: square-release-ledger
 ---
 
 # Quick 261124-pmo — Summary
+
+## Correções pós-revisão (2026-11-24)
+
+- **Pré-condição:** cobrança nova agora exige `nineSixteenVerticalAccess`
+  (origem `two_stage_9_16`, crédito vertical `delivered`, vertical integral)
+  antes do débito; falha/indeterminação não cobra. Liberação já paga retorna
+  antes do probe e continua recuperável.
+- **Chip:** o formato da ação é definido pela origem (campanha 9:16 ⇒ 1:1),
+  independentemente do estado; `unknown/incompatible` abrem consulta/explicação
+  e nunca oferecem confirmação de compra.
+- **GET recuperando `delivered`:** conclui a jornada uma única vez por sessão,
+  respeitando sessão/descarte de resposta obsoleta; POST continua concluindo
+  uma única vez.
+- **Releitura financeira:** `read_failed` após `saldo_insuficiente` permanece
+  `unknown`; somente ausência comprovada (`none`) vira insuficiência.
+- **Validador F62:** corrigido separadamente, removendo o shebang do módulo
+  importado pelo Vitest (commit `af00a814`), sem excluir ou enfraquecer testes.
 
 ## Resultado
 
@@ -60,22 +77,21 @@ comprovante durável.
 
 | Gate | Resultado |
 |---|---|
-| Testes afetados amplos (44 arquivos) | 485/485 PASS |
-| Testes novos/focados (9 arquivos) | 112/112 PASS |
+| Testes afetados amplos (44 arquivos) | 491/491 PASS |
+| Testes novos/focados (7 arquivos) | 109/109 PASS |
 | `npm run typecheck` | exit 0 |
 | `npm run lint` | exit 0 |
 | `npm run build` | exit 0 (porta 3100 parada antes; reiniciada depois) |
 | `git diff --check` | exit 0 |
-| Suíte global | 873 arquivos PASS + 2 skipped + **1 suíte preexistente falhando**; 10.842 testes PASS + 10 skipped |
+| Suíte global | 874 arquivos PASS + 2 skipped; 10.857 testes PASS + 10 skipped; **exit 0** |
 
-### Falha preexistente da suíte global
+### Validador F62
 
-`scripts/verify/__tests__/f62-authorization.test.mjs` falha com `SyntaxError`
-porque o módulo importado `scripts/verify/f62-authorization.mjs` começa com
-shebang (`#!/usr/bin/env node`) e o Vitest 4 não o remove no transform. O arquivo
-**não foi modificado por esta quick** (`git diff` vazio). Prova de controle:
-removendo temporariamente apenas a primeira linha, o arquivo passa **9/9**; a
-linha foi restaurada. Não tratei isso como alteração de escopo.
+A falha preexistente `f62-authorization.test.mjs` foi corrigida separadamente
+pelo commit `af00a814`, removendo apenas o shebang do módulo importado
+(`scripts/verify/f62-authorization.mjs`). A suíte e as verificações foram
+preservadas: **9/9 PASS**.
+
 
 Os gates de integração PostgreSQL/homolog/local-disposable não foram executados
 por este runner global (mensagem padrão de gate não executado); a prova de
