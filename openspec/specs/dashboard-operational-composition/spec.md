@@ -247,7 +247,7 @@ O dashboard SHALL manter hierarquia de títulos, foco visível, teclado, contras
 
 ### Requirement: Campanha conjunta elegível no dashboard sem duplicar card
 
-O dashboard SHALL considerar elegível a campanha conjunta com pelo menos um formato entregue e `status = ready`. A campanha conjunta SHALL aparecer no máximo uma vez entre as campanhas recentes, sem criar uma linha por formato. Toda campanha disponível no dashboard — conjunta, individual ou legada — SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com os mesmos nomes, vocabulário e semântica de estados da listagem e do detalhe. Os chips SHALL ser compactos: texto visível apenas “Quadrado 1:1”/“Vertical 9:16”; rótulos de estado e badge “Selecionado” NÃO SHALL aparecer no chip. O estado completo SHALL permanecer no nome/descrição acessível. A ajuda SHALL ser flutuante, fora do fluxo, sem aumentar a altura da linha, deslocar miniatura/ações ou criar overflow horizontal. Cada chip SHALL ser um `<button type="button">` que abre/fecha apenas a explicação local; NÃO SHALL existir controle “?” separado. O dashboard PODE ter menos evidência que o detalhe e exibir `unknown` onde o detalhe exibe `absent` + `refunded`, sem adicionar consulta. Os chips NÃO SHALL iniciar geração, abrir modal, produzir efeito financeiro ou navegar individualmente por formato nesta fatia. A contagem de campanhas disponíveis SHALL contar a campanha uma única vez. A miniatura SHALL ser derivada, com preferência para o quadrado quando entregue. A ação de abertura SHALL permanecer disponível mesmo quando apenas um formato estiver entregue ou a miniatura estiver indisponível. A apresentação dos chips SHALL usar somente os dados já carregados, sem nova consulta por card.
+O dashboard SHALL considerar elegível a campanha conjunta com pelo menos um formato entregue e `status = ready`. A campanha conjunta SHALL aparecer no máximo uma vez entre as campanhas recentes, sem criar uma linha por formato. Toda campanha disponível no dashboard — conjunta, individual ou legada — SHALL exibir sempre os dois chips informativos `1:1` e `9:16`, com os mesmos nomes, vocabulário e semântica de estados da listagem e do detalhe. Uma campanha individual que recebeu o vertical posteriormente SHALL continuar aparecendo uma única vez e refletir o formato adicional entregue. Os chips SHALL ser compactos: texto visível apenas “Quadrado 1:1”/“Vertical 9:16”; rótulos de estado e badge “Selecionado” NÃO SHALL aparecer no chip. O estado completo SHALL permanecer no nome/descrição acessível. A ajuda SHALL ser flutuante, fora do fluxo, sem aumentar a altura da linha, deslocar miniatura/ações ou criar overflow horizontal. Cada chip SHALL ser um `<button type="button">` que abre/fecha apenas a explicação local; NÃO SHALL existir controle “?” separado. O dashboard PODE ter menos evidência que o detalhe e exibir `unknown` onde o detalhe exibe `absent` + `refunded`, sem adicionar consulta. Os chips NÃO SHALL iniciar geração, abrir modal, produzir efeito financeiro ou navegar individualmente por formato. A contagem de campanhas disponíveis SHALL contar a campanha uma única vez. A miniatura SHALL ser derivada, com preferência para o quadrado quando entregue. A ação de abertura SHALL permanecer disponível mesmo quando apenas um formato estiver entregue ou a miniatura estiver indisponível. A apresentação dos chips e do formato adicional SHALL usar somente os dados já carregados em lote, sem nova consulta por card.
 
 #### Scenario: Campanha conjunta parcial aparece uma vez
 
@@ -262,6 +262,22 @@ O dashboard SHALL considerar elegível a campanha conjunta com pelo menos um for
 - **THEN** a linha SHALL exibir chips para `1:1` e `9:16`
 - **AND** o formato não incluído SHALL aparecer em cinza, sem `+` e sem promessa de geração
 - **AND** a campanha individual pronta NÃO SHALL ser apresentada como parcial
+
+#### Scenario: Vertical adicionado posteriormente é refletido
+
+- **WHEN** uma campanha individual ou legada `1:1` recebeu um vertical `9:16` entregue
+- **THEN** a linha SHALL continuar aparecendo uma única vez
+- **AND** o chip `9:16` SHALL ser `delivered`
+- **AND** o chip `1:1` SHALL permanecer `delivered`
+- **AND** a linha SHALL NOT ser apresentada como parcial
+- **AND** SHALL NOT abrir modal, reservar crédito ou navegar por chip
+
+#### Scenario: Adição sem leitura completa não vira ausência
+
+- **WHEN** o dashboard não possui a leitura completa da adição
+- **THEN** o chip do formato adicional PODE ser `unknown`
+- **AND** SHALL NOT exibir `absent/not_delivered` sem evidência
+- **AND** SHALL NOT adicionar consulta por card para igualar a evidência do detalhe
 
 #### Scenario: Chips compactos e ajuda flutuante
 
