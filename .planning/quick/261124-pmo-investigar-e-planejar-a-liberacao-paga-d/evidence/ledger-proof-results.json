@@ -1,0 +1,607 @@
+{
+  "environment": {
+    "target": "127.0.0.1:55422/postgres",
+    "sentinelRows": 1
+  },
+  "scenarios": {
+    "saldo1Lock": {
+      "waited": true,
+      "state": "active"
+    },
+    "saldo1": {
+      "a": {
+        "ok": true,
+        "txId": "f3d06458-2a4c-4c99-b66d-1d5055c6c475",
+        "code": null,
+        "message": null
+      },
+      "b": {
+        "ok": true,
+        "txId": null,
+        "code": null,
+        "message": null
+      },
+      "winnerId": "f3d06458-2a4c-4c99-b66d-1d5055c6c475",
+      "deductionCount": 1,
+      "finalBalance": 0,
+      "lockWait": {
+        "waited": true,
+        "state": "active"
+      }
+    },
+    "saldo2Lock": {
+      "waited": true,
+      "state": "active"
+    },
+    "saldo2": {
+      "a": {
+        "ok": true,
+        "txId": "49c38280-faec-4437-87f2-c2499039f870",
+        "code": null,
+        "message": null
+      },
+      "b": {
+        "ok": false,
+        "txId": null,
+        "code": "23505",
+        "message": "duplicate key value violates unique constraint \"idx_credit_transactions_idempotency\""
+      },
+      "winnerId": "49c38280-faec-4437-87f2-c2499039f870",
+      "deductionCount": 1,
+      "finalBalance": 1,
+      "lockWait": {
+        "waited": true,
+        "state": "active"
+      }
+    },
+    "lostResponse": {
+      "first": {
+        "ok": true,
+        "txId": "8b51150b-e5ef-4c65-9cf0-2b4379b287eb",
+        "code": null,
+        "message": null
+      },
+      "second": {
+        "ok": true,
+        "txId": "8b51150b-e5ef-4c65-9cf0-2b4379b287eb",
+        "code": null,
+        "message": null
+      },
+      "winnerId": "8b51150b-e5ef-4c65-9cf0-2b4379b287eb",
+      "deductionCount": 1,
+      "finalBalance": 0
+    },
+    "refundReplay": {
+      "deduction": {
+        "ok": true,
+        "txId": "97a53c61-faf4-46f2-a146-bdb8a2fb80d6",
+        "code": null,
+        "message": null
+      },
+      "refundId": "4d2793e0-f3b4-44ff-998a-1b488aead803",
+      "replay": {
+        "ok": true,
+        "txId": "97a53c61-faf4-46f2-a146-bdb8a2fb80d6",
+        "code": null,
+        "message": null
+      },
+      "winnerId": "97a53c61-faf4-46f2-a146-bdb8a2fb80d6",
+      "refundRowId": "4d2793e0-f3b4-44ff-998a-1b488aead803",
+      "deductionCount": 1,
+      "refundCount": 1,
+      "finalBalance": 1,
+      "accessDeniedByRefund": true
+    },
+    "transportFailure": {
+      "reserved": {
+        "ok": true,
+        "txId": "c5a36808-9a69-4831-8348-08f2d66c6036",
+        "code": null,
+        "message": null
+      },
+      "commitError": {
+        "code": "57P01",
+        "message": "terminating connection due to administrator command"
+      },
+      "deductionCount": 0,
+      "finalBalance": 1,
+      "persisted": null
+    }
+  },
+  "batch": {
+    "storeId": "aa00cd0a-2d2d-4e27-b40e-2b940b905fd7",
+    "campaignIds": [
+      "225285fe-d51c-4dbc-84f9-a5962273ff55",
+      "69eed699-5144-4dbc-800e-04f556932345",
+      "69f09e2b-b439-4fd3-956a-ec3dd0cae147"
+    ],
+    "queryCount": 4,
+    "states": [
+      [
+        "225285fe-d51c-4dbc-84f9-a5962273ff55",
+        "delivered"
+      ],
+      [
+        "69eed699-5144-4dbc-800e-04f556932345",
+        "absent"
+      ],
+      [
+        "69f09e2b-b439-4fd3-956a-ec3dd0cae147",
+        "absent"
+      ]
+    ],
+    "deductionPlan": [
+      {
+        "Plan": {
+          "Node Type": "Index Scan",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Scan Direction": "Forward",
+          "Index Name": "idx_credit_transactions_idempotency",
+          "Relation Name": "credit_transactions",
+          "Alias": "credit_transactions",
+          "Startup Cost": 0.14,
+          "Total Cost": 8.16,
+          "Plan Rows": 1,
+          "Plan Width": 68,
+          "Index Cond": "((store_id = 'aa00cd0a-2d2d-4e27-b40e-2b940b905fd7'::uuid) AND (idempotency_key = ANY ('{square_release:v1:c1ecb92c0661d9bd279a53ec4aca05a4718ab1e29786bf7ef74e7a71cdd435f4,square_release:v1:c5bc0f6b26ee52887622444738eaefdb31c8ccbadf04547370fe258bdd350df5,square_release:v1:548850ab8a8275be3293875ba15d6c3b112da930c1c32356990b9fc1192755fb}'::text[])))"
+        }
+      }
+    ],
+    "refundPlan": [
+      {
+        "Plan": {
+          "Node Type": "Bitmap Heap Scan",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Relation Name": "credit_transactions",
+          "Alias": "credit_transactions",
+          "Startup Cost": 4.16,
+          "Total Cost": 9.51,
+          "Plan Rows": 1,
+          "Plan Width": 48,
+          "Recheck Cond": "(store_id = 'aa00cd0a-2d2d-4e27-b40e-2b940b905fd7'::uuid)",
+          "Filter": "((reference = ANY ('{3a05e6b4-eee4-4b64-9c90-7236ce408ea5}'::text[])) AND (type = 'refund'::text))",
+          "Plans": [
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Index Name": "idx_credit_transactions_store_id",
+              "Startup Cost": 0,
+              "Total Cost": 4.16,
+              "Plan Rows": 2,
+              "Plan Width": 0,
+              "Index Cond": "(store_id = 'aa00cd0a-2d2d-4e27-b40e-2b940b905fd7'::uuid)"
+            }
+          ]
+        }
+      }
+    ],
+    "deductionPlanUsesIdempotencyIndex": true,
+    "refundPlanText": "[{\"Plan\":{\"Node Type\":\"Bitmap Heap Scan\",\"Parallel Aware\":false,\"Async Capable\":false,\"Relation Name\":\"credit_transactions\",\"Alias\":\"credit_transactions\",\"Startup Cost\":4.16,\"Total Cost\":9.51,\"Plan Rows\":1,\"Plan Width\":48,\"Recheck Cond\":\"(store_id = 'aa00cd0a-2d2d-4e27-b40e-2b940b905fd7'::uuid)\",\"Filter\":\"((reference = ANY ('{3a05e6b4-eee4-4b64-9c90-7236ce408ea5}'::text[])) AND (type = 'refund'::text))\",\"Plans\":[{\"Node Type\":\"Bitmap Index Scan\",\"Parent Relationship\":\"Outer\",\"Parallel Aware\":false,\"Async Capable\":false,\"Index Name\":\"idx_credit_transactions_store_id\",\"Startup Cost\":0,\"Total Cost\":4.16,\"Plan Rows\":2,\"Plan Width\":0,\"Index Cond\":\"(store_id = 'aa00cd0a-2d2d-4e27-b40e-2b940b905fd7'::uuid)\"}]}}]"
+  },
+  "consumers": {
+    "totalDeductions": {
+      "total": 1,
+      "n": 1
+    },
+    "balance": {
+      "balance": 1
+    },
+    "adminCostViewExists": true,
+    "adminCostViewFiltersCampaignPipeline": true,
+    "adminGetMetricsIsVsSpecific": true,
+    "finding": "O consumo aparece no ledger/saldo/extrato. A view admin_cost_vs_credits é de custo de IA e exclui a liberação por feature. admin_get_metrics.credits_consumed é VS-específico; não existe, neste código, um total global de consumo que some todas as deduções. Se esse total for requisito financeiro, é uma lacuna de relatório separada, não um efeito da liberação."
+  },
+  "assertions": [
+    {
+      "name": "DB alvo é loopback",
+      "pass": true,
+      "detail": "127.0.0.1:55422"
+    },
+    {
+      "name": "DB alvo é a porta descartável 55422",
+      "pass": true,
+      "detail": "55422"
+    },
+    {
+      "name": "DB alvo é database postgres",
+      "pass": true,
+      "detail": "/postgres"
+    },
+    {
+      "name": "sentinela f50_4_harness_identity presente",
+      "pass": true,
+      "detail": {
+        "n": 1
+      }
+    },
+    {
+      "name": "saldo1: sessão A deduziu",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "txId": "f3d06458-2a4c-4c99-b66d-1d5055c6c475",
+        "code": null,
+        "message": null
+      }
+    },
+    {
+      "name": "saldo1: perdedora aguardou o lock do saldo",
+      "pass": true,
+      "detail": {
+        "waited": true,
+        "state": "active"
+      }
+    },
+    {
+      "name": "saldo1: exatamente uma dedução",
+      "pass": true,
+      "detail": {
+        "dedupCount": 1
+      }
+    },
+    {
+      "name": "saldo1: dedução vencedora é -1",
+      "pass": true,
+      "detail": -1
+    },
+    {
+      "name": "saldo1: perdedora recupera a vencedora",
+      "pass": true,
+      "detail": {
+        "bRes": {
+          "ok": true,
+          "txId": null,
+          "code": null,
+          "message": null
+        },
+        "bRecovered": "f3d06458-2a4c-4c99-b66d-1d5055c6c475",
+        "winner": "f3d06458-2a4c-4c99-b66d-1d5055c6c475"
+      }
+    },
+    {
+      "name": "saldo1: saldo final 0",
+      "pass": true,
+      "detail": {
+        "finalBalance": 0
+      }
+    },
+    {
+      "name": "saldo1: sem refund",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "saldo2: sessão A deduziu",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "txId": "49c38280-faec-4437-87f2-c2499039f870",
+        "code": null,
+        "message": null
+      }
+    },
+    {
+      "name": "saldo2: perdedora aguardou o lock do saldo",
+      "pass": true,
+      "detail": {
+        "waited": true,
+        "state": "active"
+      }
+    },
+    {
+      "name": "saldo2: exatamente uma dedução",
+      "pass": true,
+      "detail": {
+        "dedupCount": 1
+      }
+    },
+    {
+      "name": "saldo2: perdedora recebeu 23505",
+      "pass": true,
+      "detail": {
+        "ok": false,
+        "txId": null,
+        "code": "23505",
+        "message": "duplicate key value violates unique constraint \"idx_credit_transactions_idempotency\""
+      }
+    },
+    {
+      "name": "saldo2: releitura recupera a vencedora",
+      "pass": true,
+      "detail": {
+        "winner": "49c38280-faec-4437-87f2-c2499039f870",
+        "a": "49c38280-faec-4437-87f2-c2499039f870",
+        "bRecovered": "49c38280-faec-4437-87f2-c2499039f870"
+      }
+    },
+    {
+      "name": "saldo2: saldo final 1",
+      "pass": true,
+      "detail": {
+        "finalBalance": 1
+      }
+    },
+    {
+      "name": "lost: primeira chamada deduziu",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "txId": "8b51150b-e5ef-4c65-9cf0-2b4379b287eb",
+        "code": null,
+        "message": null
+      }
+    },
+    {
+      "name": "lost: retry devolve a mesma transação",
+      "pass": true,
+      "detail": {
+        "first": {
+          "ok": true,
+          "txId": "8b51150b-e5ef-4c65-9cf0-2b4379b287eb",
+          "code": null,
+          "message": null
+        },
+        "second": {
+          "ok": true,
+          "txId": "8b51150b-e5ef-4c65-9cf0-2b4379b287eb",
+          "code": null,
+          "message": null
+        }
+      }
+    },
+    {
+      "name": "lost: exatamente uma dedução",
+      "pass": true,
+      "detail": {
+        "dedupCount": 1
+      }
+    },
+    {
+      "name": "lost: saldo final 0",
+      "pass": true,
+      "detail": {
+        "finalBalance": 0
+      }
+    },
+    {
+      "name": "refund: dedução inicial",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "txId": "97a53c61-faf4-46f2-a146-bdb8a2fb80d6",
+        "code": null,
+        "message": null
+      }
+    },
+    {
+      "name": "refund: estorno criado",
+      "pass": true,
+      "detail": {
+        "refundId": "4d2793e0-f3b4-44ff-998a-1b488aead803"
+      }
+    },
+    {
+      "name": "refund: repetição devolve o mesmo estorno",
+      "pass": true,
+      "detail": {
+        "refundId": "4d2793e0-f3b4-44ff-998a-1b488aead803",
+        "duplicate": "4d2793e0-f3b4-44ff-998a-1b488aead803"
+      }
+    },
+    {
+      "name": "refund: replay devolve a dedução original",
+      "pass": true,
+      "detail": {
+        "replay": {
+          "ok": true,
+          "txId": "97a53c61-faf4-46f2-a146-bdb8a2fb80d6",
+          "code": null,
+          "message": null
+        },
+        "deduction": {
+          "ok": true,
+          "txId": "97a53c61-faf4-46f2-a146-bdb8a2fb80d6",
+          "code": null,
+          "message": null
+        }
+      }
+    },
+    {
+      "name": "refund: exatamente uma dedução",
+      "pass": true,
+      "detail": {
+        "dedupCount": 1
+      }
+    },
+    {
+      "name": "refund: exatamente um estorno",
+      "pass": true,
+      "detail": {
+        "refundCount": 1
+      }
+    },
+    {
+      "name": "refund: saldo restaurado",
+      "pass": true,
+      "detail": {
+        "finalBalance": 1
+      }
+    },
+    {
+      "name": "refund: a prova de acesso é negada",
+      "pass": true,
+      "detail": {
+        "winner": "97a53c61-faf4-46f2-a146-bdb8a2fb80d6",
+        "refund": "4d2793e0-f3b4-44ff-998a-1b488aead803"
+      }
+    },
+    {
+      "name": "transport: dedução na transação aberta",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "txId": "c5a36808-9a69-4831-8348-08f2d66c6036",
+        "code": null,
+        "message": null
+      }
+    },
+    {
+      "name": "transport: commit falhou",
+      "pass": true,
+      "detail": {
+        "code": "57P01",
+        "message": "terminating connection due to administrator command"
+      }
+    },
+    {
+      "name": "transport: nenhuma dedução persistida",
+      "pass": true,
+      "detail": {
+        "dedupCount": 0,
+        "winner": null
+      }
+    },
+    {
+      "name": "transport: saldo intacto",
+      "pass": true,
+      "detail": {
+        "finalBalance": 1
+      }
+    },
+    {
+      "name": "batch: dedução da campanha 0",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "txId": "3a05e6b4-eee4-4b64-9c90-7236ce408ea5",
+        "code": null,
+        "message": null
+      }
+    },
+    {
+      "name": "batch: 3 operações",
+      "pass": true,
+      "detail": {
+        "rows": 3
+      }
+    },
+    {
+      "name": "batch: 3 artefatos",
+      "pass": true,
+      "detail": {
+        "rows": 3
+      }
+    },
+    {
+      "name": "batch: 1 dedução",
+      "pass": true,
+      "detail": {
+        "rows": 1
+      }
+    },
+    {
+      "name": "batch: consultas constantes = 4",
+      "pass": true,
+      "detail": {
+        "queryCount": 4
+      }
+    },
+    {
+      "name": "batch: campanha 0 entregue",
+      "pass": true,
+      "detail": {
+        "state": "delivered"
+      }
+    },
+    {
+      "name": "batch: campanhas 1/2 ausentes",
+      "pass": true,
+      "detail": {
+        "states": [
+          [
+            "225285fe-d51c-4dbc-84f9-a5962273ff55",
+            "delivered"
+          ],
+          [
+            "69eed699-5144-4dbc-800e-04f556932345",
+            "absent"
+          ],
+          [
+            "69f09e2b-b439-4fd3-956a-ec3dd0cae147",
+            "absent"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "batch: plano de deduções usa índice de idempotência",
+      "pass": true,
+      "detail": {
+        "plan": [
+          {
+            "Plan": {
+              "Node Type": "Index Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "idx_credit_transactions_idempotency",
+              "Relation Name": "credit_transactions",
+              "Alias": "credit_transactions",
+              "Startup Cost": 0.14,
+              "Total Cost": 8.16,
+              "Plan Rows": 1,
+              "Plan Width": 68,
+              "Index Cond": "((store_id = 'aa00cd0a-2d2d-4e27-b40e-2b940b905fd7'::uuid) AND (idempotency_key = ANY ('{square_release:v1:c1ecb92c0661d9bd279a53ec4aca05a4718ab1e29786bf7ef74e7a71cdd435f4,square_release:v1:c5bc0f6b26ee52887622444738eaefdb31c8ccbadf04547370fe258bdd350df5,square_release:v1:548850ab8a8275be3293875ba15d6c3b112da930c1c32356990b9fc1192755fb}'::text[])))"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "batch: nenhuma leitura de Storage",
+      "pass": true,
+      "detail": "apenas queries SQL foram executadas"
+    },
+    {
+      "name": "consumidores: total de deduções inclui a liberação",
+      "pass": true,
+      "detail": {
+        "total": 1,
+        "n": 1
+      }
+    },
+    {
+      "name": "consumidores: saldo reflete a dedução",
+      "pass": true,
+      "detail": {
+        "balance": 1
+      }
+    },
+    {
+      "name": "consumidores: view de custo de IA filtra campaign_pipeline",
+      "pass": true,
+      "detail": {
+        "hasView": true
+      }
+    },
+    {
+      "name": "consumidores: admin_get_metrics continua VS-específico",
+      "pass": true,
+      "detail": {
+        "hasMetrics": true
+      }
+    }
+  ],
+  "findings": [
+    "O consumo aparece no ledger/saldo/extrato. A view admin_cost_vs_credits é de custo de IA e exclui a liberação por feature. admin_get_metrics.credits_consumed é VS-específico; não existe, neste código, um total global de consumo que some todas as deduções. Se esse total for requisito financeiro, é uma lacuna de relatório separada, não um efeito da liberação."
+  ],
+  "summary": {
+    "totalAssertions": 46,
+    "passed": 46,
+    "failed": 0
+  }
+}

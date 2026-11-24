@@ -2,14 +2,14 @@
 quick_id: 261124-pmo
 slug: investigar-e-planejar-a-liberacao-paga-d
 title: Plano revisado — liberação 1:1 pelo ledger, sem migration
-status: revised-plan-pending-design-review
+status: proofs-passed-pending-final-review
 created: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
 mode: planejamento-sem-implementacao
 approval:
-  status: pending-design-review
-  note: Candidata pelo ledger; nenhuma task executada. Provas de concorrência/recuperação pendentes.
+  status: pending-final-review
+  note: Provas de concorrência/recuperação PASS em PostgreSQL descartável; implementação não iniciada.
 ---
 
 # Plano revisado 261124-pmo — liberação 1:1 pelo ledger
@@ -20,8 +20,36 @@ Liberar o quadrado 1:1 já armazenado de uma campanha entregue em 9:16,
 cobrando exatamente 1 crédito, usando a dedução no ledger existente como
 comprovante durável. Sem migration, tabela, RPC, flag ou segredo novo.
 
-**Status:** candidata sustentada pelo código; **não aprovada** até as provas de
-concorrência e recuperação.
+**Status:** prova técnica **PASS** em PostgreSQL local descartável; implementação
+de UI/API ainda **não iniciada**, aguardando o Review Stop.
+
+## Prova técnica executada (2026-11-24)
+
+Ambiente: stack Supabase efêmero `f50-4-disposable-pmo-20261124a`,
+`127.0.0.1:55422/postgres`, CLI 2.75.0, **159 migrations do repo**, sentinela
+`f50_4_harness_identity` presente. Nenhum ambiente compartilhado foi acessado.
+Evidência: `evidence/ledger-proof-results.json`; script:
+`proofs/ledger-proof.mjs`.
+
+Resultado: **46/46 asserções PASS**.
+
+| Prova | Resultado real |
+|---|---|
+| Saldo 1, duas sessões | Sessão A deduziu; B aguardou o lock, recebeu `NULL`, releu a chave e recuperou a mesma transação; 1 dedução; saldo 0. |
+| Saldo ≥2, duas sessões | A deduziu; B recebeu `23505` (`idx_credit_transactions_idempotency`), releu a chave e recuperou a mesma transação; 1 dedução; saldo 1. |
+| Resposta perdida | Duas chamadas com a mesma chave retornaram o mesmo `tx_id`; 1 dedução; sem nova cobrança. |
+| Replay após estorno | Estorno único; saldo restaurado; repetição devolve a mesma dedução e o mesmo estorno; acesso negado pela presença do refund. |
+| Falha de transporte antes do commit | Backend terminado (`57P01`); transação revertida; 0 deduções; saldo intacto. |
+| Lote (3 campanhas) | 4 consultas constantes; nenhum Storage; campanha liberada `delivered`, demais `absent`; sem N+1. |
+| Plano de deduções | `Index Scan` em `idx_credit_transactions_idempotency`. |
+| Plano de refunds | `Bitmap Heap Scan` por `idx_credit_transactions_store_id` + filtro; sem índice novo. |
+| Consumidores | Deduções totais da loja incluem a liberação; saldo reflete; `admin_cost_vs_credits` filtra `campaign_pipeline`; `admin_get_metrics.credits_consumed` é VS-específico. |
+
+**Limitações da prova:** executada em SQL direto, não pelo `CreditService`/rota;
+não exercita pré-voo real de artefato, HTTP, CSRF, UI ou assinatura. O serviço
+deve implementar a recuperação de `NULL`/`23505` e a releitura obrigatória,
+cobertas por testes unitários na implementação. O lote de refunds usa o índice
+de loja + filtro (sem índice novo); volume por loja deve ser observado.
 
 ## Decisões já incorporadas
 
@@ -35,18 +63,34 @@ concorrência e recuperação.
   após a liberação.
 - Vertical, copy, snapshot, `storage_path` e operação primária intocados.
 
-## Decisões ainda abertas
+## Decisões fechadas na revisão
 
-1. **Após estorno:** uma nova liberação exige novo identificador de tentativa
-   (nova chave) ou fica bloqueada? Com a chave estável, repetir não cobra de
-   novo, mas também não libera.
-2. **Performance em lote:** confirmar que as consultas por chave/índice são
-   suficientes sem índice novo; se não, avaliar indexação em etapa separada.
-3. **Rótulo do extrato:** texto “Liberação do formato 1:1” e eventual i18n.
-4. **Escopo legado:** somente campanha nova `9:16` com `square_original`
-   comprovado.
-5. **Estorno operacional:** haverá ação de suporte para estornar a liberação?
-   Se sim, o refund revoga o acesso.
+- **Após estorno:** bloquear nova compra da mesma liberação nesta quick. Não
+  criar nova chave automaticamente; replay não cobra e não libera.
+- **Confirmação:** autenticação + ownership + CSRF + revalidação server-side;
+  sem token/segredo novo.
+- **Formato padrão:** `9:16`; quadrado por `?format=1:1`.
+- **Extrato:** rótulo “Liberação do formato 1:1” derivado de
+  `metadata.kind='square_release'`. `reserve_credit` não recebe `reason`; a
+  linha terá `reason` NULL, sem prometer esse campo.
+- **Contabilidade:** a liberação não é custo de IA e fica fora de
+  `campaign_pipeline`, mas o consumo permanece no ledger/saldo/extrato.
+- **Lote:** 4 consultas constantes; sem N+1, Storage por card ou índice novo.
+
+## Lacunas restantes
+
+1. **Total financeiro global:** o ledger e o extrato incluem o consumo, mas
+   `admin_get_metrics.credits_consumed` é VS-específico e
+   `admin_cost_vs_credits` é custo de IA. Não foi encontrado, neste código, um
+   total global de consumo que some todas as deduções. Se esse total for
+   requisito, é uma lacuna de relatório separada — não refatorar fora do
+   escopo nesta quick.
+2. **Estorno operacional:** definir se haverá ação de suporte; se sim, o refund
+   revoga o acesso.
+3. **Escopo legado:** manter somente campanha nova `9:16` com
+   `square_original` comprovado.
+4. **Volume do filtro de refunds:** o plano usa o índice de loja + filtro; sem
+   índice novo. Observar volume por loja antes de considerar indexação.
 
 ## Task 1 — Contrato puro
 
@@ -158,13 +202,15 @@ Testes unitários/contrato:
 - auth/CSRF/ownership;
 - regressões 1:1, F62, conjunto, vertical e download.
 
-Provas de ambiente (etapa futura, somente com autorização):
+Provas de ambiente executadas em 2026-11-24 (PASS; stack descartável):
 
-- duas sessões Postgres, mesma chave, saldo 1 ⇒ uma dedução, mesmo `tx_id`,
-  saldo 0;
-- saldo ≥2 ⇒ uma dedução e `23505` na perdedora, resolvida por releitura;
-- resposta perdida/retry;
-- estorno e nova tentativa conforme decisão aberta.
+- duas sessões, saldo 1: uma dedução, perdedora `NULL` e releitura da vencedora;
+- duas sessões, saldo ≥2: uma dedução, perdedora `23505` e releitura;
+- resposta perdida/retry: mesma transação, sem nova cobrança;
+- replay após estorno: não libera nem cobra novamente;
+- falha de transporte antes do commit: rollback total, zero dedução;
+- lote: 4 consultas constantes; deduções por índice único; refunds por índice
+  de loja + filtro; sem Storage por card.
 
 ## Gates
 
@@ -173,20 +219,21 @@ Provas de ambiente (etapa futura, somente com autorização):
 - lint;
 - `git diff --check`;
 - build somente se necessário e com `.next` livre;
-- nenhum acesso a ambiente, provider, banco, Storage ou chamada paga nesta
-  etapa de planejamento.
+- nenhum acesso a ambiente compartilhado/produção, provider, Storage de
+  produção ou chamada paga nesta etapa.
 
 ## Entrega desta etapa
 
-Plano revisado + lacunas. Nenhuma implementação, migration, banco ou Storage.
-Sem merge, push ou deploy.
+Plano final + prova técnica. Nenhuma implementação, migration, tabela, RPC,
+flag ou segredo. O banco descartável foi destruído após a prova. Sem merge,
+push ou deploy.
 
 ## Review Stop
 
-Aguardar decisão sobre:
+Aguardar decisão final para iniciar a implementação focada, com atenção às
+lacunas restantes:
 
-- aprovar a candidata pelo ledger ou exigir prova adicional;
-- política de nova tentativa após estorno;
-- performance/índice da leitura em lote;
-- rótulo do extrato e escopo legado;
-- autorização para a etapa de provas reais em ambiente isolado.
+- total financeiro global (ledger/extrato OK; relatório global inexistente);
+- estorno operacional de suporte;
+- escopo legado;
+- volume do filtro de refunds (sem índice novo).

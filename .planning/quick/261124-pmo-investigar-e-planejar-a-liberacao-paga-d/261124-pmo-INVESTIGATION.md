@@ -2,14 +2,14 @@
 quick_id: 261124-pmo
 slug: investigar-e-planejar-a-liberacao-paga-d
 title: Liberação paga do quadrado 1:1 pelo ledger existente
-status: revised-investigation
+status: proofs-passed-pending-final-review
 created: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
 mode: investigacao-e-planejamento
 approval:
-  status: pending-design-review
-  note: Candidata pelo ledger; sem migration e sem implementação. Provas de concorrência/recuperação pendentes.
+  status: pending-final-review
+  note: Candidata pelo ledger; prova técnica PASS em PostgreSQL descartável. Sem implementação.
 ---
 
 # Investigação revisada 261124-pmo — liberação 1:1 pelo ledger
@@ -240,8 +240,9 @@ revogado pela linha de refund.
   (`20260808000001_f38_1_create_ai_cost_accounting.sql`). A liberação usa
   `feature='square_release'`, portanto **não** entra em custo/margem de
   geração. Teste de contrato deve provar o filtro.
-- **Suporte:** `reason` humano estável + metadados de identidade; sem PII, path
-  ou URL. O histórico administrativo existente mostra a transação.
+- **Suporte:** `reserve_credit` não recebe `reason`; a linha terá `reason`
+  NULL. A identificação vem dos metadados (`kind='square_release'`), sem PII,
+  path ou URL. O histórico administrativo existente mostra a transação.
 - **Operação primária/recuperação:** intocadas, pois não há linha em
   `product_1_1_campaign_credit_operations` nem em tabelas conjuntas.
 
@@ -262,36 +263,53 @@ Algoritmo por página (constante, sem N+1, sem validação binária por card):
 Nenhuma leitura de Storage, nenhum probe binário e nenhuma consulta por card.
 O detalhe continua fazendo a validação integral antes de exibir/baixar.
 
-## Lacunas e provas exigidas antes da aprovação
+## Prova técnica executada (2026-11-24)
 
-1. **Concorrência real em Postgres** (ambiente isolado autorizado, etapa
-   futura): duas sessões com a mesma chave e saldo 1; exatamente uma dedução;
-   as duas chamadas resolvem para o mesmo `tx_id`; saldo final 0; nenhuma
-   segunda cobrança. Repetir com saldo ≥2 para exercitar `23505`.
-2. **Formato do erro Supabase** para `23505` e para `saldo_insuficiente`
-   (`data=null`), com releitura obrigatória.
-3. **Recuperação após resposta perdida** e após reabertura/refresh.
-4. **Estorno e nova tentativa:** decidir se, após refund, uma nova liberação
-   exige novo identificador de tentativa (nova chave) ou fica bloqueada. Com a
-   chave estável, repetir não cobra de novo, mas também não libera.
-5. **Performance da leitura em lote** sem índice novo: confirmar plano de
-   execução e volume aceitável; se não for, avaliar indexação em etapa separada
-   (não presumir migration).
-6. **Rótulo no extrato** e compatibilidade com contabilidade/suporte; validar
-   que nenhum relatório soma todas as deduções ignorando `feature`.
-7. **CSRF/auth:** POST com `requireSameOrigin` + `requireApiUser` +
-   `requireOwnership`, sem token/segredo novo; revalidação server-side de
-   campanha, vertical e artefato.
-8. **Sem N+1** em lista/dashboard e sem binário por card.
+Ambiente: stack Supabase efêmero `f50-4-disposable-pmo-20261124a`,
+`127.0.0.1:55422/postgres`, CLI 2.75.0, 159 migrations do repo, sentinela
+descartável presente. **46/46 asserções PASS**; evidência em
+`evidence/ledger-proof-results.json` e script em `proofs/ledger-proof.mjs`.
+
+| Prova | Resultado |
+|---|---|
+| saldo 1, duas sessões | 1 dedução; perdedora `NULL`; releitura recuperou a vencedora; saldo 0 |
+| saldo ≥2, duas sessões | 1 dedução; perdedora `23505`; releitura recuperou a vencedora; saldo 1 |
+| resposta perdida | mesma transação; sem nova cobrança |
+| replay após estorno | não libera nem cobra; refund único; saldo restaurado |
+| falha de transporte antes do commit | `57P01`; rollback; 0 deduções; saldo intacto |
+| lote (3 campanhas) | 4 consultas constantes; sem Storage; sem N+1 |
+| plano de deduções | `Index Scan` em `idx_credit_transactions_idempotency` |
+| plano de refunds | `Bitmap Heap Scan` em `idx_credit_transactions_store_id` + filtro |
+| consumidores | ledger/saldo incluem a liberação; `admin_cost_vs_credits` filtra `campaign_pipeline`; `admin_get_metrics.credits_consumed` é VS-específico |
+
+**Limitações:** a prova foi SQL direto, não pelo `CreditService`, rota, UI ou
+pré-voo real de artefato. O serviço deve implementar a releitura em `NULL`/
+`23505`; isso será coberto por testes unitários na implementação.
+
+## Lacunas restantes
+
+1. **Total financeiro global:** ledger/extrato/saldo incluem o consumo, mas
+   `admin_get_metrics.credits_consumed` é VS-específico e
+   `admin_cost_vs_credits` é custo de IA. Não há, neste código, um total global
+   que some todas as deduções. Se for requisito, é uma lacuna de relatório
+   separada.
+2. **Estorno operacional:** definir se haverá ação de suporte. Se sim, o refund
+   revoga o acesso; nova compra fica bloqueada nesta quick.
+3. **Escopo legado:** manter somente campanha nova `9:16` com
+   `square_original` comprovado.
+4. **Volume do filtro de refunds:** o plano usa o índice de loja + filtro, sem
+   índice novo; observar volume por loja.
+5. **CSRF/auth e pré-voo real:** implementação/testes, não prova de banco.
+6. **Sem N+1/Storage por card:** comprovado no SQL; falta prova no código real.
 
 ## Não objetivos
 
-- Não implementar antes da revisão.
+- Não implementar antes da revisão final.
 - Não criar migration, tabela, RPC, flag ou segredo.
 - Não usar a tabela F62 no sentido inverso.
 - Não criar linha em `product_two_format_deliveries` ou
   `product_1_1_campaign_credit_operations`.
 - Não alterar vertical, copy, snapshot, `storage_path`, operação primária ou
   contabilidade existente.
-- Não acessar/modificar ambientes nesta etapa.
+- Não acessar ambiente compartilhado/produção.
 - Não fazer merge, push ou deploy.

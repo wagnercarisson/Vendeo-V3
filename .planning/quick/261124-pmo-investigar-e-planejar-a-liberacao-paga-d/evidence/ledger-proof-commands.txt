@@ -1,0 +1,35 @@
+Prova técnica 261124-pmo — comandos e resultados
+
+1) Criar stack descartável
+   F50_4_RUN_ID=pmo-20261124b
+   F50_4_DB_PORT=55422
+   F50_4_DB_SHADOW_PORT=55423
+   node scripts/f50-4/disposable-db.mjs create
+   exit 0
+   alvo: 127.0.0.1:55422/postgres
+   project_id: f50-4-disposable-pmo-20261124b
+   migrations_expected: 159
+
+2) Aplicar migrations existentes
+   node scripts/f50-4/disposable-db.mjs push
+   exit 0
+   ledger: 159 versões
+
+3) Prova de ledger (script final)
+   node .planning/quick/261124-pmo-.../proofs/ledger-proof.mjs
+   exit 0
+   asserções: 46/46 PASS
+   evidência: evidence/ledger-proof-results.json
+
+4) Destruir stack
+   node scripts/f50-4/disposable-db.mjs destroy
+   exit 0
+   containers do project_id: 0
+   listeners 55422/55432/55433: 0
+
+Observação: uma execução anterior (run a) usou o mesmo procedimento e também
+passou 46/46; o run b reexecutou com o script final após remoção de um parâmetro
+não usado, sem mudança de comportamento.
+
+Ambiente compartilhado/produção: não acessado.
+Nenhuma migration criada ou aplicada fora do stack descartável.
