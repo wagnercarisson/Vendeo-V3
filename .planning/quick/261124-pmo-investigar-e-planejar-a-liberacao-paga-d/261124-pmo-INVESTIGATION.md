@@ -1,293 +1,297 @@
 ---
 quick_id: 261124-pmo
 slug: investigar-e-planejar-a-liberacao-paga-d
-title: Liberação paga do quadrado 1:1 já armazenado após entrega 9:16
-status: investigation
+title: Liberação paga do quadrado 1:1 pelo ledger existente
+status: revised-investigation
 created: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
 mode: investigacao-e-planejamento
 approval:
   status: pending-design-review
-  note: Nenhum código, migration, banco ou Storage será alterado antes da revisão do desenho.
+  note: Candidata pelo ledger; sem migration e sem implementação. Provas de concorrência/recuperação pendentes.
 ---
 
-# Investigação 261124-pmo — liberação paga do quadrado 1:1
+# Investigação revisada 261124-pmo — liberação 1:1 pelo ledger
 
-## Pergunta
+## Revisão da recomendação anterior
 
-Como liberar para o lojista o **quadrado 1:1 já armazenado** de uma campanha
-entregue em **9:16**, cobrando **exatamente 1 crédito**, sem alterar a arte
-vertical, a copy, a operação vertical ou a projeção atual da campanha — e sem
-tratar a tabela F62 como se ela aceitasse o sentido inverso?
+As opções A e B foram **descartadas nesta etapa**:
 
-Escopo desta etapa: **somente investigação e planejamento**. Nada foi
-implementado, migrado, aplicado, gerado ou cobrado.
+- A linha `1:1` isolada em `product_two_format_deliveries` não é segura: os
+  leitores administrativos e a projeção conjunta esperam o **par completo**
+  (1:1 + 9:16). Uma linha isolada seria classificada como vínculo incompleto.
+- Criar tabela/RPC dedicada adiciona estrutura antes de esgotar o mecanismo de
+  cobrança que já existe.
 
-## Fatos comprovados no código atual
+Nova candidata: usar a **dedução de 1 crédito no ledger existente** como
+comprovante durável da liberação. Nenhuma migration, tabela, RPC, flag ou
+segredo novo é necessário no desenho proposto. A candidata permanece **não
+aprovada** até as provas de concorrência e recuperação.
 
-### 1. A tabela F62 é unidirecional por constraint
+Nesta etapa nenhum ambiente foi acessado ou modificado.
 
-`campaign_format_additions` fixa a direção no schema:
+## Fatos comprovados no código
+
+### 1. A tabela F62 continua fora do sentido inverso
+
+`campaign_format_additions` fixa:
 
 - `ck_cfa_source_format CHECK (source_format = '1:1')`
 - `ck_cfa_target_format CHECK (target_format = '9:16')`
 
-Fonte: `supabase/migrations/20261123130252_campaign_format_addition.sql`
-(colunas + constraints `ck_cfa_*`).
+Fonte: `supabase/migrations/20261123130252_campaign_format_addition.sql`.
 
-Portanto, registrar “9:16 → 1:1” nessa tabela **falha no banco**. Ela não é
-candidata para a liberação do quadrado. Qualquer desenho que a reutilize no
-sentido inverso está descartado.
+“9:16 → 1:1” falha no banco. A tabela não será usada.
 
 ### 2. O quadrado já existe e é recuperável sem cópia
 
-No fluxo vertical 9:16, a etapa `base` executa o mesmo `square-base` com o
-`operationId` da operação de controle vertical
-(`src/lib/product-9-16-two-stage/orchestration/base-step.ts`). O artefato é
-persistido pela F60.1 em `campaign_composition_artifacts` como:
+A etapa `base` do fluxo vertical executa o `square-base` com o `operationId` da
+operação de controle (`base-step.ts`). O artefato fica em
+`campaign_composition_artifacts` como `role='square_original'`, `format='1:1'`,
+1024×1024 JPEG, bucket interno, path determinístico.
 
-- `role = 'square_original'`
-- `format = '1:1'`
-- 1024×1024, JPEG
-- bucket `campaign-internal-artifacts`
-- path determinístico
-  `{store}/{campaign}/{operation}/square_original.jpg`
+`retrieveCompositionArtifact` valida identidade, autorização, path, bucket,
+bytes, dimensões, MIME, tamanho e checksum. Serve os bytes existentes sem
+copiar, reencodar ou alterar o vertical.
 
-A tabela `campaign_composition_artifacts` é imutável por trigger e tem
-identidade única `(store_id, campaign_id, operation_id, role)`.
+### 3. “Reserva” de crédito já é a dedução efetiva
 
-`retrieveCompositionArtifact(...)` valida identidade, autorização, path, bucket,
-bytes, dimensões, MIME, tamanho e checksum antes de devolver os bytes
-(`src/lib/campaign/composition-artifacts/retrieve.ts`). Logo, a liberação pode
-**servir os bytes existentes no bucket interno**, sem copiar, sem reencodar e
-sem tocar no vertical.
+`CreditService.reserveCredit` chama `reserve_credit` com valor, campanha,
+chave de idempotência e metadados
+(`src/lib/credit/credit-service.ts:84`). A RPC mais recente
+(`supabase/migrations/20260920000001_f50_demo_credits.sql:612`):
 
-### 3. A cobrança de exatamente 1 crédito já existe
+- valida `p_amount > 0`;
+- consulta `(store_id, idempotency_key)` e, se já existir uma dedução,
+  devolve o mesmo `tx_id` sem cobrar de novo; se o tipo existente não for
+  `deduction`, levanta `idempotency_conflict`;
+- trava `credit_balances ... FOR UPDATE`;
+- debita demo → bônus → comprado;
+- insere `credit_transactions` com `type='deduction'`, `amount=-p_amount`,
+  `campaign_id`, `idempotency_key` e `metadata` (acrescentando os splits de
+  demo/bônus/comprado);
+- atualiza o saldo na mesma transação;
+- retorna `NULL` quando o saldo é insuficiente.
 
-`product_1_1_campaign_credit_operations`:
+`CreditService.confirmCredit` é **no-op** (`credit-service.ts:108`). Não existe
+segunda etapa de confirmação: a dedução já é o efeito financeiro.
 
-- `CONSTRAINT chk_p1_1_campaign_credit_operations_amount CHECK (amount = 1)`
-- identidade única `(campaign_id, operation_id)`
-- estados `reserved | art_uploaded | delivered | refunded`
+### 4. Idempotência e recuperação já existem no ledger
 
-As autoridades existentes são:
+- Índice único parcial:
+  `(store_id, idempotency_key) WHERE idempotency_key IS NOT NULL`
+  (`20260716000001_create_credit_tables.sql`).
+- `credit_transactions` é append-only (trigger bloqueia UPDATE/DELETE).
+- `refund_credit` insere uma transação `type='refund'` com
+  `reference = deduction_tx_id`, restaura o saldo e é idempotente por
+  `reference` ou por chave (`refund_credit_at`, migração F50.2).
+- O extrato (`getHistory`) lê `reason`, `reference`, `idempotency_key` e
+  `metadata`.
 
-- `product_1_1_reserve_credit_operation(store, campaign, operation, 1, metadata)`
-  — reserva **um** crédito no ledger na mesma transação, com chave de
-  idempotência `p1_1_reserve_{campaign}_{operation}` e rollback total em falha;
-- `product_1_1_begin_publication(campaign, operation)` — fence/token;
-- `product_1_1_mark_campaign_credit_art_uploaded(campaign, operation, token)`;
-- `product_1_1_deliver_campaign_credit_operation(campaign, operation, token)`;
-- `product_1_1_refund_campaign_credit_operation(campaign, operation, reason)`.
+### 5. Não é preciso criar operação primária nem vínculo conjunto
 
-Fontes: `supabase/migrations/20261008000002_f56_2b1a_product_1_1_campaign_credit.sql`
-e `supabase/migrations/20261016000001_f56_2b2b_publication_fence.sql`.
+O desenho **não** cria linha em:
 
-A RPC de reserva recusa qualquer valor diferente de 1 (`invalid_credit_amount`)
-e o CHECK do banco reforça o mesmo invariante. Não é necessário criar preço,
-tabela de preço, crédito de 2 ou uma segunda cobrança.
+- `product_1_1_campaign_credit_operations`;
+- `product_two_format_deliveries`;
+- `campaign_format_additions`.
 
-### 4. Existe um vínculo durável por formato, mas a RPC conjunta não serve
+Consequências:
 
-`product_two_format_deliveries` aceita **uma linha por formato**:
+- `product_1_1_get_campaign_operation_by_campaign` continua vendo apenas a
+  operação primária/vertical existente;
+- leitores administrativos do par não são afetados;
+- recuperação de operação primária e F62 não são tocadas;
+- não há novo estado de crédito além do ledger.
 
-- `format IN ('1:1','9:16')`
-- `artifact_role IN ('square_original','vertical')`
-- `1:1` exige `artifact_role='square_original'` e
-  `delivery_operation_id <> operation_id`
-- FK para a operação de controle em `product_9_16_two_stage_operations`
-- FK para a identidade financeira em `product_1_1_campaign_credit_operations`
-- uniques por `(campaign, operation, format)` e por `delivery_operation_id`
+## Demonstração da candidata
 
-O schema **permite** uma linha `1:1` isolada. Porém, a RPC existente
-`product_two_format_deliver_format` chama
-`product_two_format_project_campaign`, que exige **dois vínculos** coerentes
-(1:1 + 9:16) e levanta `delivery_links_inconsistent` quando há apenas um. Como a
-entrega e a projeção ocorrem na mesma transação, essa RPC não pode ser usada
-para a liberação isolada.
+### 1. Chave de idempotência estável, definida pelo servidor
 
-Conclusão: o **vínculo** existente é aproveitável; a **RPC conjunta** não é.
+Canônico, montado **somente** após validar campanha/loja/vertical/artefato:
 
-### 5. A operação de liberação não pode ser confundida com a operação primária
-
-`product_1_1_get_campaign_operation_by_campaign` escolhe a operação de crédito
-mais recente, excluindo apenas adições F62 via
-`campaign_format_additions`. Uma nova operação de crédito para o quadrado
-apareceria como a “operação da campanha” em leituras que usam essa RPC.
-
-Portanto, o desenho precisa excluir explicitamente a operação de liberação
-dessa leitura (por exemplo, `NOT EXISTS` contra o vínculo `1:1` de liberação).
-Isso será um teste obrigatório.
-
-### 6. Hoje a campanha 9:16 só entrega o vertical
-
-Na rota de download, campanhas com `generationOrigin = two_stage_9_16` entram no
-ramo vertical e **sempre** servem o vertical; não existe caminho `?format=1:1`
-para esse formato. O ramo F62 de `?format=` só existe para campanha `1:1` com
-adição posterior (`src/app/api/campaign/[id]/download/route.ts`).
-
-A liberação exige um ramo novo e estrito: `9:16` + `?format=1:1` só serve o
-quadrado quando a liberação estiver `delivered` e o artefato `square_original`
-for integral. Sem fallback para o vertical.
-
-### 7. A apresentação atual só prevê adição do 9:16
-
-`buildIndividualFormatPresentation` recebe uma adição opcional tipada
-`format: "9:16"`. Para a campanha persistida `9:16`, o quadrado é sempre
-`absent/not_requested`. É necessário um input simétrico de liberação do `1:1`
-(sem reutilizar a semântica da tabela F62).
-
-## Demonstração — usando as estruturas existentes
-
-Identidades:
-
-- `S` = store
-- `C` = campaign
-- `V` = operação de controle vertical já existente
-- `R` = nova operação de crédito exclusiva da liberação do quadrado
-
-### Passo 1 — pré-condições (somente leitura)
-
-- `campaigns` pertence a `S`;
-- `campaigns.input_snapshot->>'campaignFormat' = '9:16'` e
-  `formatContractVersion = 'f59-vertical-9-16-v1'`;
-- operação `V` existe em `product_9_16_two_stage_operations` para `C/S`;
-- crédito de `V` em `product_1_1_campaign_credit_operations` está `delivered`;
-- `square_original` de `(C,V)` existe e `retrieveCompositionArtifact` devolve
-  `integral` (verificação server-side, antes de reservar);
-- não existe vínculo de liberação ativo para `(C,V)`;
-- não há vínculo `9:16` para a mesma campanha (a campanha é individual, não
-  conjunta).
-
-Se qualquer pré-condição falhar, **não reserva**.
-
-### Passo 2 — registrar e cobrar na mesma transação
-
-Dentro de uma RPC nova (a tabela de vínculo é `SELECT`-only para
-`service_role`; INSERT direto não é permitido):
-
-```sql
--- pseudocódigo do corpo da RPC, com as autoridades reais
-SELECT ... FROM public.campaigns
- WHERE id = C AND store_id = S
- FOR UPDATE;
-
--- valida 9:16, V entregue, ausência de vínculo 9:16 e inexistência de
--- liberação ativa; replay retorna o vínculo existente sem cobrar
-
-SELECT public.product_1_1_reserve_credit_operation(
-  S, C, R, 1,
-  jsonb_build_object(
-    'kind', 'square_release',
-    'source_operation_id', V,
-    'artifact_role', 'square_original'
-  )
-);
-
-INSERT INTO public.product_two_format_deliveries (
-  campaign_id, operation_id, store_id, format,
-  delivery_operation_id, artifact_role
-) VALUES (
-  C, V, S, '1:1', R, 'square_original'
-);
+```text
+square_release:v1
+| storeId
+| campaignId
+| verticalOperationId
+| artifactId
+| artifactChecksumSha256
+| square_original
+| 1:1
 ```
 
-Invariantes:
+A chave persistida é:
 
-- `amount = 1` é garantido pela autoridade e pelo CHECK;
-- a reserva entra no ledger com idempotência por `(C,R)`;
-- se o INSERT falhar, a reserva é desfeita na mesma transação;
-- concorrência: o unique `(C,V,'1:1')` e a identidade `(C,R)` impedem duas
-  liberações; a perdedora faz rollback da própria reserva;
-- replay: se o vínculo já existe, a RPC devolve o `R` existente e o estado do
-  crédito, sem nova cobrança.
-
-### Passo 3 — entregar o crédito e liberar o acesso
-
-Depois de o servidor confirmar `square_original` integral:
-
-```sql
-SELECT public.product_1_1_begin_publication(C, R);          -- token
-SELECT public.product_1_1_mark_campaign_credit_art_uploaded(C, R, token);
-SELECT public.product_1_1_deliver_campaign_credit_operation(C, R, token);
+```text
+square_release:v1:<sha256(canônico)>
 ```
 
-Não há upload, cópia ou regeneração: o objeto existente é a arte publicada. A
-opção `product_1_1_confirm_existing_art(C, R, 'integral')` também existe para
-arte já existente, mas o caminho padrão com fence/token é preferível para não
-perder a semântica de publicação e de recuperação.
+Propriedades:
 
-### Passo 4 — falha e estorno
+- não vem do cliente, de request id, de preço, de data ou de sessão;
+- é estável entre GET, POST, retry, recarregar página e renovar a modal;
+- muda apenas se a identidade validada mudar — o artefato é imutável e a
+  operação vertical é única por campanha;
+- o índice único `(store_id, idempotency_key)` garante uma única dedução por
+  loja/chave.
 
-- Falha comprovada antes da publicação: `product_1_1_refund_campaign_credit_operation(C,R,motivo)`
-  devolve exatamente o crédito reservado.
-- Estado de publicação `in_flight`/`result_unknown`/`published`: seguir as
-  regras existentes do fence; nunca estornar cegamente.
-- `unknown`: não estornar nem liberar; manter acompanhamento.
-- `delivered` é terminal e não estorna.
+Na leitura, a chave é **recomputada** a partir das identidades atuais e o
+registro é validado; não se confia em metadados fornecidos pelo cliente.
 
-### Passo 5 — acesso ao quadrado
+### 2. Dedução de exatamente 1 crédito e prova de identidade
 
-- A rota de download lê o vínculo `1:1` + crédito `R = delivered`;
-- valida `square_original` integral com `retrieveCompositionArtifact`;
-- serve os bytes do bucket interno com `Content-Disposition: attachment`;
-- não altera `campaigns.storage_path`, `input_snapshot`, copy, vertical ou
-  projeção; o vertical continua sendo o formato preferido da campanha.
+```ts
+const RELEASE_COST_CREDITS = 1 as const;
 
-## O que já existe vs. o que falta
+const txId = await creditService.reserveCredit(storeId, RELEASE_COST_CREDITS, {
+  campaignId,
+  idempotencyKey: releaseKey,
+  metadata: {
+    kind: "square_release",
+    version: 1,
+    feature: "square_release",
+    vertical_operation_id: verticalOperationId,
+    artifact_id: artifactId,
+    artifact_role: "square_original",
+    artifact_format: "1:1",
+    artifact_checksum_sha256: checksumSha256,
+    artifact_width: 1024,
+    artifact_height: 1024,
+    artifact_mime: "image/jpeg",
+    cost_credits: 1,
+  },
+});
+```
 
-| Necessidade | Estrutura existente | Situação |
-|---|---|---|
-| Cobrar 1 crédito | `product_1_1_campaign_credit_operations` + RPCs de reserva/entrega/estorno | **Reutilizável** |
-| Ledger/idempotência | `reserve_credit` com chave `p1_1_reserve_C_R` | **Reutilizável** |
-| Arte quadrada | `campaign_composition_artifacts` (`square_original`) + `retrieveCompositionArtifact` | **Reutilizável, sem cópia** |
-| Vínculo formato↔crédito | `product_two_format_deliveries` (linha `1:1` isolada) | **Estruturalmente possível; RPC conjunta não serve** |
-| Registro da liberação | Nova RPC que reserve + insira o vínculo | **Necessária** |
-| Exclusão da operação primária | `product_1_1_get_campaign_operation_by_campaign` | **Precisa ser estendida** |
-| Leitura/UI/download do quadrado liberado | Novo reader + ramo `?format=1:1` + apresentação | **Necessário** |
-| Tabela F62 | `campaign_format_additions` | **Não serve: direção fixa 1:1 → 9:16** |
+O ledger não tem `CHECK (amount = 1)` para toda dedução; a garantia de **1
+crédito** é a constante server-side `RELEASE_COST_CREDITS = 1` mais teste
+explícito. Na leitura, exigir `type='deduction'`, `amount=-1`,
+`campaign_id=C` e metadados de identidade iguais aos recomputados.
 
-## Decisão estrutural em aberto (para revisão)
+A liberação é comprovada por:
 
-**Opção A (recomendada para esta quick):** reutilizar
-`product_two_format_deliveries` como vínculo `1:1` isolado, com uma RPC nova de
-abertura e uma guarda explícita de que a campanha é `9:16` individual (sem
-vínculo `9:16`). Não cria tabela nova. Exige documentar que uma linha `1:1`
-isolada é um uso deliberado de liberação e que a projeção conjunta não é
-chamada.
+1. dedução encontrada por `(store_id, chave)`;
+2. tipo `deduction`, valor `-1`, campanha correta;
+3. metadados de identidade coerentes;
+4. **nenhum** `refund` com `reference = dedução.id`.
 
-**Opção B:** criar uma tabela dedicada `campaign_square_releases` (campanha,
-loja, operação de controle, operação de crédito, timestamps), mantendo
-`product_two_format_deliveries` exclusivamente para o par. Mais limpa
-semanticamente, porém adiciona tabela e migration.
+Dedução estornada **não** libera acesso. O estorno não apaga a dedução
+(append-only); é uma linha separada referenciando-a.
 
-A escolha precisa de aceite humano porque a Opção A reutiliza uma tabela cujo
-nome expressa “dois formatos”, ainda que os constraints permitam a linha
-isolada.
+### 3. Duas confirmações concorrentes: uma cobrança
 
-## Riscos e decisões para o Review Stop
+O ponto crítico é que `reserve_credit` faz a checagem de idempotência **antes**
+de travar o saldo. Com a mesma chave, há dois cenários de perdedora:
 
-1. **Opção A vs. B** — reutilizar o vínculo conjunto ou criar tabela dedicada.
-2. **Token de confirmação** — criar token próprio da liberação (mesmo segredo
-   `FORMAT_ADDITION_CONFIRMATION_SECRET`, payload com `kind` distinto) ou usar
-   confirmação autenticada sem token adicional.
-3. **Formato preferido após a liberação** — manter `9:16` como preferido e o
-   quadrado acessível por `?format=1:1`; não reprojetar `campaigns.storage_path`.
-4. **Escopo legado** — liberar somente campanha nova `9:16` com
-   `square_original` comprovado; legado sem esse artefato fica fora.
-5. **Fence** — usar `begin/mark/deliver` ou `confirm_existing_art`; recomendo o
-   primeiro.
-6. **Exclusão em `getCampaignOperation`** — obrigatória para a operação `R` não
-   virar a operação primária.
-7. **Ambiente** — migration nova precisa de autorização separada para
-   aplicação; nada será aplicado nesta fase.
+- **Saldo vira zero:** a vencedora deduz 1 e commita; a perdedora espera o lock,
+  lê saldo 0 e `reserve_credit` retorna `NULL`. O serviço traduz como possível
+  corrida, relê `(store_id, chave)` e encontra a dedução da vencedora; retorna
+  sucesso sem nova cobrança.
+- **Saldo ainda cobre duas:** a perdedora passa pela checagem de saldo e tenta
+  inserir a mesma chave; o índice único levanta `23505`. O serviço captura,
+  relê `(store_id, chave)` e encontra a vencedora; retorna sucesso.
+
+Regra: **nunca** chamar `reserve_credit` uma segunda vez após a releitura; se a
+releitura falhar, devolver estado incerto/refresh, sem segundo débito. A prova
+de concorrência real com duas sessões Postgres continua pendente.
+
+### 4. Resposta HTTP perdida após o commit
+
+O POST sempre começa lendo a dedução pela chave:
+
+- encontrada e não estornada → `delivered`, sem chamar `reserve_credit`;
+- não encontrada → tenta a dedução.
+
+Se o commit ocorreu e a resposta se perdeu, o retry e o GET encontram a dedução
+e recuperam a liberação sem nova cobrança.
+
+### 5. Quadrado ausente/inválido/indeterminado antes da cobrança
+
+A ordem é obrigatória:
+
+1. validar campanha `9:16` e vertical `delivered`;
+2. validar `square_original` (linha + `retrieveCompositionArtifact`);
+3. somente então montar a chave e chamar `reserveCredit`.
+
+Ausente, inválido ou indeterminado ⇒ **nenhum débito**. O artefato é imutável,
+portanto não há TOCTOU relevante entre a validação e a dedução.
+
+### 6. Falha posterior de assinatura/download
+
+A dedução é a prova de acesso; assinatura é por requisição. Falha transitória de
+assinatura/download:
+
+- **não** estorna automaticamente;
+- mantém a liberação;
+- permite novo GET/download sem nova cobrança.
+
+Estorno só por decisão explícita (suporte/rollback), e nesse caso o acesso é
+revogado pela linha de refund.
+
+### 7. Extrato, contabilidade e suporte
+
+- **Extrato:** a dedução aparece como uma transação normal. O rótulo atual de
+  `deduction` é “Geração”; o plano inclui rotular `metadata.kind =
+  'square_release'` como “Liberação do formato 1:1”, sem migration.
+- **Contabilidade:** a view `admin_cost_vs_credits` soma deduções com
+  `metadata.feature = 'campaign_pipeline'`
+  (`20260808000001_f38_1_create_ai_cost_accounting.sql`). A liberação usa
+  `feature='square_release'`, portanto **não** entra em custo/margem de
+  geração. Teste de contrato deve provar o filtro.
+- **Suporte:** `reason` humano estável + metadados de identidade; sem PII, path
+  ou URL. O histórico administrativo existente mostra a transação.
+- **Operação primária/recuperação:** intocadas, pois não há linha em
+  `product_1_1_campaign_credit_operations` nem em tabelas conjuntas.
+
+### 8. Leitura em lote para chips de lista/dashboard
+
+Algoritmo por página (constante, sem N+1, sem validação binária por card):
+
+1. filtrar campanhas com formato persistido `9:16` (puro);
+2. uma consulta em lote a `product_9_16_two_stage_operations` para obter `V`;
+3. uma consulta em lote a `campaign_composition_artifacts` para
+   `role='square_original'` (id/checksum/dimensões, sem bytes);
+4. calcular as chaves em memória;
+5. uma consulta em lote a `credit_transactions` por
+   `store_id + idempotency_key IN (...)` (índice único);
+6. uma consulta em lote de refunds por `reference IN (tx_ids)`;
+7. mapear `delivered/refunded/absent` por campanha.
+
+Nenhuma leitura de Storage, nenhum probe binário e nenhuma consulta por card.
+O detalhe continua fazendo a validação integral antes de exibir/baixar.
+
+## Lacunas e provas exigidas antes da aprovação
+
+1. **Concorrência real em Postgres** (ambiente isolado autorizado, etapa
+   futura): duas sessões com a mesma chave e saldo 1; exatamente uma dedução;
+   as duas chamadas resolvem para o mesmo `tx_id`; saldo final 0; nenhuma
+   segunda cobrança. Repetir com saldo ≥2 para exercitar `23505`.
+2. **Formato do erro Supabase** para `23505` e para `saldo_insuficiente`
+   (`data=null`), com releitura obrigatória.
+3. **Recuperação após resposta perdida** e após reabertura/refresh.
+4. **Estorno e nova tentativa:** decidir se, após refund, uma nova liberação
+   exige novo identificador de tentativa (nova chave) ou fica bloqueada. Com a
+   chave estável, repetir não cobra de novo, mas também não libera.
+5. **Performance da leitura em lote** sem índice novo: confirmar plano de
+   execução e volume aceitável; se não for, avaliar indexação em etapa separada
+   (não presumir migration).
+6. **Rótulo no extrato** e compatibilidade com contabilidade/suporte; validar
+   que nenhum relatório soma todas as deduções ignorando `feature`.
+7. **CSRF/auth:** POST com `requireSameOrigin` + `requireApiUser` +
+   `requireOwnership`, sem token/segredo novo; revalidação server-side de
+   campanha, vertical e artefato.
+8. **Sem N+1** em lista/dashboard e sem binário por card.
 
 ## Não objetivos
 
-- Não alterar a tabela F62 nem sua semântica.
-- Não alterar vertical, copy, `input_snapshot` ou `campaigns.storage_path`.
-- Não copiar/reencodar a arte quadrada.
-- Não gerar imagem nem chamar provider.
-- Não implementar UI/rota/migration antes da revisão do desenho.
+- Não implementar antes da revisão.
+- Não criar migration, tabela, RPC, flag ou segredo.
+- Não usar a tabela F62 no sentido inverso.
+- Não criar linha em `product_two_format_deliveries` ou
+  `product_1_1_campaign_credit_operations`.
+- Não alterar vertical, copy, snapshot, `storage_path`, operação primária ou
+  contabilidade existente.
+- Não acessar/modificar ambientes nesta etapa.
 - Não fazer merge, push ou deploy.

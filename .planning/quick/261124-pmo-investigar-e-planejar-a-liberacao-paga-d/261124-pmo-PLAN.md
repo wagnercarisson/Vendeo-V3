@@ -1,193 +1,192 @@
 ---
 quick_id: 261124-pmo
 slug: investigar-e-planejar-a-liberacao-paga-d
-title: Plano proposto — liberação paga do quadrado 1:1 após 9:16
-status: planned-for-design-review
+title: Plano revisado — liberação 1:1 pelo ledger, sem migration
+status: revised-plan-pending-design-review
 created: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
 mode: planejamento-sem-implementacao
 approval:
   status: pending-design-review
-  note: Nenhuma task abaixo foi executada. O plano aguarda revisão do desenho e aceite humano.
+  note: Candidata pelo ledger; nenhuma task executada. Provas de concorrência/recuperação pendentes.
 ---
 
-# Plano proposto 261124-pmo
+# Plano revisado 261124-pmo — liberação 1:1 pelo ledger
 
 ## Objetivo
 
-Permitir que uma campanha entregue em **9:16** libere o **quadrado 1:1 já
-armazenado** por **exatamente 1 crédito**, sem regenerar ou alterar o vertical,
-sem alterar a copy e sem reutilizar a tabela F62 no sentido inverso.
+Liberar o quadrado 1:1 já armazenado de uma campanha entregue em 9:16,
+cobrando exatamente 1 crédito, usando a dedução no ledger existente como
+comprovante durável. Sem migration, tabela, RPC, flag ou segredo novo.
 
-Estado atual: **investigação concluída; implementação não iniciada.**
+**Status:** candidata sustentada pelo código; **não aprovada** até as provas de
+concorrência e recuperação.
 
-## Decisões que precisam de aceite antes da execução
+## Decisões já incorporadas
 
-1. **Vínculo:** Opção A (linha `1:1` isolada em `product_two_format_deliveries`
-   + RPC nova) ou Opção B (tabela dedicada `campaign_square_releases`).
-   Recomendação técnica: **Opção A**, por reutilizar constraints/FKs
-   existentes e não criar tabela; exige guarda explícita de campanha `9:16`
-   individual e documentação de que a projeção conjunta não é chamada.
-2. **Confirmação:** token próprio da liberação reutilizando
-   `FORMAT_ADDITION_CONFIRMATION_SECRET` com payload `kind` distinto, ou
-   confirmação autenticada sem token adicional.
-3. **Formato preferido:** manter `9:16` como preferido e liberar o quadrado via
-   `?format=1:1`, sem reprojetar `campaigns.storage_path`.
-4. **Escopo:** somente campanha nova `9:16` com `square_original` comprovado;
-   legado sem esse artefato fica fora.
-5. **Fence de entrega:** `beginPublication` → `markArtUploaded` → `deliver`
-   (recomendado), sem upload, ou `confirm_existing_art` (caminho de recuperação).
+- Opções A/B descartadas: o vínculo conjunto exige o par e os leitores
+  administrativos classificariam uma linha isolada como incompleta.
+- Sem `product_1_1_campaign_credit_operations`, sem
+  `product_two_format_deliveries`, sem `campaign_format_additions`.
+- Confirmação autenticada + CSRF + revalidação server-side; **sem token/segredo
+  novo**. O custo é fixo e a chave de idempotência é derivada no servidor.
+- `9:16` permanece padrão; o quadrado é selecionável por `?format=1:1` somente
+  após a liberação.
+- Vertical, copy, snapshot, `storage_path` e operação primária intocados.
 
-## Task 1 — Contrato puro e apresentação
+## Decisões ainda abertas
 
-- Criar `src/lib/campaign/square-release/{types,eligibility,index}.ts`:
-  - estados `eligible | processing | delivered | refunded | unknown |
-    unavailable | incompatible`;
-  - entrada segura: formato persistido `9:16`, ciclo de vida do vertical,
-    existência/validade da arte quadrada, vínculo de liberação e estado do
-    crédito;
-  - `eligible` só com vertical `delivered`, quadrado `integral`, sem liberação
-    ativa e sem vínculo `9:16` na mesma campanha;
-  - nenhum `input_snapshot`, path, URL ou bytes no contrato de UI.
-- Estender `buildIndividualFormatPresentation` com um input simétrico de
-  liberação do `1:1` (sem reutilizar a semântica da tabela F62):
-  - `delivered` → quadrado entregue, selecionável;
-  - `processing` → acompanhamento;
-  - `refunded` → ausente com crédito devolvido;
-  - `unknown`/`unavailable` → sem promessa de entrega.
-- Reutilizar `actionStateLabel`/`actionHelpText` do chip para a ação
-  “Liberar quadrado 1:1” e ajuda “Custo: 1 crédito”, sem nova linguagem de
-  geração.
+1. **Após estorno:** uma nova liberação exige novo identificador de tentativa
+   (nova chave) ou fica bloqueada? Com a chave estável, repetir não cobra de
+   novo, mas também não libera.
+2. **Performance em lote:** confirmar que as consultas por chave/índice são
+   suficientes sem índice novo; se não, avaliar indexação em etapa separada.
+3. **Rótulo do extrato:** texto “Liberação do formato 1:1” e eventual i18n.
+4. **Escopo legado:** somente campanha nova `9:16` com `square_original`
+   comprovado.
+5. **Estorno operacional:** haverá ação de suporte para estornar a liberação?
+   Se sim, o refund revoga o acesso.
 
-## Task 2 — Migration (autorada, NÃO aplicada)
+## Task 1 — Contrato puro
 
-- Nova migration `YYYYMMDDHHmmss_campaign_square_release.sql` com timestamp real
-  UTC e unicidade conferida na worktree, `main` e branches paralelas.
-- RPC `campaign_square_release_open(S, C, V, R)`:
-  1. lock da campanha (`FOR UPDATE`) e validação de loja;
-  2. validação do contrato `9:16` (`campaignFormat` +
-     `formatContractVersion`);
-  3. validação de `V` em `product_9_16_two_stage_operations` e crédito `V`
-     `delivered`;
-  4. rejeição se existir vínculo `9:16` para a campanha;
-  5. replay: se já existe vínculo `1:1` para `(C,V)`, devolver `R` e estado do
-     crédito sem cobrar; divergência de `R` → conflito;
-  6. `product_1_1_reserve_credit_operation(S,C,R,1,metadata)` — exatamente 1;
-  7. INSERT em `product_two_format_deliveries` com
-     `format='1:1'`, `artifact_role='square_original'`,
-     `delivery_operation_id=R`, `operation_id=V`;
-  8. retorno fechado com `success`, `idempotent`, `state`, `releaseOperationId`.
-- Redefinir `product_1_1_get_campaign_operation_by_campaign` para excluir
-  operações que aparecem como `delivery_operation_id` de vínculo `1:1`
-  (a operação de liberação não pode virar a operação primária).
-- Grants: `REVOKE` público/anon/authenticated; `GRANT EXECUTE` apenas
-  `service_role`; sem INSERT direto na tabela de vínculo.
-- Nenhuma alteração em `campaign_format_additions`, artefatos, copy, vertical,
-  `campaigns.storage_path` ou `input_snapshot`.
-- Testes de contrato da migration: constraints, direção única, FK, unique,
-  ausência de grant de escrita direta, exclusão da operação primária.
+Criar `src/lib/campaign/square-release/{types,identity,state,index}.ts`:
 
-## Task 3 — Orquestração server-side
+- `RELEASE_COST_CREDITS = 1`;
+- identidade canônica:
+  `storeId`, `campaignId`, `verticalOperationId`, `artifactId`,
+  `artifactChecksumSha256`, `square_original`, `1:1`;
+- chave `square_release:v1:<sha256(canônico)>`;
+- schema de metadados da dedução:
+  `kind`, `version`, `feature`, `vertical_operation_id`, `artifact_id`,
+  `artifact_role`, `artifact_format`, `artifact_checksum_sha256`,
+  `artifact_width`, `artifact_height`, `artifact_mime`, `cost_credits`;
+- estados: `eligible | delivered | refunded | unknown | unavailable |
+  incompatible`;
+- validação fechada do registro lido: tipo `deduction`, valor `-1`,
+  `campaign_id`, metadados de identidade coerentes e ausência de refund;
+- nenhum path, URL, bytes ou PII no contrato de UI.
 
-- Criar `src/lib/campaign/square-release/`:
-  - leitor canônico do vínculo `1:1` + crédito `R` + estado do vertical;
-  - cliente financeiro fino para a RPC de abertura e autoridades existentes;
-  - verificação da arte `square_original` via
-    `retrieveCompositionArtifact` (sem cópia);
-  - abertura idempotente, entrega com fence e estorno conforme estado;
-  - token de confirmação conforme decisão aprovada.
-- Regras:
-  - verificar a arte **antes** de reservar; se ausente/inválida/indeterminada,
-    não reservar;
-  - reserva exata de 1 crédito; nenhuma segunda cobrança em replay;
-  - falha antes da publicação → estorno único; `unknown`/fence → não estornar
-    cegamente;
-  - `delivered` terminal.
-- Não importar nem alterar o fluxo vertical/F62; somente leitura das
-  autoridades e do artefato.
+## Task 2 — Serviço server-side
 
-## Task 4 — API
+Criar o serviço de liberação:
 
-- Nova rota `src/app/api/campaign/[id]/square-release/route.ts`:
-  - **GET** read-only: `eligible`, `processing`, `delivered`, `refunded`,
-    `unknown`, `unavailable`, `incompatible`; nunca reserva, gera ou cobra;
-  - **POST** autenticado + CSRF/ownership + confirmação: abre/retoma a
-    liberação, entrega o crédito e devolve o estado;
-  - replay idempotente; erros fechados (`insufficient_credits`, conflito,
-    arte indisponível, estado inválido);
-  - nenhuma resposta devolve path, URL assinada, token financeiro ou bytes.
-- Não reutilizar `/format-additions` para o sentido inverso.
+- **pré-voo:** campanha 9:16, vertical `delivered`, `square_original` integral
+  via `retrieveCompositionArtifact`; sem débito se falhar;
+- **garantia de dedução única:**
+  1. ler `credit_transactions` por `(store_id, idempotency_key)`;
+  2. se existir, validar identidade/refund e retornar;
+  3. se não existir, `CreditService.reserveCredit(store, 1, { campaignId,
+     idempotencyKey, metadata })`;
+  4. se a chamada retornar `saldo_insuficiente`/`NULL` ou `23505`, reler a
+     chave **uma vez**; se a dedução vencedora existir, retornar sucesso; se
+     não, devolver insuficiência/estado incerto;
+  5. nunca chamar `reserveCredit` de novo após a releitura;
+- **prova de acesso:** dedução + `-1` + identidade coerente + nenhum refund
+  com `reference = dedução.id`;
+- **estado:** `delivered` se a prova vale; `refunded` se houver refund;
+  `unknown` se a leitura falhar; `unavailable/incompatible` conforme pré-voo;
+- **sem estorno automático** por falha de assinatura/download;
+- **batch:** função de leitura em lote para lista/dashboard, sem Storage e sem
+  binário por card.
 
-## Task 5 — Download e detalhe
+## Task 3 — API
 
-- Rota de download: novo ramo estrito para campanha `9:16` +
-  `?format=1:1`:
-  - exige vínculo `1:1` com crédito `delivered`;
-  - exige `square_original` integral;
-  - serve os bytes existentes do bucket interno;
-  - não altera `campaigns.storage_path`, copy, vertical ou projeção;
-  - `?format=9:16` e ausência de `?format` permanecem inalterados;
-  - inválido/duplicado/não liberado falha fechado, sem fallback.
-- Detalhe `/campanhas/[id]`:
-  - ler o estado da liberação somente para campanha `9:16`;
-  - chip do quadrado: ação “Liberar quadrado 1:1” quando elegível; custo 1
-    crédito; acompanhamento em processing; link `?format=1:1` quando
-    delivered; textos honestos em refunded/unknown/unavailable;
-  - modal própria (ou extensão mínima e isolada) com o mesmo contrato de
-    estados aprovado na F62: consulta ≠ confirmação ≠ processamento;
-  - Cancelar/Escape/clique fora permitidos antes da confirmação; bloqueados
-    durante operação real;
-  - nenhuma ação na lista/dashboard.
-- Copy e vertical não são tocados; `9:16` continua sendo o formato preferido.
+Nova rota `src/app/api/campaign/[id]/square-release/route.ts`:
 
-## Task 6 — Testes e gates
+- **GET** read-only: pré-voo + estado, sem débito;
+- **POST**:
+  - `requireSameOrigin` + `requireApiUser` + `requireOwnership`;
+  - revalidar campanha 9:16, vertical delivered e artefato integral;
+  - recomputar identidade/chave no servidor;
+  - garantir a dedução única (com recuperação de corrida);
+  - retornar `delivered`/`refunded`/erros fechados;
+  - nenhum path, URL, token ou bytes na resposta;
+- sem token de confirmação; justificativa: custo fixo, chave server-side,
+  ledger idempotente, autenticação + CSRF + revalidação.
 
-Testes mínimos:
+## Task 4 — Download e detalhe
 
-- puros: estados de elegibilidade, apresentação simétrica, ausência de
-  fallback, refunded/unknown;
-- migration: constraints/FKs/unique, direção F62 rejeitada, exclusão da
-  operação primária;
-- orquestração: vertical não entregue ⇒ sem reserva; quadrado ausente/inválido
-  ⇒ sem reserva; sucesso ⇒ 1 crédito `delivered`; replay ⇒ sem segunda
-  cobrança; falha antes da publicação ⇒ 1 estorno; `unknown` ⇒ sem estorno;
-  concorrência ⇒ 1 vínculo/1 cobrança; legado/9:16 sem quadrado ⇒
-  incompatível;
-- download: `1:1` liberado serve o quadrado; não liberado falha; `9:16`
-  preservado; sem fallback;
-- UI: ação/custo/confirmação, consulta inicial sem geração, processing
-  bloqueado, delivered vira link, refunded/unknown, pt-BR/es-419;
-- regressões F62, 1:1, conjunto, vertical e download.
+- Download: novo ramo estrito para campanha `9:16` + `?format=1:1`:
+  - exigir prova de liberação e `square_original` integral;
+  - servir os bytes existentes do bucket interno;
+  - inválido/duplicado/não liberado falha fechado, sem fallback;
+  - `?format=9:16` e ausência de `?format` inalterados;
+  - nenhuma alteração em `campaigns.storage_path`.
+- Detalhe:
+  - ler o estado da liberação apenas para campanha `9:16`;
+  - chip do quadrado: “Liberar quadrado 1:1” quando elegível, custo 1 crédito;
+    acompanhamento/estado honesto; link `?format=1:1` quando liberado;
+  - modal própria/isolada com o contrato consulta ≠ confirmação ≠
+    processamento;
+  - Cancelar/Escape/clique fora permitidos antes da confirmação;
+  - sem ação na lista/dashboard.
 
-Gates:
+## Task 5 — Lista, dashboard e extrato
+
+- Lista/dashboard: leitura em lote do estado de liberação por página:
+  1. campanhas 9:16;
+  2. operações verticais em lote;
+  3. artefatos `square_original` em lote (sem bytes);
+  4. chaves em memória;
+  5. deduções por `store_id + idempotency_key IN (...)`;
+  6. refunds por `reference IN (...)`;
+  7. estado por card.
+  Sem N+1, sem Storage, sem binário por card.
+- Extrato: rotular a dedução com `metadata.kind='square_release'` como
+  “Liberação do formato 1:1” (fallback atual preservado).
+- Contabilidade: garantir `feature='square_release'`, fora de
+  `metadata.feature='campaign_pipeline'`; teste de contrato do filtro.
+
+## Task 6 — Testes e provas
+
+Testes unitários/contrato:
+
+- chave estável: mesmos dados ⇒ mesma chave; qualquer identidade diferente ⇒
+  chave diferente; entrada do cliente não influencia;
+- exatamente 1 crédito: chamada sempre com 1; leitura exige `amount=-1`;
+- prova: dedução válida libera; refund revoga; metadados divergentes falham;
+- concorrência simulada: `reserveCredit` retorna `NULL`/`23505` e a releitura
+  encontra a vencedora ⇒ sucesso sem segunda chamada; releitura vazia ⇒
+  insuficiência/incerteza;
+- resposta perdida: segunda chamada não chama `reserveCredit`;
+- pré-voo: quadrado ausente/inválido/indeterminado ⇒ zero débito;
+- assinatura/download falhando depois do commit ⇒ liberação preservada, sem
+  refund;
+- batch: número constante de consultas, sem Storage, sem N+1;
+- extrato/contabilidade: rótulo e filtro `feature`;
+- auth/CSRF/ownership;
+- regressões 1:1, F62, conjunto, vertical e download.
+
+Provas de ambiente (etapa futura, somente com autorização):
+
+- duas sessões Postgres, mesma chave, saldo 1 ⇒ uma dedução, mesmo `tx_id`,
+  saldo 0;
+- saldo ≥2 ⇒ uma dedução e `23505` na perdedora, resolvida por releitura;
+- resposta perdida/retry;
+- estorno e nova tentativa conforme decisão aberta.
+
+## Gates
 
 - testes afetados;
 - typecheck;
 - lint;
 - `git diff --check`;
-- build somente se necessário e com a `.next` livre (parar apenas a instância
-  identificada, se houver);
-- nenhuma chamada paga, migration aplicada, banco/Storage alterado.
+- build somente se necessário e com `.next` livre;
+- nenhum acesso a ambiente, provider, banco, Storage ou chamada paga nesta
+  etapa de planejamento.
 
-## Evidência / validação visual
+## Entrega desta etapa
 
-- GET atrasado de forma controlada para comprovar consulta ≠ confirmação ≠
-  processamento, sem confirmar cobrança real.
-- Preferir a modal/jornada real autenticada; se indisponível, harness
-  complementar explícito, sem página/rota temporária no app.
-
-## Limites
-
-- Sem implementação antes da revisão deste desenho.
-- Sem alteração de vertical, copy, F62, contabilidade existente, provider,
-  banco, Storage, flags, segredos ou configuração.
-- Sem merge, push ou deploy.
-- A migration, quando autorizada, será autorada e **não aplicada** sem
-  autorização específica do ambiente.
+Plano revisado + lacunas. Nenhuma implementação, migration, banco ou Storage.
+Sem merge, push ou deploy.
 
 ## Review Stop
 
-Parar aqui. Entregar a investigação, a demonstração de cobrança/vínculo, as
-opções estruturais e este plano. Aguardar decisão humana sobre vínculo, token,
-formato preferido, escopo legado e fence antes de qualquer implementação.
+Aguardar decisão sobre:
+
+- aprovar a candidata pelo ledger ou exigir prova adicional;
+- política de nova tentativa após estorno;
+- performance/índice da leitura em lote;
+- rótulo do extrato e escopo legado;
+- autorização para a etapa de provas reais em ambiente isolado.
