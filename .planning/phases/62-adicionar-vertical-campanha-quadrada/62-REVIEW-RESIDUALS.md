@@ -16,6 +16,12 @@
 | **R7** | `62-05` | **INFO-2 — teste do chip na task.** Incluir `campaign-format-chips.test.tsx` no `<verify>` da Task 3 (task que altera o componente), e não apenas na verificação do plano. |
 | **R8** | `62-03`, `62-04` | **Seleção de campanha legada.** Reconciliado em 2026-11-23: `legacy_campaign` é origem da campanha/fonte, não da seleção. A abertura nova usa a configuração atual `configured` com versão válida; não aceitar `legacy`/`legacy_sunburst_low` nem ampliar o CHECK do F60.6. Incluir teste explícito de campanha legada + seleção atual configurada antes de executar `62-03`/`62-04`. **Reconciliado no `62-03-PLAN.md` em 2026-11-23.** |
 
+## Autorização final — 2026-11-24
+
+| # | Plano(s) | Ajuste autorizado | Evidência/estado |
+|---|---|---|---|
+| **R9** | `62-08` | **Test-only:** adicionar à `AUTHORIZED_CONTRACT_CHANGES` somente os cinco caminhos do transporte F62 (`node-http-download.ts`, `retrieve.ts`, `storage.ts`, `node-http-download.contract.test.ts`, `retrieve.contract.test.ts`), sem alterar `PHASE_BASE_SHA`, `PROTECTED_PATHS`, `CONTRACT_PATHS`, controle positivo ou outras asserções. | **AUTORIZADO e EXECUTADO em 2026-11-24**; detalhes em `62-08-ALLOWLIST-AUTHORIZATION.md`; guard F60.4 **8/8 PASS**; suíte global **867 arquivos / 10.805 testes PASS + 2 arquivos/10 skipped, 0 falhas**. |
+
 ## Fora deste registro
 
 - Nenhuma alteração de código, migration, banco, Storage, provider, flag, ambiente, homolog, produção, merge, push, deploy, sync ou archive.

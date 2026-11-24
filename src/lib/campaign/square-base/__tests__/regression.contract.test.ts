@@ -105,6 +105,13 @@ const AUTHORIZED_CONTRACT_CHANGES = new Set([
   "src/lib/campaign/composition-artifacts/types.ts",
   "src/lib/campaign/composition-artifacts/__tests__/persist.contract.test.ts",
   "src/lib/campaign/composition-artifacts/__tests__/resolve-source.contract.test.ts",
+  // F62 / 62-08 (autorizado test-only): transporte Node HTTP do detalhe.
+  // Somente os cinco caminhos do transporte; o diretório inteiro NÃO é liberado.
+  "src/lib/campaign/composition-artifacts/node-http-download.ts",
+  "src/lib/campaign/composition-artifacts/retrieve.ts",
+  "src/lib/campaign/composition-artifacts/storage.ts",
+  "src/lib/campaign/composition-artifacts/__tests__/node-http-download.contract.test.ts",
+  "src/lib/campaign/composition-artifacts/__tests__/retrieve.contract.test.ts",
 ]);
 
 interface GitResult {
