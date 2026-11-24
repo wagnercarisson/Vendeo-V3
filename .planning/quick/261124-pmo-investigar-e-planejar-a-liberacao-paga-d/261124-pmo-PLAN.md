@@ -2,14 +2,14 @@
 quick_id: 261124-pmo
 slug: investigar-e-planejar-a-liberacao-paga-d
 title: Plano revisado — liberação 1:1 pelo ledger, sem migration
-status: proofs-passed-pending-final-review
+status: implementation-complete-pending-manual-review
 created: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
-mode: planejamento-sem-implementacao
+mode: implementacao-focada
 approval:
-  status: pending-final-review
-  note: Provas de concorrência/recuperação PASS em PostgreSQL descartável; implementação não iniciada.
+  status: approved
+  note: Desenho aprovado; implementação concluída. Teste manual completo pendente no Review Stop.
 ---
 
 # Plano revisado 261124-pmo — liberação 1:1 pelo ledger
