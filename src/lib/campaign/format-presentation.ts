@@ -76,6 +76,12 @@ export interface IndividualFormatPresentationInput {
    * Carrega apenas estado/marcas seguras; nunca snapshot, path ou bytes.
    */
   readonly addition?: FormatAdditionPresentationInput | null;
+  /**
+   * Quick 261124-pmo — liberação paga do quadrado 1:1 já armazenado. Apenas
+   * estados duráveis; `eligible` é representado pela ausência do input e pela
+   * ação do chip, nunca por um estado inventado.
+   */
+  readonly release?: FormatReleasePresentationInput | null;
 }
 
 /**
@@ -91,6 +97,16 @@ export interface FormatAdditionPresentationInput {
   readonly state: "delivered" | "processing" | "unknown" | "absent";
   /** `true` somente quando a adição terminou estornada; nunca presumido. */
   readonly refunded?: boolean;
+}
+
+/**
+ * Quick 261124-pmo — estado durável da liberação do quadrado `1:1`.
+ * `eligible` não entra aqui: a apresentação do formato continua
+ * `absent/not_requested` e a ação do chip sinaliza a liberação disponível.
+ */
+export interface FormatReleasePresentationInput {
+  readonly format: "1:1";
+  readonly state: "delivered" | "refunded" | "unknown" | "unavailable";
 }
 
 const FORMAT_KEYS: readonly CampaignFormatKey[] = Object.freeze(["1:1", "9:16"]);
@@ -189,6 +205,23 @@ function additionEntry(
   }
 }
 
+function releaseEntry(
+  release: FormatReleasePresentationInput,
+  activeFormat: CampaignFormatKey | null,
+  key: CampaignFormatKey,
+): CampaignFormatPresentationEntry {
+  switch (release.state) {
+    case "delivered":
+      return entry("delivered", { active: activeFormat === key });
+    case "refunded":
+      return entry("absent", { refunded: true, reason: "not_delivered" });
+    case "unknown":
+      return entry("unknown");
+    case "unavailable":
+      return entry("unavailable");
+  }
+}
+
 /**
  * Monta a apresentação de uma campanha individual a partir do formato
  * persistido (resolvedor), do ciclo de vida já derivado pela superfície e,
@@ -242,7 +275,11 @@ export function buildIndividualFormatPresentation(
     input.addition !== undefined &&
     input.addition.format === otherKey
       ? additionEntry(input.addition, activeFormat, otherKey)
-      : entry("absent", { reason: "not_requested" });
+      : input.release !== null &&
+          input.release !== undefined &&
+          input.release.format === otherKey
+        ? releaseEntry(input.release, activeFormat, otherKey)
+        : entry("absent", { reason: "not_requested" });
 
   return presentation(
     {

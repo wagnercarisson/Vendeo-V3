@@ -224,6 +224,21 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/submission/eligibility-context",
     ],
   },
+  // Quick 261124-pmo — liberação do quadrado 1:1 pelo ledger. Somente leitura
+  // da operação entregue e transporte binário do artefato existente; não abre
+  // operação primária, não gera, não cobra pela operação 1:1.
+  ["src/app/api/campaign/[id]/square-release/route.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/attempt-start-client"],
+  },
+  ["src/lib/campaign/square-release/reader.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/artifact/node-http-storage-download"],
+  },
+  ["src/lib/campaign/square-release/preview.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/artifact/node-http-storage-download"],
+  },
   // Plano 07 — superfícies admin de resolução de pendências. Pares EXPLÍCITOS
   // (sem prefixo `pending/**` genérico). A rota importa SOMENTE o serviço de
   // resolução; a página importa SOMENTE o repositório de pendências; o formulário

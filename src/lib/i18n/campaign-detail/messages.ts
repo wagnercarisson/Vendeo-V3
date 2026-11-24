@@ -39,6 +39,8 @@ export interface CampaignDetailMessages {
   readonly jointNotes: CampaignDetailJointNotesMessages;
   /** F62 — textos da adição posterior do formato vertical. */
   readonly formatAddition: CampaignDetailFormatAdditionMessages;
+  /** Quick 261124-pmo — liberação paga do quadrado 1:1 já armazenado. */
+  readonly squareRelease: CampaignDetailSquareReleaseMessages;
 }
 
 export interface CampaignDetailJointNotesMessages {
@@ -105,4 +107,23 @@ export interface CampaignDetailFormatAdditionMessages {
   readonly selection: string;
   readonly incompatible: CampaignDetailFormatAdditionIncompatibleMessages;
   readonly readUnavailable: CampaignDetailFormatAdditionReadUnavailableMessages;
+}
+
+export interface CampaignDetailSquareReleaseMessages {
+  readonly title: string;
+  readonly description: string;
+  readonly checking: string;
+  readonly cost: string;
+  readonly confirm: string;
+  readonly cancel: string;
+  readonly processing: string;
+  readonly delivered: string;
+  readonly refunded: string;
+  readonly unknown: string;
+  readonly unavailable: string;
+  readonly incompatible: string;
+  readonly insufficientCredits: string;
+  readonly retry: string;
+  readonly available: string;
+  readonly actionHelp: string;
 }

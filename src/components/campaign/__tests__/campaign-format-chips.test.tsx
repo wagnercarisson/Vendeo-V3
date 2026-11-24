@@ -224,8 +224,42 @@ describe("F61 — chip único de formato (sem '?')", () => {
     expect(onAction).toHaveBeenCalledWith("9:16");
   });
 
-  it("F62: sem ação (lista/dashboard) mantém a explicação informativa de formato não incluído", () => {
-    renderChips(individual("delivered"));
+  it("261124-pmo: chip quadrado acionável no detalhe 9:16 usa a orientação de liberação", () => {
+    const onAction = vi.fn();
+    const presentation = buildIndividualFormatPresentation(
+      {
+        resolution: resolveCampaignFormat({
+          campaignFormat: "9:16",
+          formatContractVersion: "f59-vertical-9-16-v1",
+        }),
+        lifecycle: "delivered",
+      },
+      "9:16",
+    );
+    render(
+      <CampaignFormatChips
+        presentation={presentation}
+        messages={ptBRCampaignFormatMessages}
+        onFormatAction={onAction}
+        actionFormat="1:1"
+        actionHelpText={ptBRCampaignDetailMessages.squareRelease.actionHelp}
+        actionStateLabel={ptBRCampaignDetailMessages.squareRelease.available}
+      />,
+    );
+
+    const square = chipByLabel(/^Quadrado 1:1/);
+    expect(square).toHaveAccessibleName(
+      `Quadrado 1:1: ${ptBRCampaignDetailMessages.squareRelease.available}`,
+    );
+    expect(square).toHaveAccessibleDescription(
+      ptBRCampaignDetailMessages.squareRelease.actionHelp,
+    );
+
+    fireEvent.click(square);
+    expect(onAction).toHaveBeenCalledWith("1:1");
+  });
+
+  it("F62: sem ação (lista/dashboard) mantém a explicação informativa de formato não incluído", () => {    renderChips(individual("delivered"));
     const vertical = chipByLabel(/^Vertical 9:16: N/);
     expect(vertical).toHaveAccessibleDescription(
       `${ptBRCampaignFormatMessages.labels.notRequested}. ${ptBRCampaignFormatMessages.explanations.notRequested}`,

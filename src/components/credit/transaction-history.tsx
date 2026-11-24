@@ -23,6 +23,9 @@ function formatValue(type: string, amount: number): string {
 
 function getTransactionLabel(tx: CreditTransaction): string {
   const metadata = (tx.metadata ?? {}) as Record<string, unknown>;
+  if (tx.type === "deduction" && metadata.kind === "square_release") {
+    return "Liberação do formato 1:1";
+  }
   const program = metadata.credit_program;
   if (program === "trial_28d") {
     if (tx.type === "demo") {

@@ -90,6 +90,11 @@ export interface CampaignPageProps {
   newFlowFormat?: "1:1" | "9:16" | "1:1+9:16";
   /** F60.7 C3 — identifica o fluxo conjunto mesmo sem view válida (fallback). */
   jointFlow?: boolean;
+  /** Quick 261124-pmo — estado read-only da liberação do quadrado 1:1. */
+  squareRelease?: {
+    readonly state: SquareReleaseViewState;
+    readonly refunded?: boolean;
+  };
   /** F60.7 C3 — apresentação conjunta (uma linha, dois formatos). */
   joint?: {    readonly formats: Readonly<Record<TwoFormatFormat, TwoFormatDeliveryState>>;
     readonly preferredFormat: TwoFormatFormat | null;
@@ -164,6 +169,14 @@ export interface CampaignPageProps {
  * `product-1-1` (G-NA); a página passa `operation.status` estruturalmente.
  */
 export type NewFlowDisplayState = "running" | "delivered" | "refunded" | "unknown";
+
+export type SquareReleaseViewState =
+  | "eligible"
+  | "delivered"
+  | "refunded"
+  | "unknown"
+  | "unavailable"
+  | "incompatible";
 
 export interface NewFlowOperationSnapshot {
   readonly status: "reserved" | "art_uploaded" | "delivered" | "refunded";

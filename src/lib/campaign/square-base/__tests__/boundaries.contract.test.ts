@@ -441,13 +441,25 @@ describe("F60.4 boundaries — migrations, rotas e UI intocadas", () => {
       "src/app/api/campaign/[id]/format-additions/__tests__/route.test.ts",
       "src/app/api/campaign/[id]/download/__tests__/route.addition.test.ts",
     ]);
+    // Quick 261124-pmo — liberação paga do quadrado 1:1 já armazenado.
+    const allowedSquareRelease = new Set([
+      "src/app/api/campaign/[id]/square-release/",
+      "src/app/api/campaign/[id]/square-release/route.ts",
+      "src/app/api/campaign/[id]/square-release/__tests__/route.test.ts",
+      "src/app/api/campaign/[id]/download/__tests__/route.square-release.test.ts",
+    ]);
     const changed = status.stdout
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => line.replace(/^\S+\s+/, ""));
     expect(
-      changed.filter((file) => !allowedC2.has(file) && !allowedF62.has(file)),
+      changed.filter(
+        (file) =>
+          !allowedC2.has(file) &&
+          !allowedF62.has(file) &&
+          !allowedSquareRelease.has(file),
+      ),
     ).toEqual([]);
   });
 

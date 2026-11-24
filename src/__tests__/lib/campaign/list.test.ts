@@ -25,6 +25,12 @@ vi.mock("@/lib/campaign/format-addition/list-summary", () => ({
   }) => ({ format: "9:16", state: summary.state, refunded: summary.refunded }),
 }));
 
+vi.mock("@/lib/campaign/square-release", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/campaign/square-release")>();
+  return { ...actual, readSquareReleaseListSummaries: async () => new Map() };
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
 });

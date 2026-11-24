@@ -23,6 +23,11 @@ import { resolveTwoFormatAccess } from "@/lib/product-two-format/access";
 import { COMPOSITION_ARTIFACT_BUCKET } from "@/lib/campaign/composition-artifacts/artifact-path";
 import { readFormatAdditionByCampaign } from "@/lib/campaign/format-addition/delivery-reader";
 import { CompositionVerticalProbe } from "@/lib/product-9-16-two-stage/orchestration/vertical-probe";
+import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
+import {
+  readSquareReleaseArtifact,
+  readSquareReleaseLedger,
+} from "@/lib/campaign/square-release";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -280,6 +285,120 @@ export const GET = apiHandler(async (
       return NextResponse.json(
         { error: { code: "operation_not_found", message: "Operação não encontrada." } },
         { status: 404 },
+      );
+    }
+
+    // Quick 261124-pmo — seleção estrita do quadrado liberado. `?format=1:1`
+    // NUNCA cai no vertical; `?format=9:16`/ausente preserva o caminho atual.
+    const releaseFormatValues = new URL(_request.url).searchParams.getAll("format");
+    if (releaseFormatValues.length > 1) {
+      return NextResponse.json(
+        { error: { code: "unsupported_format", message: "Formato inválido." } },
+        { status: 400 },
+      );
+    }
+    const releaseRequestedFormat =
+      releaseFormatValues.length === 1 ? releaseFormatValues[0] : undefined;
+    if (
+      releaseRequestedFormat !== undefined &&
+      releaseRequestedFormat !== "1:1" &&
+      releaseRequestedFormat !== "9:16"
+    ) {
+      return NextResponse.json(
+        { error: { code: "unsupported_format", message: "Formato inválido." } },
+        { status: 400 },
+      );
+    }
+    if (releaseRequestedFormat === "1:1") {
+      const artifactRead = await readSquareReleaseArtifact(
+        {
+          storeId: campaign.store_id,
+          campaignId: id,
+          verticalOperationId: operationId,
+        },
+        { client: supabaseAdmin },
+      );
+      if (artifactRead.kind === "read_failed") {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 503 },
+        );
+      }
+      if (artifactRead.kind === "absent") {
+        return NextResponse.json(
+          { error: { code: "not_delivered", message: "Formato não entregue." } },
+          { status: 403 },
+        );
+      }
+      const identity = {
+        storeId: campaign.store_id,
+        campaignId: id,
+        verticalOperationId: operationId,
+        artifactId: artifactRead.artifact.artifactId,
+        checksumSha256: artifactRead.artifact.checksumSha256,
+      };
+      const ledger = await readSquareReleaseLedger(identity, {
+        client: supabaseAdmin,
+      });
+      if (ledger.kind === "read_failed") {
+        return NextResponse.json(
+          { error: { code: "operation_unavailable", message: "Operação indisponível." } },
+          { status: 503 },
+        );
+      }
+      if (ledger.kind !== "delivered") {
+        return NextResponse.json(
+          {
+            error: {
+              code: ledger.kind === "refunded" ? "refunded" : "not_delivered",
+              message: "Formato não liberado.",
+            },
+          },
+          { status: 403 },
+        );
+      }
+      const square = await retrieveCompositionArtifact(
+        {
+          identity: {
+            storeId: campaign.store_id,
+            campaignId: id,
+            operationId,
+            role: "square_original",
+          },
+          authorization: { kind: "system" },
+        },
+        {
+          client: supabaseAdmin,
+        },
+      );
+      if (square.kind === "indeterminate") {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 503 },
+        );
+      }
+      if (square.kind !== "integral") {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 404 },
+        );
+      }
+      const filename = buildSafeDownloadFilename({
+        productName: campaign.product_name,
+        createdAt: campaign.created_at,
+        extension: "jpg",
+      });
+      return new NextResponse(
+        new Blob([new Uint8Array(square.bytes)], {
+          type: square.artifact.mimeType,
+        }),
+        {
+          headers: {
+            "Content-Type": square.artifact.mimeType,
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Cache-Control": "private, no-store",
+          },
+        },
       );
     }
     const control = new ProductTwoStageOperationClient(supabaseAdmin as never);

@@ -9,6 +9,7 @@ const mockGenerateBatchThumbnailUrls = vi.fn();
 const mockGenerateBatchPreferredThumbnailUrls = vi.fn(async () => ({}));
 const mockReadTwoFormatListSummaries = vi.fn(async () => new Map());
 const mockReadFormatAdditionListSummaries = vi.fn(async () => new Map());
+const mockReadSquareReleaseListSummaries = vi.fn(async () => new Map());
 const mockCountReadyCampaigns = vi.fn();
 
 vi.mock("server-only", () => ({}));
@@ -37,6 +38,15 @@ vi.mock("@/lib/campaign/format-addition/list-summary", () => ({
       ? { format: "9:16", state: "absent", refunded: summary.refunded }
       : { format: "9:16", state: summary.state },
 }));
+
+vi.mock("@/lib/campaign/square-release", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/campaign/square-release")>();
+  return {
+    ...actual,
+    readSquareReleaseListSummaries: mockReadSquareReleaseListSummaries,
+  };
+});
 
 vi.mock("@/lib/campaign/metrics", () => ({
   countReadyCampaigns: mockCountReadyCampaigns,

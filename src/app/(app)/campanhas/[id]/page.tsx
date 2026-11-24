@@ -40,6 +40,12 @@ import {
   type IndividualFormatLifecycle,
 } from "@/lib/campaign/format-presentation";
 import { readFormatAdditionByCampaign } from "@/lib/campaign/format-addition/delivery-reader";
+import {
+  readSquareReleasePreview,
+  readSquareReleaseSummary,
+  squareReleasePresentation,
+} from "@/lib/campaign/square-release";
+import type { SquareReleaseSummary } from "@/lib/campaign/square-release";
 import { CompositionVerticalProbe } from "@/lib/product-9-16-two-stage/orchestration/vertical-probe";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import {
@@ -594,7 +600,55 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
         // Fail-closed: sem preview comprovado, mantém o quadrado.
       }
     }
+    const releaseGenerationOrigin = resolveCampaignGenerationOrigin(
+      campaign.input_snapshot,
+    );
+    let squareReleaseSummary: SquareReleaseSummary | null = null;
+    let squareReleaseSelected = false;
+    if (
+      newFlowState === "delivered" &&
+      releaseGenerationOrigin.kind === "two_stage_9_16" &&
+      formatResolution.kind === "9:16"
+    ) {
+      squareReleaseSummary = await readSquareReleaseSummary(
+        {
+          storeId: campaign.store_id,
+          campaignId: id,
+          verticalOperationId: newFlowOperation.operationId,
+        },
+        { client: supabaseAdmin },
+      );
+      if (squareReleaseSummary.state === "delivered") {
+        if (
+          individualFormatRequest.kind === "valid" &&
+          individualFormatRequest.format === "1:1"
+        ) {
+          const preview = await readSquareReleasePreview(
+            {
+              storeId: campaign.store_id,
+              campaignId: id,
+              verticalOperationId: newFlowOperation.operationId,
+            },
+            { client: supabaseAdmin },
+          );
+          if (preview !== null) {
+            props.imageUrl = preview.previewUrl;
+            props.newFlowFormat = "1:1";
+            props.downloadUrl = preview.downloadUrl;
+            props.downloadDisabled = false;
+            squareReleaseSelected = true;
+          }
+        }
+      }
+    }
+    const squareReleaseInput = squareReleasePresentation(
+      squareReleaseSummary ?? undefined,
+    );
     const formatHrefs: Partial<Record<CampaignFormatKey, string>> = {};
+    if (squareReleaseSummary?.state === "delivered") {
+      formatHrefs["1:1"] = `/campanhas/${id}?format=1:1`;
+      formatHrefs["9:16"] = `/campanhas/${id}?format=9:16`;
+    }
     if (additionDelivered) {
       if (newFlowState === "delivered" && formatResolution.kind === "1:1") {
         formatHrefs["1:1"] = `/campanhas/${id}?format=1:1`;
@@ -603,16 +657,31 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
     }
     props = {
       ...props,
+      ...(squareReleaseSummary === null
+        ? {}
+        : {
+            squareRelease: {
+              state: squareReleaseSummary.state,
+              refunded: squareReleaseSummary.refunded,
+            },
+          }),
       ...(Object.keys(formatHrefs).length > 0 ? { formatHrefs } : {}),
       formatPresentation: buildIndividualFormatPresentation(
-        { resolution: formatResolution, lifecycle: newFlowLifecycle, addition },
-        verticalSelected
-          ? "9:16"
-          : newFlowState === "delivered" &&
-              props.imageUrl !== null &&
-              formatResolution.kind !== "unavailable"
-            ? formatResolution.kind
-            : null,
+        {
+          resolution: formatResolution,
+          lifecycle: newFlowLifecycle,
+          addition,
+          ...(squareReleaseInput === null ? {} : { release: squareReleaseInput }),
+        },
+        squareReleaseSelected
+          ? "1:1"
+          : verticalSelected
+            ? "9:16"
+            : newFlowState === "delivered" &&
+                props.imageUrl !== null &&
+                formatResolution.kind !== "unavailable"
+              ? formatResolution.kind
+              : null,
       ),
     };
     return (

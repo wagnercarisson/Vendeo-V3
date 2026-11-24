@@ -56,6 +56,8 @@ export interface CampaignFormatChipsProps {
    * preservado (apenas explicação local).
    */
   readonly onFormatAction?: (format: CampaignFormatKey) => void;
+  /** Formato que recebe a ação; default F62 `9:16`. */
+  readonly actionFormat?: CampaignFormatKey;
   /** F62 — orientação de geração exibida quando a ação está disponível. */
   readonly actionHelpText?: string;
   /** F62 — rótulo de estado do chip acionável (ex.: "Disponível para gerar"). */
@@ -195,6 +197,7 @@ export function CampaignFormatChips({
   onFormatAction,
   actionHelpText,
   actionStateLabel,
+  actionFormat = "9:16",
 }: CampaignFormatChipsProps): ReactElement {
   const [mounted, setMounted] = useState(false);
   const [activeKey, setActiveKey] = useState<CampaignFormatKey | null>(null);
@@ -431,7 +434,7 @@ export function CampaignFormatChips({
 
   const activeEntry = activeKey ? presentation.formats[activeKey] : null;
   const activeActionApplicable =
-    activeKey === "9:16" &&
+    activeKey === actionFormat &&
     onFormatAction !== undefined &&
     activeEntry?.state === "absent" &&
     activeEntry.reason === "not_requested";
@@ -458,7 +461,7 @@ export function CampaignFormatChips({
             href.length > 0 &&
             entry.state === "delivered";
           const hasAction =
-            formatKey === "9:16" && onFormatAction !== undefined;
+            formatKey === actionFormat && onFormatAction !== undefined;
           const isOpen = activeKey === formatKey;
           const descriptionId = descriptionIds[formatKey];
           const chipClass = [BASE_CHIP_CLASS, stateClasses(entry)]

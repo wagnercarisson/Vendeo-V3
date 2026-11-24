@@ -130,6 +130,12 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
       "src/components/campaign/campaign-format-chips.tsx",
       "src/app/api/campaign/[id]/format-additions/",
       "src/app/api/campaign/[id]/format-additions/route.ts",
+      // Quick 261124-pmo — liberação do quadrado 1:1 já armazenado.
+      "src/app/api/campaign/[id]/square-release/",
+      "src/app/api/campaign/[id]/square-release/route.ts",
+      "src/app/api/campaign/[id]/download/route.ts",
+      "src/components/campaign/release-square-dialog.tsx",
+      "src/components/credit/transaction-history.tsx",
     ]);
     const changed = gitStatus(["src/app", "src/components"])
       .split(/\r?\n/)

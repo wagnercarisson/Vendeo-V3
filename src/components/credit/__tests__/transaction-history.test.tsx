@@ -51,8 +51,25 @@ describe("TransactionHistory", () => {
     expect(screen.getByText("Extrato de Créditos")).toBeInTheDocument();
   });
 
-  it("renders empty state when no transactions", () => {
+  it("rotula a dedução da liberação do quadrado sem chamar de geração", () => {
+    const tx = makeTx({
+      type: "deduction",
+      amount: -1,
+      reason: null,
+      metadata: { kind: "square_release", feature: "square_release" },
+    });
     render(
+      <TransactionHistory
+        transactions={[tx]}
+        totalPages={1}
+        currentPage={1}
+      />,
+    );
+    expect(screen.getAllByText("Liberação do formato 1:1").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Geração")).toBeNull();
+  });
+
+  it("renders empty state when no transactions", () => {    render(
       <TransactionHistory
         transactions={[]}
         totalPages={0}

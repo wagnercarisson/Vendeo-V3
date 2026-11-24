@@ -81,6 +81,22 @@ const EXPECTED_PT_KEYS = [
   "formatAddition.tracking",
   "formatAddition.unavailable",
   "formatAddition.unknown",
+  "squareRelease.actionHelp",
+  "squareRelease.available",
+  "squareRelease.cancel",
+  "squareRelease.checking",
+  "squareRelease.confirm",
+  "squareRelease.cost",
+  "squareRelease.delivered",
+  "squareRelease.description",
+  "squareRelease.incompatible",
+  "squareRelease.insufficientCredits",
+  "squareRelease.processing",
+  "squareRelease.refunded",
+  "squareRelease.retry",
+  "squareRelease.title",
+  "squareRelease.unavailable",
+  "squareRelease.unknown",
   "publicationKit",
   "formats.activeLabel",
   "formats.explanations.delivered",
@@ -251,6 +267,18 @@ describe("catálogos do namespace da campanha pronta pt-BR e es-419", () => {
     expect(
       es419CampaignDetailMessages.formatAddition.checkingAvailability,
     ).toBe("Verificando disponibilidad…");
+    expect(ptBRCampaignDetailMessages.squareRelease.cost).toBe(
+      "Custo: 1 crédito",
+    );
+    expect(es419CampaignDetailMessages.squareRelease.cost).toBe(
+      "Costo: 1 crédito",
+    );
+    expect(ptBRCampaignDetailMessages.squareRelease.processing).toBe(
+      "Estamos disponibilizando o formato quadrado.",
+    );
+    expect(es419CampaignDetailMessages.squareRelease.processing).toBe(
+      "Estamos habilitando el formato cuadrado.",
+    );
   });
 
   it("F62 — incompatibilidade e indisponibilidade têm texto por motivo", () => {

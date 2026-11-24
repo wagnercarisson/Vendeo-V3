@@ -112,4 +112,25 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
       identityConflict: "Os dados da campanha não conferem.",
     }),
   }),
+  squareRelease: Object.freeze({
+    title: "Liberar formato quadrado",
+    description:
+      "O formato quadrado 1:1 já está armazenado. Você pode liberá-lo para esta campanha.",
+    checking: "Verificando disponibilidade…",
+    cost: "Custo: 1 crédito",
+    confirm: "Liberar formato quadrado",
+    cancel: "Cancelar",
+    processing: "Estamos disponibilizando o formato quadrado.",
+    delivered: "Formato quadrado liberado.",
+    refunded: "A liberação foi desfeita e o crédito foi devolvido.",
+    unknown:
+      "Não foi possível confirmar a liberação agora. Consulte novamente em instantes.",
+    unavailable: "O formato quadrado não está disponível para liberação.",
+    incompatible: "Esta campanha não permite liberar o formato quadrado.",
+    insufficientCredits: "Saldo insuficiente para liberar o formato quadrado.",
+    retry: "Tentar novamente",
+    available: "Disponível para liberar",
+    actionHelp:
+      "Libere o formato quadrado já armazenado. Custo: 1 crédito.",
+  }),
 });

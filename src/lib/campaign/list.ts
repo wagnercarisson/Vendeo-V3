@@ -19,6 +19,11 @@ import {
   readFormatAdditionListSummaries,
   type FormatAdditionListSummary,
 } from "@/lib/campaign/format-addition/list-summary";
+import {
+  readSquareReleaseListSummaries,
+  squareReleasePresentation,
+  type SquareReleaseSummary,
+} from "@/lib/campaign/square-release";
 import { classifyTwoFormatCampaign } from "@/lib/product-two-format/contracts";
 import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
 import {
@@ -129,6 +134,7 @@ function buildListFormatPresentation(input: {
   readonly status: CampaignStatus;
   readonly summary: TwoFormatListSummary | undefined;
   readonly additionSummary: FormatAdditionListSummary | undefined;
+  readonly releaseSummary: SquareReleaseSummary | undefined;
 }): CampaignFormatPresentation {
   const classification = classifyTwoFormatCampaign(input.inputSnapshot);
 
@@ -167,6 +173,9 @@ function buildListFormatPresentation(input: {
     ...(input.additionSummary === undefined
       ? {}
       : { addition: formatAdditionPresentation(input.additionSummary) }),
+    ...(input.releaseSummary === undefined
+      ? {}
+      : { release: squareReleasePresentation(input.releaseSummary) }),
   });
 }
 
@@ -242,6 +251,16 @@ export async function listCampaigns(
       input_snapshot: row.input_snapshot,
     })),
   });
+  const releaseSummaries = await readSquareReleaseListSummaries(
+    {
+      storeId,
+      campaigns: rows.map((row) => ({
+        id: row.id,
+        input_snapshot: row.input_snapshot,
+      })),
+    },
+    { client: supabaseAdmin },
+  );
   const preferredThumbnails = await generateBatchPreferredThumbnailUrls(
     [...summaries.values()].map((summary) => ({
       id: summary.campaignId,
@@ -261,6 +280,7 @@ export async function listCampaigns(
       status: item.status,
       summary,
       additionSummary,
+      releaseSummary: releaseSummaries.get(item.id),
     });
     if (summary) {
       return {

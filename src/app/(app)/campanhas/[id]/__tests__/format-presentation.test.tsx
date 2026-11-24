@@ -72,12 +72,24 @@ const h = vi.hoisted(() => {
     versions: [] as unknown[],
     probeKind: "missing" as "missing" | "integral",
     signedUrlMode: "ok" as "ok" | "null",
+    squareReleaseSummary: {
+      campaignId: "22222222-2222-4222-8222-222222222222",
+      state: "incompatible",
+      refunded: false,
+    } as Record<string, unknown>,
+    squarePreview: null as Record<string, unknown> | null,
     reset(): void {
       for (const key of Object.keys(counters)) counters[key] = 0;
       this.approvalEnabled = false;
       this.versions = [];
       this.probeKind = "missing";
       this.signedUrlMode = "ok";
+      this.squareReleaseSummary = {
+        campaignId: "22222222-2222-4222-8222-222222222222",
+        state: "incompatible",
+        refunded: false,
+      };
+      this.squarePreview = null;
       this.outcomesResult = {
         kind: "found",
         unknownOperationIds: new Set<string>(),
@@ -138,6 +150,17 @@ vi.mock("@/lib/campaign/correction-reports", () => ({
 vi.mock("@/lib/campaign/format-addition/delivery-reader", () => ({
   readFormatAdditionByCampaign: async () => ({ kind: "none" }),
 }));
+
+// Quick 261124-pmo — leitura da liberação controlada pela fixture.
+vi.mock("@/lib/campaign/square-release", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/campaign/square-release")>();
+  return {
+    ...actual,
+    readSquareReleaseSummary: async () => h.squareReleaseSummary,
+    readSquareReleasePreview: async () => h.squarePreview,
+  };
+});
 
 vi.mock("@/lib/product-1-1/snapshot/persist-snapshot", () => ({
   readProductOneToOneBackgroundDirection: async () => null,
@@ -691,6 +714,98 @@ describe("F61 — detalhe do NOVO fluxo (individual)", () => {
       active: false,
     });
     expect(presentation(props).partial).toBe(false);
+  });
+
+  it("quadrado liberado com ?format=1:1 ⇒ quadrado ativo, link vertical e download próprio", async () => {
+    newFlowFixture(VERTICAL_EXPANSION_SNAPSHOT, "delivered");
+    h.squareReleaseSummary = {
+      campaignId: CAMPAIGN_ID,
+      state: "delivered",
+      refunded: false,
+    };
+    h.squarePreview = {
+      previewUrl: "https://signed/square-release",
+      downloadUrl: `/api/campaign/${CAMPAIGN_ID}/download?format=1:1`,
+    };
+
+    const props = await renderProps("1:1");
+
+    expect(props.imageUrl).toBe("https://signed/square-release");
+    expect(props.newFlowFormat).toBe("1:1");
+    expect(props.downloadUrl).toBe(
+      `/api/campaign/${CAMPAIGN_ID}/download?format=1:1`,
+    );
+    expect(presentation(props).formats["1:1"]).toMatchObject({
+      state: "delivered",
+      active: true,
+    });
+    expect(presentation(props).formats["9:16"]).toMatchObject({
+      state: "delivered",
+      active: false,
+    });
+    expect(props.formatHrefs).toMatchObject({
+      "1:1": `/campanhas/${CAMPAIGN_ID}?format=1:1`,
+      "9:16": `/campanhas/${CAMPAIGN_ID}?format=9:16`,
+    });
+  });
+
+  it("quadrado liberado sem ?format ⇒ 9:16 permanece ativo e ambos ficam linkáveis", async () => {
+    newFlowFixture(VERTICAL_EXPANSION_SNAPSHOT, "delivered");
+    h.squareReleaseSummary = {
+      campaignId: CAMPAIGN_ID,
+      state: "delivered",
+      refunded: false,
+    };
+
+    const props = await renderProps();
+
+    expect(props.imageUrl).toBe("https://signed/vertical-preview");
+    expect(props.newFlowFormat).toBe("9:16");
+    expect(presentation(props).formats["9:16"].active).toBe(true);
+    expect(presentation(props).formats["1:1"]).toMatchObject({
+      state: "delivered",
+      active: false,
+    });
+    expect(props.formatHrefs).toMatchObject({
+      "1:1": `/campanhas/${CAMPAIGN_ID}?format=1:1`,
+      "9:16": `/campanhas/${CAMPAIGN_ID}?format=9:16`,
+    });
+  });
+
+  it("quadrado elegível ⇒ sem link, sem preview e quadrado continua ausente/not_requested", async () => {
+    newFlowFixture(VERTICAL_EXPANSION_SNAPSHOT, "delivered");
+    h.squareReleaseSummary = {
+      campaignId: CAMPAIGN_ID,
+      state: "eligible",
+      refunded: false,
+    };
+
+    const props = await renderProps();
+
+    expect(props.squareRelease).toMatchObject({ state: "eligible" });
+    expect(presentation(props).formats["1:1"]).toMatchObject({
+      state: "absent",
+      reason: "not_requested",
+    });
+    expect(props.formatHrefs).toBeUndefined();
+  });
+
+  it("quadrado estornado ⇒ ausente com crédito devolvido, sem link", async () => {
+    newFlowFixture(VERTICAL_EXPANSION_SNAPSHOT, "delivered");
+    h.squareReleaseSummary = {
+      campaignId: CAMPAIGN_ID,
+      state: "refunded",
+      refunded: true,
+    };
+
+    const props = await renderProps();
+
+    expect(presentation(props).formats["1:1"]).toMatchObject({
+      state: "absent",
+      refunded: true,
+      reason: "not_delivered",
+    });
+    expect(props.formatHrefs).toBeUndefined();
   });
 
   it("vertical 9:16 delivered sem arte ⇒ entregue sem ativo", async () => {

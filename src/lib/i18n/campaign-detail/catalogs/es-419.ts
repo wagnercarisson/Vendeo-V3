@@ -112,4 +112,25 @@ export const es419CampaignDetailMessages = Object.freeze({
       identityConflict: "Los datos de la campaña no coinciden.",
     }),
   }),
+  squareRelease: Object.freeze({
+    title: "Liberar formato cuadrado",
+    description:
+      "El formato cuadrado 1:1 ya está almacenado. Puedes liberarlo para esta campaña.",
+    checking: "Verificando disponibilidad…",
+    cost: "Costo: 1 crédito",
+    confirm: "Liberar formato cuadrado",
+    cancel: "Cancelar",
+    processing: "Estamos habilitando el formato cuadrado.",
+    delivered: "Formato cuadrado liberado.",
+    refunded: "La liberación se deshizo y el crédito se devolvió.",
+    unknown:
+      "No fue posible confirmar la liberación ahora. Consulta de nuevo en unos instantes.",
+    unavailable: "El formato cuadrado no está disponible para liberarlo.",
+    incompatible: "Esta campaña no permite liberar el formato cuadrado.",
+    insufficientCredits: "Saldo insuficiente para liberar el formato cuadrado.",
+    retry: "Intentar de nuevo",
+    available: "Disponible para liberar",
+    actionHelp:
+      "Libera el formato cuadrado ya almacenado. Costo: 1 crédito.",
+  }),
 }) satisfies CampaignDetailMessages;

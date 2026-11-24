@@ -11,6 +11,11 @@ import {
   readFormatAdditionListSummaries,
   type FormatAdditionListSummary,
 } from "@/lib/campaign/format-addition/list-summary";
+import {
+  readSquareReleaseListSummaries,
+  squareReleasePresentation,
+  type SquareReleaseSummary,
+} from "@/lib/campaign/square-release";
 import type { FormatAdditionPresentationInput } from "@/lib/campaign/format-presentation";
 import type { TwoFormatDeliveryState, TwoFormatFormat } from "@/lib/product-two-format/types";
 import { countReadyCampaigns } from "@/lib/campaign/metrics";
@@ -80,6 +85,7 @@ function buildDashboardFormatPresentation(input: {
   readonly inputSnapshot: Record<string, unknown> | null;
   readonly summary: TwoFormatListSummary | undefined;
   readonly additionSummary: FormatAdditionListSummary | undefined;
+  readonly releaseSummary: SquareReleaseSummary | undefined;
 }): CampaignFormatPresentation {
   const classification = classifyTwoFormatCampaign(input.inputSnapshot);
 
@@ -116,6 +122,9 @@ function buildDashboardFormatPresentation(input: {
     ...(input.additionSummary === undefined
       ? {}
       : { addition: formatAdditionPresentation(input.additionSummary) }),
+    ...(input.releaseSummary === undefined
+      ? {}
+      : { release: squareReleasePresentation(input.releaseSummary) }),
   });
 }
 
@@ -161,6 +170,16 @@ export async function queryEligibleCampaigns(
       input_snapshot: row.input_snapshot,
     })),
   });
+  const releaseSummaries = await readSquareReleaseListSummaries(
+    {
+      storeId,
+      campaigns: rows.map((row) => ({
+        id: row.id,
+        input_snapshot: row.input_snapshot,
+      })),
+    },
+    { client: supabaseAdmin },
+  );
   const preferredThumbnails = await generateBatchPreferredThumbnailUrls(
     [...summaries.values()].map((summary) => ({
       id: summary.campaignId,
@@ -184,6 +203,7 @@ export async function queryEligibleCampaigns(
       inputSnapshot: row.input_snapshot,
       summary,
       additionSummary,
+      releaseSummary: releaseSummaries.get(row.id),
     });
     if (summary) {
       return {

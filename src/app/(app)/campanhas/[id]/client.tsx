@@ -26,6 +26,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
 import { CampaignFormatChips } from "@/components/campaign/campaign-format-chips";
 import { AddVerticalDialog } from "@/components/campaign/add-vertical-dialog";
+import { ReleaseSquareDialog } from "@/components/campaign/release-square-dialog";
 import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
 import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { CopyRecoveryPanel } from "@/components/flow/copy-recovery-panel";
@@ -112,6 +113,14 @@ function PageFormatChips({
   readonly onFormatAction?: (format: "1:1" | "9:16") => void;
 }) {
   const jointNote = jointNoteFor(props);
+  const releaseAction = props.squareRelease?.state === "eligible";
+  const actionFormat = releaseAction ? "1:1" : "9:16";
+  const actionHelpText = releaseAction
+    ? props.messages.squareRelease.actionHelp
+    : props.messages.formatAddition.generateGuidance;
+  const actionStateLabel = releaseAction
+    ? props.messages.squareRelease.available
+    : props.messages.formatAddition.availableForGeneration;
   return (
     <div
       className="mt-4 mb-6"
@@ -123,8 +132,9 @@ function PageFormatChips({
         hrefs={props.formatHrefs}
         helpLang={props.locale === "es-419" ? "es-419" : undefined}
         onFormatAction={onFormatAction}
-        actionHelpText={props.messages.formatAddition.generateGuidance}
-        actionStateLabel={props.messages.formatAddition.availableForGeneration}
+        actionFormat={actionFormat}
+        actionHelpText={actionHelpText}
+        actionStateLabel={actionStateLabel}
       />
       {jointNote ? (
         <p className="mt-2 text-xs text-text-muted font-body">{jointNote}</p>
@@ -163,14 +173,32 @@ function newRequestToken(): string | null {
 export default function CampaignPageClient(props: CampaignPageClientProps) {
   const router = useRouter();
   const [additionOpen, setAdditionOpen] = useState(false);
+  const [releaseOpen, setReleaseOpen] = useState(false);
   const openAddition = useCallback(() => setAdditionOpen(true), []);
   const closeAddition = useCallback(() => setAdditionOpen(false), []);
+  const openRelease = useCallback(() => setReleaseOpen(true), []);
+  const closeRelease = useCallback(() => setReleaseOpen(false), []);
   const handleAdditionDelivered = useCallback(() => {
     setAdditionOpen(false);
     router.replace(`/campanhas/${props.campaignId}?format=9:16`);
     router.refresh();
   }, [props.campaignId, router]);
-  const formatAction = props.joint ? undefined : openAddition;
+  const handleReleased = useCallback(() => {
+    setReleaseOpen(false);
+    router.replace(`/campanhas/${props.campaignId}?format=1:1`);
+    router.refresh();
+  }, [props.campaignId, router]);
+  const handleFormatAction = useCallback(
+    (format: "1:1" | "9:16") => {
+      if (format === "1:1") {
+        openRelease();
+      } else {
+        openAddition();
+      }
+    },
+    [openAddition, openRelease],
+  );
+  const formatAction = props.joint ? undefined : handleFormatAction;
 
   // F60.7 C3 — polling read-only do conjunto. Status não contém URL: em
   // QUALQUER transição relevante (entregue, estornado/ausente, unknown) um único
@@ -301,6 +329,14 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
           onClose={closeAddition}
           onDelivered={handleAdditionDelivered}
         />
+        <ReleaseSquareDialog
+          campaignId={props.campaignId}
+          messages={props.messages.squareRelease}
+          locale={props.locale}
+          open={releaseOpen}
+          onClose={closeRelease}
+          onReleased={handleReleased}
+        />
       </div>
     );
   }
@@ -346,6 +382,14 @@ export default function CampaignPageClient(props: CampaignPageClientProps) {
         open={additionOpen}
         onClose={closeAddition}
         onDelivered={handleAdditionDelivered}
+      />
+      <ReleaseSquareDialog
+        campaignId={props.campaignId}
+        messages={props.messages.squareRelease}
+        locale={props.locale}
+        open={releaseOpen}
+        onClose={closeRelease}
+        onReleased={handleReleased}
       />
     </div>
   );
