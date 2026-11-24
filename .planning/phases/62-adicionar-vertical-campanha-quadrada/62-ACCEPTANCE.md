@@ -1,11 +1,13 @@
 # F62 — Aceite final local (visual/funcional e desempenho)
 
 **Data:** 2026-11-24
+**Status:** **ACEITA LOCALMENTE; SPECS SINCRONIZADAS; CHANGE ARQUIVADA; PUBLICAÇÃO REMOTA PENDENTE.**
 **Declarante:** responsável pelo produto (declaração registrada nesta sessão)
 **Escopo aceito:** adição vertical 9:16 à campanha quadrada já entregue,
 validada em produção local (`http://localhost:3100`).
 **Natureza:** aceite **local/homologação local**. Não é aprovação de produção,
-publicação, merge, push, deploy, sync ou archive.
+publicação, merge, push ou deploy. A change OpenSpec foi **sincronizada e
+arquivada** em 2026-11-24; a publicação remota permanece pendente.
 
 > Este documento separa explicitamente três fontes: (1) a **declaração
 > visual/funcional do responsável**; (2) as **verificações técnicas do revisor**;
@@ -121,8 +123,8 @@ Nenhuma delas é necessária para o aceite atual.
 5. **Gate F60.4:** fechado pela correção test-only da allowlist (5 caminhos do
    transporte) e pelo guard **8/8 PASS**; a suíte global foi reexecutada e ficou
    **867 arquivos/10.805 testes PASS + 2 arquivos/10 skipped, 0 falhas**.
-6. **Release:** sync/archive, aplicação remota da migration, merge, push,
-   deploy, ativação de flag e publicação continuam **não autorizados**.
+6. **Release:** sync/archive concluídos; aplicação remota da migration, merge,
+   push, deploy, ativação de flag e publicação continuam **não autorizados**.
 7. **P1–P3:** opcionais e não bloqueantes; não implementados.
 
 ## 7. Estado operacional
@@ -135,3 +137,5 @@ Nenhuma delas é necessária para o aceite atual.
 - Relatório de desempenho: `62-09-PERF-DIAGNOSIS.md`.
 - Consolidação técnica: `62-08-SUMMARY.md`.
 - GSD verify-work: `62-GSD-UAT.md`; OpenSpec verify: `62-OPSX-VERIFY.md`.
+- Encerramento documental: `62-CLOSURE-REPORT.md`; change arquivada em
+  `openspec/changes/archive/2026-11-24-adicionar-vertical-campanha-quadrada/`.

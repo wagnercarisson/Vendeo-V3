@@ -89,5 +89,7 @@ Nenhum gap funcional identificado na jornada Vellora.
   não foram reexercitadas manualmente nesta aceitação.
 - A migration permanece aplicada somente na homologação local; produção/remoto
   não foram acessados.
-- Sync/archive, merge, push e deploy permanecem não autorizados.
+- Specs sincronizadas e change arquivada em 2026-11-24 em
+  `openspec/changes/archive/2026-11-24-adicionar-vertical-campanha-quadrada/`;
+  merge, push e deploy permanecem não autorizados.
 - P1–P3 são melhorias opcionais, não bloqueantes, e não foram implementadas.

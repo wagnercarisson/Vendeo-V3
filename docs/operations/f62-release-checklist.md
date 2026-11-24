@@ -11,7 +11,8 @@
 > executados. O gate F60.4 (allowlist test-only do transporte) foi **fechado**
 > em 2026-11-24 (guard 8/8; suíte global verde). A nova jornada **Vellora**
 > (`682dafa2-…`) foi avaliada visualmente e considerada publicável. O release
-> continua pré-release e sem autorização de publicação.
+> continua pré-release e sem autorização de publicação. As 11 delta specs foram
+> sincronizadas e a change F62 foi arquivada em 2026-11-24.
 
 ## 0. Ordem obrigatória do release
 

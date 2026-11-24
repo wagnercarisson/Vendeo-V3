@@ -1,7 +1,8 @@
 # OpenSpec Verification Report — `adicionar-vertical-campanha-quadrada`
 
 **Data:** 2026-11-24
-**Change:** `openspec/changes/adicionar-vertical-campanha-quadrada/`
+**Status:** **SPECS SINCRONIZADAS E CHANGE ARQUIVADA; PUBLICAÇÃO REMOTA PENDENTE.**
+**Change:** `openspec/changes/archive/2026-11-24-adicionar-vertical-campanha-quadrada/`
 **Schema:** `spec-driven`
 **Método:** `/opsx-verify` (skill `openspec-verify-change`), sobre `openspec status`,
 `openspec instructions apply`, delta specs, `tasks.md`, `design.md`,
@@ -94,9 +95,10 @@ Nenhum.
 ## Final Assessment
 
 **Sem CRITICAL.** Há 2 warnings conhecidos e aceitos (variantes manuais e
-migration remota) e 1 sugestão opcional (P1–P3). O change está **pronto para
-arquivamento documental com as ressalvas registradas**; `/opsx-sync` e
-`/opsx-archive` **não foram executados** e dependem de autorização separada.
+migration remota) e 1 sugestão opcional (P1–P3). O change foi **sincronizado e
+arquivado** em `openspec/changes/archive/2026-11-24-adicionar-vertical-campanha-quadrada/`;
+`/opsx-sync` e `/opsx-archive` foram concluídos. A **publicação remota** permanece
+pendente e não foi autorizada.
 
 ## Comandos e exit codes desta verificação
 
@@ -113,6 +115,10 @@ arquivamento documental com as ressalvas registradas**; `/opsx-sync` e
 | `git diff --check` (worktree) | 0 | limpo |
 | `git diff --check 241815fa..HEAD` | 0 | range F62 limpo |
 | `git diff --check 55276323..HEAD` | 2 | whitespace preexistente fora da F62; não alterado |
+| `openspec validate <capability> --type spec --strict` (11x) | 0 | **11/11 capabilities PASS** |
+| `openspec validate --specs --strict` | 1 | 235/302; 67 falhas preexistentes fora da F62; 0 nas 11 afetadas |
+| `openspec list` | 0 | **No active changes found** |
+| `openspec validate --changes --strict` | 0 | No items found to validate |
 
 > O runner global marca os gates de banco opt-in como **NÃO EXECUTADO**; as
 > provas PostgreSQL/Storage da F62 são evidências separadas. Nenhuma migration

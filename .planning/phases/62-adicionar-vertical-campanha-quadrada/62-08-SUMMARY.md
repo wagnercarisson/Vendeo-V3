@@ -26,6 +26,7 @@ key-files:
     - .planning/phases/62-adicionar-vertical-campanha-quadrada/62-09-PERF-DIAGNOSIS.md
     - .planning/phases/62-adicionar-vertical-campanha-quadrada/62-GSD-UAT.md
     - .planning/phases/62-adicionar-vertical-campanha-quadrada/62-OPSX-VERIFY.md
+    - .planning/phases/62-adicionar-vertical-campanha-quadrada/62-CLOSURE-REPORT.md
   modified:
     - src/lib/campaign/square-base/__tests__/regression.contract.test.ts
     - openspec/changes/adicionar-vertical-campanha-quadrada/tasks.md
@@ -49,9 +50,8 @@ completed: 2026-11-24
 
 # F62-08 — Consolidação, aceite local, Vellora e gates finais
 
-**Status:** **CONCLUÍDA LOCALMENTE / EM HOMOLOGAÇÃO LOCAL; ACEITE
-VISUAL/FUNCIONAL E DE DESEMPENHO DECLARADO PELO RESPONSÁVEL; GATE F60.4
-FECHADO; SUÍTE GLOBAL VERDE; NÃO PUBLICADA.**
+**Status:** **CONCLUÍDA E ACEITA LOCALMENTE; SPECS SINCRONIZADAS; CHANGE
+ARQUIVADA; PUBLICAÇÃO REMOTA PENDENTE.**
 **Data:** 2026-11-24.
 **Branch:** `feat/campaign-add-vertical` — HEAD de referência `783a5ce4`.
 **Campanha da nova jornada:** Chaleira Elétrica Vellora —
@@ -134,6 +134,7 @@ desempenho; a Vellora não teve medições separadas registradas.
 | Suíte global | **867 arquivos / 10.805 testes PASS + 2 arquivos/10 skipped; 0 falhas** |
 | `npx openspec validate --changes --strict` | **1/0** |
 | OpenSpec tasks | **71/71** |
+| OpenSpec sync/archive | **11/11 capabilities strict**; change arquivada; **no active changes** |
 | Build de produção | **0** (evidência anterior; não reexecutado com 3100 ativo) |
 | `git diff --check` (worktree) | **0** |
 | `git diff --check 241815fa..HEAD` (range F62) | **0** |
@@ -191,14 +192,17 @@ Não implementados:
 
 ## 8. Sequência de encerramento
 
+**Sync/archive concluídos em 2026-11-24:** 11 delta specs sincronizadas e change
+arquivada em `openspec/changes/archive/2026-11-24-adicionar-vertical-campanha-quadrada/`;
+o sync não foi repetido no arquivamento.
+
 1. Teste manual na instância `http://localhost:3100` (página em 9:16).
 2. Encerrar a instância 3100 após o teste.
 3. Autorização separada para o gate remoto da migration (preflight do alvo,
    confirmação de que a F62 ainda não foi aplicada, backup/restore-list e
    ledger).
-4. Autorização separada para sync/archive do OpenSpec.
-5. Autorização separada para merge, push e deploy.
-6. Decisão sobre P1–P3 (opcionais) somente após o encerramento acima.
+4. Autorização separada para merge, push e deploy.
+5. Decisão sobre P1–P3 (opcionais) somente após o encerramento acima.
 
 Nenhuma geração paga foi repetida; nenhum banco, Storage, flag ou configuração
 foi alterado nesta rodada.
