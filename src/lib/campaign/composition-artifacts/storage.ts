@@ -21,6 +21,11 @@ export type ReadObjectInfoResult =
   | { readonly kind: "absent" }
   | { readonly kind: "indeterminate" };
 
+export type DownloadBytesTransport = (
+  path: string,
+  bucket?: string,
+) => Promise<DownloadBytesResult>;
+
 export type UploadImmutableResult =
   | { readonly kind: "uploaded" }
   | { readonly kind: "path_conflict" }
@@ -86,12 +91,18 @@ function normalizeInfoMetadata(metadata: unknown): unknown {
  * `uploadImmutable` grava exclusivamente no bucket interno.
  */
 export class CompositionArtifactStorage {
-  constructor(private readonly client: SupabaseClient = supabaseAdmin) {}
+  constructor(
+    private readonly client: SupabaseClient = supabaseAdmin,
+    private readonly downloadTransport?: DownloadBytesTransport,
+  ) {}
 
   async downloadBytes(
     path: string,
     bucket: string = COMPOSITION_ARTIFACT_BUCKET,
   ): Promise<DownloadBytesResult> {
+    if (this.downloadTransport !== undefined) {
+      return this.downloadTransport(path, bucket);
+    }
     let data: unknown;
     let error: unknown;
     try {

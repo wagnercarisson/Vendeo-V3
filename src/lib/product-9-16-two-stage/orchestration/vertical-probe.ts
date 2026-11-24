@@ -11,7 +11,10 @@ import {
 import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repository";
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
 import { ROLE_POLICY } from "@/lib/campaign/composition-artifacts/role-policy";
-import { CompositionArtifactStorage } from "@/lib/campaign/composition-artifacts/storage";
+import {
+  CompositionArtifactStorage,
+  type DownloadBytesTransport,
+} from "@/lib/campaign/composition-artifacts/storage";
 import { isCompatibleExpansionArtifact } from "@/lib/campaign/vertical-expansion/reuse-compatibility";
 import { verifyExpansionReuseEvidence } from "@/lib/campaign/vertical-expansion/reuse-evidence";
 import type {
@@ -27,6 +30,7 @@ import type {
 
 export interface CompositionProbeDeps {
   readonly client?: SupabaseClient;
+  readonly downloadBytes?: DownloadBytesTransport;
 }
 
 type ProbeOutcome =
@@ -39,9 +43,11 @@ export class CompositionVerticalProbe
   implements VerticalArtifactProbe
 {
   private readonly client: SupabaseClient;
+  private readonly downloadBytes?: DownloadBytesTransport;
 
   constructor(deps: CompositionProbeDeps = {}) {
     this.client = deps.client ?? supabaseAdmin;
+    this.downloadBytes = deps.downloadBytes;
   }
 
   private async probe(
@@ -85,7 +91,12 @@ export class CompositionVerticalProbe
     // (2) Conteudo integral + path/bucket/dimensao/MIME conferidos.
     const retrieved = await retrieveCompositionArtifact(
       { identity, authorization: { kind: "system" } },
-      { client: this.client },
+      {
+        client: this.client,
+        ...(this.downloadBytes === undefined
+          ? {}
+          : { downloadBytes: this.downloadBytes }),
+      },
     );
     if (retrieved.kind === "indeterminate") return { kind: "indeterminate" };
     if (retrieved.kind === "absent") return { kind: "absent" };

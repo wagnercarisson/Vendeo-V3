@@ -57,6 +57,7 @@ import {
   PRODUCT_ONE_TO_ONE_ARTIFACT_BUCKET,
 } from "@/lib/product-1-1/artifact/artifact-store";
 import { downloadStorageObjectViaNodeHttp } from "@/lib/product-1-1/artifact/node-http-storage-download";
+import { createNodeHttpDownloadTransport } from "@/lib/campaign/composition-artifacts/node-http-download";
 import { readTwoFormatDelivery } from "@/lib/product-two-format/delivery-reader";
 import { resolveTwoFormatAccess } from "@/lib/product-two-format/access";
 import { COMPOSITION_ARTIFACT_BUCKET } from "@/lib/campaign/composition-artifacts/artifact-path";
@@ -119,7 +120,16 @@ async function additionSignedUrls(
   campaignId: string,
   operationId: string,
 ): Promise<{ previewUrl: string | null; downloadUrl: string | null }> {
-  const probe = new CompositionVerticalProbe({ client: supabaseAdmin });
+  const probe = new CompositionVerticalProbe({
+    client: supabaseAdmin,
+    downloadBytes: createNodeHttpDownloadTransport((input) =>
+      downloadStorageObjectViaNodeHttp({
+        bucket: input.bucket,
+        path: input.path,
+        timeoutMs: 15000,
+      }),
+    ),
+  });
   const vertical = await probe.probeVerticalArtifact({
     storeId,
     campaignId,

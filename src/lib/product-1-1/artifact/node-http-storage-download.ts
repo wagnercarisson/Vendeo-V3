@@ -10,6 +10,7 @@ export interface NodeHttpStorageDownloadInput {
   readonly path: string;
   readonly baseUrl?: string;
   readonly serviceKey?: string;
+  readonly timeoutMs?: number;
 }
 
 /**
@@ -42,6 +43,7 @@ export function downloadStorageObjectViaNodeHttp(
     base,
   );
   const client = url.protocol === "https:" ? https : http;
+  const timeoutMs = input.timeoutMs ?? 15000;
 
   return new Promise<Buffer>((resolve, reject) => {
     const request = client.get(
@@ -82,5 +84,8 @@ export function downloadStorageObjectViaNodeHttp(
       },
     );
     request.on("error", reject);
+    request.setTimeout(timeoutMs, () => {
+      request.destroy(new Error("storage_download_timeout"));
+    });
   });
 }

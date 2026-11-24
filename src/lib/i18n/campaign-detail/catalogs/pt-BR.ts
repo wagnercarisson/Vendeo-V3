@@ -45,7 +45,7 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
   formatAddition: Object.freeze({
     title: "Adicionar formato vertical",
     description:
-      "Crie uma versão vertical desta campanha sem alterar a arte quadrada.",
+      "Você pode gerar o formato vertical 9:16 para essa campanha.",
     action: "Adicionar vertical 9:16",
     availableForGeneration: "Disponível para gerar",
     generateGuidance:
@@ -53,7 +53,7 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
     cost: "Custo: 1 crédito",
     confirm: "Confirmar adição",
     cancel: "Cancelar",
-    processing: "Criando o formato vertical...",
+    processing: "Estamos gerando a campanha no formato vertical.",
     tracking: "Você pode acompanhar o andamento nesta página.",
     retry: "Tentar novamente",
     continue: "Continuar acompanhamento",

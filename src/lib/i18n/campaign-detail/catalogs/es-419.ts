@@ -45,7 +45,7 @@ export const es419CampaignDetailMessages = Object.freeze({
   formatAddition: Object.freeze({
     title: "Agregar formato vertical",
     description:
-      "Crea una versión vertical de esta campaña sin cambiar el arte cuadrado.",
+      "Puedes generar el formato vertical 9:16 para esta campaña.",
     action: "Agregar vertical 9:16",
     availableForGeneration: "Disponible para generar",
     generateGuidance:
@@ -53,7 +53,7 @@ export const es419CampaignDetailMessages = Object.freeze({
     cost: "Costo: 1 crédito",
     confirm: "Confirmar adición",
     cancel: "Cancelar",
-    processing: "Creando el formato vertical...",
+    processing: "Estamos generando la campaña en el formato vertical.",
     tracking: "Puedes seguir el avance en esta página.",
     retry: "Intentar de nuevo",
     continue: "Continuar seguimiento",

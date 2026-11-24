@@ -94,7 +94,9 @@ describe("F62-05 — modal de adição vertical", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
         jsonResponse({
-          state: "processing",
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
           confirmationToken: "token-1",
         }),
       );
@@ -110,7 +112,7 @@ describe("F62-05 — modal de adição vertical", () => {
       />,
     );
 
-    await screen.findByText(messages.processing);
+    await screen.findByText(messages.cost);
     fireEvent.click(screen.getByRole("button", { name: messages.cancel }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -685,6 +687,135 @@ describe("F62-05 — modal de adição vertical", () => {
     });
   });
 
+  it("F62-08: descrição aprovada no estado inicial", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({
+        state: "eligible",
+        sourceOrigin: "new_flow_1_1",
+        costCredits: 1,
+        confirmationToken: "token-1",
+      }),
+    );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(messages.description)).toBeInTheDocument();
+    expect(screen.getByText(messages.description).textContent).toBe(
+      "Você pode gerar o formato vertical 9:16 para essa campanha.",
+    );
+  });
+
+  it("F62-08: processing bloqueia Cancelar, Escape e clique fora", async () => {
+    const onClose = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({
+        state: "processing",
+        confirmationToken: "token-1",
+      }),
+    );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole("status", { name: messages.processing });
+    const cancel = screen.getByRole("button", { name: messages.cancel });
+    expect(cancel).toBeDisabled();
+
+    fireEvent.click(cancel);
+    fireEvent.keyDown(document, { key: "Escape" });
+    const dialog = screen.getByRole("dialog");
+    fireEvent.mouseDown(dialog.parentElement as HTMLElement);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("F62-08: unknown oferece continuar e permite fechar", async () => {
+    const onClose = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({
+        state: "unknown",
+        confirmationToken: "token-1",
+      }),
+    );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(messages.unknown);
+    expect(
+      screen.getByRole("button", { name: messages.continue }),
+    ).toBeEnabled();
+    const cancel = screen.getByRole("button", { name: messages.cancel });
+    expect(cancel).toBeEnabled();
+    fireEvent.click(cancel);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("F62-08: falha oferece nova consulta read-only, sem POST", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "unavailable",
+          reason: "confirmation_failed",
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-new",
+        }),
+      );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(messages.conflict.confirmationFailed);
+    fireEvent.click(screen.getByRole("button", { name: messages.retry }));
+    await screen.findByText(messages.cost);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "GET" });
+    expect(
+      fetchMock.mock.calls.every(([, init]) => init?.method !== "POST"),
+    ).toBe(true);
+  });
+
   it("F62-08: POST anterior não é abortado ao retomar; resposta A não altera B", async () => {
     const postA = deferred<Response>();
     const postB = deferred<Response>();
@@ -772,8 +903,15 @@ describe("F62-05 — modal de adição vertical", () => {
       await Promise.resolve();
     });
     expect(onDelivered).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toHaveAttribute(
+      "data-submitting",
+      "true",
+    );
     expect(
-      screen.getByRole("button", { name: messages.processing }),
+      screen.getByRole("status", { name: messages.processing }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: messages.cancel }),
     ).toBeDisabled();
 
     postB.resolve(jsonResponse({ state: "delivered" }));

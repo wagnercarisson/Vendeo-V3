@@ -12,7 +12,10 @@ import {
 import { validateArtifactIdentity } from "./identity";
 import { verifyCompositionArtifactBytes } from "./integrity";
 import { getArtifactByIdentity } from "./repository";
-import { CompositionArtifactStorage } from "./storage";
+import {
+  CompositionArtifactStorage,
+  type DownloadBytesTransport,
+} from "./storage";
 import type {
   ArtifactIdentity,
   ArtifactRecord,
@@ -27,6 +30,7 @@ export interface RetrieveCompositionArtifactInput {
 
 export interface RetrieveDeps {
   readonly client?: SupabaseClient;
+  readonly downloadBytes?: DownloadBytesTransport;
 }
 
 function invalid(reason: string): RetrieveArtifactResult {
@@ -93,7 +97,7 @@ export async function retrieveCompositionArtifact(
   }
 
   // (4) Download com ausência provada vs indeterminate.
-  const storage = new CompositionArtifactStorage(client);
+  const storage = new CompositionArtifactStorage(client, deps.downloadBytes);
   const download = await storage.downloadBytes(artifact.storagePath);
   if (download.kind === "absent") {
     return Object.freeze({ kind: "absent" as const });

@@ -197,6 +197,51 @@ describe("retrieveCompositionArtifact", () => {
     expect(state.handles.signed).toBe(0);
   });
 
+  it("usa transporte injetado sem chamar storage-js", async () => {
+    const state = createFakeState({ artifact: seededArtifact() });
+    const result = await retrieveCompositionArtifact(
+      { identity: IDENTITY, authorization: SYSTEM },
+      {
+        client: state.client,
+        downloadBytes: async () => ({ kind: "bytes", bytes: image }),
+      },
+    );
+
+    expect(result.kind).toBe("integral");
+    expect(state.handles.downloads).toHaveLength(0);
+  });
+
+  it("transporte injetado indeterminate não presume ausência", async () => {
+    const state = createFakeState({ artifact: seededArtifact() });
+    const result = await retrieveCompositionArtifact(
+      { identity: IDENTITY, authorization: SYSTEM },
+      {
+        client: state.client,
+        downloadBytes: async () => ({ kind: "indeterminate" }),
+      },
+    );
+
+    expect(result).toEqual({ kind: "indeterminate" });
+    expect(state.handles.downloads).toHaveLength(0);
+  });
+
+  it("transporte injetado com bytes inválidos falha fechado", async () => {
+    const state = createFakeState({ artifact: seededArtifact() });
+    const result = await retrieveCompositionArtifact(
+      { identity: IDENTITY, authorization: SYSTEM },
+      {
+        client: state.client,
+        downloadBytes: async () => ({
+          kind: "bytes",
+          bytes: Buffer.from("not-a-jpeg"),
+        }),
+      },
+    );
+
+    expect(result.kind).toBe("invalid");
+    expect(state.handles.downloads).toHaveLength(0);
+  });
+
   it("returns absent without downloading when the line is missing", async () => {
     const state = createFakeState({ artifact: null });
     const result = await retrieveCompositionArtifact(

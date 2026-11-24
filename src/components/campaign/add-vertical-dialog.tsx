@@ -129,6 +129,34 @@ function rejectionDetails(json: unknown): {
   return { code, reason };
 }
 
+function Spinner({ label }: { readonly label: string }) {
+  return (
+    <span role="status" aria-label={label} className="inline-flex">
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4 animate-spin motion-reduce:animate-none"
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="9"
+          stroke="currentColor"
+          strokeWidth="3"
+          className="opacity-25"
+        />
+        <path
+          d="M21 12a9 9 0 0 0-9-9"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 /**
  * F62/62-05 — modal do detalhe. Confirma com 1 crédito, acompanha por polling
  * READ-ONLY e nunca cancela/estorna ao fechar. Nenhum dado financeiro/técnico é
@@ -163,15 +191,23 @@ export function AddVerticalDialog({
     readonly id: number;
   } | null>(null);
   const closeRef = useRef(onClose);
+  const dismissRef = useRef(onClose);
+  const busyRef = useRef(false);
   const deliveredRef = useRef(onDelivered);
   const titleId = `format-addition-title-${campaignId}`;
   const descriptionId = `format-addition-description-${campaignId}`;
   const cancelRef = useRef<HTMLButtonElement | null>(null);
 
+  const requestClose = useCallback(() => {
+    if (busyRef.current) return;
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     closeRef.current = onClose;
+    dismissRef.current = requestClose;
     deliveredRef.current = onDelivered;
-  }, [onClose, onDelivered]);
+  }, [onClose, onDelivered, requestClose]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -293,7 +329,7 @@ export function AddVerticalDialog({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        closeRef.current();
+        dismissRef.current();
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -435,12 +471,14 @@ export function AddVerticalDialog({
     !expired &&
     typeof dto.confirmationToken === "string" &&
     dto.confirmationToken.length > 0;
+  const busy = submitting || dto?.state === "processing";
+  busyRef.current = busy;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) requestClose();
       }}
     >
       <div
@@ -452,6 +490,7 @@ export function AddVerticalDialog({
         data-state={dto?.state ?? undefined}
         data-code={dto?.code ?? undefined}
         data-reason={dto?.reason ?? undefined}
+        data-submitting={submitting ? "true" : "false"}
         className="w-full max-w-md rounded-xl border border-border bg-bg-surface p-5 shadow-xl"
       >
         <h2
@@ -468,19 +507,22 @@ export function AddVerticalDialog({
         </p>
 
         <div aria-live="polite" className="mt-3 text-sm font-body">
-          {loading && !dto ? (
-            <p>{messages.processing}</p>
+          {busy || (loading && !dto) ? (
+            <div className="flex items-start gap-2">
+              <Spinner label={messages.processing} />
+              <div>
+                <p className="font-semibold text-text-primary">
+                  {messages.processing}
+                </p>
+                <p className="mt-1 text-text-muted">{messages.tracking}</p>
+              </div>
+            </div>
           ) : dto?.state === "eligible" ? (
             expired ? (
               <p>{messages.conflict.confirmationExpired}</p>
             ) : (
               <p className="font-semibold text-text-primary">{messages.cost}</p>
             )
-          ) : dto?.state === "processing" ? (
-            <>
-              <p>{messages.processing}</p>
-              <p className="mt-1 text-text-muted">{messages.tracking}</p>
-            </>
           ) : dto?.state === "unknown" ? (
             <>
               <p>{messages.unknown}</p>
@@ -504,11 +546,12 @@ export function AddVerticalDialog({
             ref={cancelRef}
             type="button"
             variant="secondary"
-            onClick={onClose}
+            onClick={requestClose}
+            disabled={busy}
           >
             {messages.cancel}
           </Button>
-          {canConfirm ? (
+          {submitting ? null : canConfirm ? (
             <Button type="button" onClick={submit} disabled={submitting}>
               {submitting ? messages.processing : messages.confirm}
             </Button>
@@ -527,6 +570,14 @@ export function AddVerticalDialog({
           ) : resumable ? (
             <Button type="button" onClick={submit} disabled={submitting}>
               {submitting ? messages.processing : messages.continue}
+            </Button>
+          ) : dto?.state === "unavailable" ? (
+            <Button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              {loading ? messages.processing : messages.retry}
             </Button>
           ) : null}
         </div>
