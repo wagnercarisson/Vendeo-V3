@@ -565,6 +565,126 @@ describe("F62-05 — modal de adição vertical", () => {
     expect(screen.queryByText(messages.failed)).toBeNull();
   });
 
+  it("F62-08: confirmação vencida não oferece Confirmar e permite novo GET read-only", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-old",
+          expiresAt: new Date(Date.now() - 1000).toISOString(),
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-new",
+          expiresAt: new Date(Date.now() + 600000).toISOString(),
+        }),
+      );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(
+      screen.getByText(messages.conflict.confirmationExpired),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: messages.confirm }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: messages.retry }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "GET" });
+    expect(
+      fetchMock.mock.calls.every(([, init]) => init?.method !== "POST"),
+    ).toBe(true);
+    expect(screen.getByText(messages.cost)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: messages.confirm }),
+    ).toBeEnabled();
+  });
+
+  it("F62-08: fechar a modal não aborta o POST em andamento", async () => {
+    const post = deferred<Response>();
+    let postSignal: AbortSignal | undefined;
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-1",
+        }),
+      )
+      .mockImplementationOnce((_input, init) => {
+        postSignal = init?.signal ?? undefined;
+        return post.promise;
+      });
+
+    const view = render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(messages.cost);
+    fireEvent.click(screen.getByRole("button", { name: messages.confirm }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(postSignal?.aborted).toBe(false);
+
+    view.rerender(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open={false}
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(postSignal?.aborted).toBe(false);
+
+    post.resolve(jsonResponse({ state: "processing" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+  });
+
   it("incompatível mostra explicação sem prometer confirmação", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       jsonResponse({

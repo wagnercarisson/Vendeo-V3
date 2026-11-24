@@ -77,6 +77,17 @@ export const es419CampaignDetailMessages = Object.freeze({
         "La confirmación ya no es válida. Cierra y abre la modal nuevamente.",
       confirmationFailed:
         "No fue posible confirmar la adición ahora. Inténtalo de nuevo.",
+      insufficientCredits:
+        "Saldo insuficiente para generar el formato vertical.",
+      rateLimitExceeded:
+        "Límite de generaciones alcanzado. Inténtalo más tarde.",
+      authorizationUnavailable:
+        "No fue posible validar la autorización ahora. Inténtalo de nuevo.",
+      legalBlocked:
+        "La generación está bloqueada por una pendencia legal.",
+      storeNotReady:
+        "La tienda debe completar el registro para generar el formato vertical.",
+      engineDisabled: "El motor de generación no está disponible.",
     }),
     selection: "Elige arriba el formato que quieres ver.",
     incompatible: Object.freeze({

@@ -172,6 +172,9 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     exact: [
       "@/lib/product-1-1/orchestration/attempt-start-client",
       "@/lib/product-1-1/artifact/artifact-store",
+      // F62-08 — transporte binário node:http usado SOMENTE no probe de preview
+      // da página de detalhe (leitura; não gera, não cobra, não entrega).
+      "@/lib/product-1-1/artifact/node-http-storage-download",
       // Plano 08 (correção de integração — P3): a página lê a copy do NOVO FLUXO
       // POR OPERAÇÃO (`readCopyDelivery`/`readCopyCancellation`) — somente leitura
       // (nunca gera/regenera/cobra). Par EXATO, sem prefixo amplo.

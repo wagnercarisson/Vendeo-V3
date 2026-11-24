@@ -131,15 +131,23 @@ O sistema SHALL persistir um vínculo durável da adição com campanha, loja, o
 
 ### Requirement: Ponte de proveniência sem geração nem alteração do original
 
-O sistema SHALL registrar a fonte quadrada entregue como `square_original` interno, uma única vez por fonte/campanha, por cópia byte-idêntica validada, com origem explícita de reuso de campanha entregue, vínculo à campanha-fonte e proveniência contendo path, dimensão, MIME, tamanho e checksum recalculados. No fluxo novo, a identidade de registro SHALL ser a operação `1:1` primária entregue que sustenta a fonte. Em campanha legada, SHALL ser uma identidade sintética determinística, sem operação financeira. A partir da ponte, a preparação SHALL usar essa identidade como fonte e o `operationId` da adição como destino. A ponte SHALL ser idempotente e SHALL NOT gerar uma nova imagem, transformar o quadrado original ou alterar o artefato `1:1` entregue.
+O sistema SHALL registrar a fonte quadrada entregue como `square_original` interno, uma única vez por fonte/campanha. Se já existir um `square_original` interno íntegro com a identidade estável da fonte, `origin=provider_generation`, correspondente à operação `1:1` primária entregue e com bytes/checksum iguais aos da imagem entregue atual, o sistema SHALL reutilizá-lo sem alterar origem, bytes, proveniência ou identidade. Caso contrário, SHALL criar a ponte por cópia byte-idêntica validada, com origem explícita de reuso (`delivered_campaign_reuse`), vínculo à campanha-fonte e proveniência contendo path, dimensão, MIME, tamanho e checksum recalculados. No fluxo novo, a identidade de registro SHALL ser a operação `1:1` primária entregue que sustenta a fonte. Em campanha legada, SHALL ser uma identidade sintética determinística, sem operação financeira. A partir da ponte, a preparação SHALL usar essa identidade como fonte e o `operationId` da adição como destino. A ponte SHALL ser idempotente e SHALL NOT gerar uma nova imagem, transformar o quadrado original ou alterar o artefato `1:1` entregue.
 
 #### Scenario: Ponte criada a partir da fonte entregue
 
-- **WHEN** a fonte `1024×1024` é validada com sucesso
-- **THEN** o sistema SHALL persistir (ou reutilizar) o `square_original` interno com identidade estável da fonte
+- **WHEN** a fonte `1024×1024` é validada com sucesso e não existe `square_original` íntegro correspondente
+- **THEN** o sistema SHALL persistir o `square_original` interno com identidade estável da fonte
 - **AND** os bytes do novo objeto SHALL ser idênticos aos bytes validados da fonte
 - **AND** a origem SHALL identificar reuso de campanha entregue, nunca geração por provider
 - **AND** o artefato original `1:1` SHALL permanecer inalterado
+
+#### Scenario: Original provider_generation íntegro é reutilizado
+
+- **WHEN** já existe `square_original` interno com `origin=provider_generation`, a mesma operação primária e bytes/checksum iguais aos da imagem entregue atual
+- **THEN** o sistema SHALL reutilizar essa linha como fonte
+- **AND** SHALL NOT criar `delivered_campaign_reuse` na mesma identidade
+- **AND** SHALL NOT alterar origem, bytes, proveniência, path ou identidade
+- **AND** a validação da abertura SHALL aceitar a linha original
 
 #### Scenario: Legado usa identidade sintética sem crédito
 

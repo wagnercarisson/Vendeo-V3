@@ -90,6 +90,8 @@ A adição não cria uma projeção de campanha, não altera o snapshot e não r
 
 O artefato preparado 1152×1152 usa o `operationId` da adição. A operação original, quando existe, e o objeto `art-1024.jpg` não são alterados. O registro é único por fonte/campanha, de modo que aberturas concorrentes ou recusadas reutilizam a mesma ponte em vez de criar cópias ilimitadas. A ponte é imutável: antes de reutilizá-la em uma nova abertura, a fonte entregue é revalidada e seu checksum é comparado ao registrado; divergência é conflito, nunca reuso silencioso.
 
+**Exceção de integração (2026-11-23):** quando a campanha nova já possui um `square_original` interno com `origin=provider_generation`, a mesma identidade da operação primária e bytes/checksum iguais aos do `art-1024.jpg` entregue, a ponte reutiliza essa linha **sem alterar origem, bytes, proveniência ou identidade**. Nesse caso a RPC de abertura aceita a linha `provider_generation` original; a criação de `delivered_campaign_reuse` ocorre somente quando não há original íntegro. Incompatibilidade real de checksum, path, dimensão, MIME ou identidade continua sendo conflito fechado.
+
 **Por quê:** `prepareSquareForExpansion` exige `square_original` interno. A ponte preserva a validação existente, deixa a origem explícita e permite preparar com `source.operationId = source_registration_operation_id` e `preparedOperationId = operationId` da adição. O checksum recalculado dos bytes reais fecha a lacuna de a tabela individual não armazenar checksum. Uma ponte por tentativa multiplicaria cópias e não representaria a fonte de forma estável.
 
 **Alternativas rejeitadas:**

@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveReusableSquareSource } from "@/lib/campaign/composition-artifacts/resolve-source";
 import { persistCompositionArtifact } from "@/lib/campaign/composition-artifacts/persist";
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
+import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repository";
 import {
   CompositionArtifactStorage,
   type DownloadBytesResult,
@@ -88,6 +89,16 @@ export interface SourceBridgeDeps {
   readonly resolveSource?: typeof resolveReusableSquareSource;
   readonly persist?: typeof persistCompositionArtifact;
   readonly retrieve?: typeof retrieveCompositionArtifact;
+  readonly readExisting?: (input: {
+    readonly storeId: string;
+    readonly campaignId: string;
+    readonly operationId: string;
+    readonly role: "square_original";
+  }) => Promise<
+    | { readonly kind: "found"; readonly record: ArtifactRecord }
+    | { readonly kind: "absent" }
+    | { readonly kind: "read_failed"; readonly message: string }
+  >;
   readonly storage?: {
     downloadBytes(path: string, bucket?: string): Promise<DownloadBytesResult>;
   };
@@ -228,6 +239,14 @@ function mapPersistFailure(result: PersistArtifactResult): EnsureSourceBridgeRes
   }
 }
 
+function canonicalSquareOriginalPath(
+  storeId: string,
+  campaignId: string,
+  operationId: string,
+): string {
+  return `${storeId.toLowerCase()}/${campaignId.toLowerCase()}/${operationId.toLowerCase()}/square_original.jpg`;
+}
+
 function verifyBridgeArtifact(
   input: {
     readonly storeId: string;
@@ -250,7 +269,11 @@ function verifyBridgeArtifact(
     artifact.mimeType === "image/jpeg" &&
     artifact.storageBucket === "campaign-internal-artifacts" &&
     artifact.storagePath ===
-      `${input.storeId.toLowerCase()}/${input.campaignId.toLowerCase()}/${input.sourceRegistrationOperationId.toLowerCase()}/square_original.jpg` &&
+      canonicalSquareOriginalPath(
+        input.storeId,
+        input.campaignId,
+        input.sourceRegistrationOperationId,
+      ) &&
     artifact.origin === "delivered_campaign_reuse" &&
     artifact.sourceCampaignId === input.campaignId.toLowerCase() &&
     artifact.checksumSha256 === input.sourceChecksumSha256 &&
@@ -258,6 +281,113 @@ function verifyBridgeArtifact(
     artifact.provenance.sourceStoragePath === input.sourceStoragePath &&
     artifact.provenance.sourceChecksumSha256 === input.sourceChecksumSha256
   );
+}
+
+/**
+ * A fonte reutilizável pode já existir como `square_original` original da
+ * campanha (`provider_generation`). Nesse caso a ponte reutiliza a linha sem
+ * alterar origem/bytes/proveniência; só cria `delivered_campaign_reuse` quando
+ * não há original íntegro.
+ */
+function verifyReusableSourceArtifact(
+  input: {
+    readonly storeId: string;
+    readonly campaignId: string;
+    readonly sourceOrigin: FormatAdditionSourceOrigin;
+    readonly sourceRegistrationOperationId: string;
+    readonly sourceStoragePath: string;
+    readonly sourceChecksumSha256: string;
+  },
+  artifact: ArtifactRecord,
+): boolean {
+  const common =
+    artifact.storeId === input.storeId.toLowerCase() &&
+    artifact.campaignId === input.campaignId.toLowerCase() &&
+    artifact.operationId === input.sourceRegistrationOperationId.toLowerCase() &&
+    artifact.role === "square_original" &&
+    artifact.format === "1:1" &&
+    artifact.width === 1024 &&
+    artifact.height === 1024 &&
+    artifact.mimeType === "image/jpeg" &&
+    artifact.storageBucket === "campaign-internal-artifacts" &&
+    artifact.storagePath ===
+      canonicalSquareOriginalPath(
+        input.storeId,
+        input.campaignId,
+        input.sourceRegistrationOperationId,
+      ) &&
+    artifact.checksumSha256.toLowerCase() ===
+      input.sourceChecksumSha256.toLowerCase();
+  if (!common) return false;
+
+  if (artifact.origin === "provider_generation") {
+    return (
+      input.sourceOrigin === "new_flow_1_1" &&
+      artifact.sourceCampaignId === null &&
+      artifact.derivedFromArtifactId === null
+    );
+  }
+
+  if (artifact.origin === "delivered_campaign_reuse") {
+    return (
+      artifact.sourceCampaignId === input.campaignId.toLowerCase() &&
+      artifact.provenance.sourceOrigin === input.sourceOrigin &&
+      artifact.provenance.sourceStoragePath === input.sourceStoragePath &&
+      artifact.provenance.sourceChecksumSha256 ===
+        input.sourceChecksumSha256.toLowerCase()
+    );
+  }
+
+  return false;
+}
+
+function classifyExistingSourceConflict(
+  input: {
+    readonly storeId: string;
+    readonly campaignId: string;
+    readonly sourceRegistrationOperationId: string;
+    readonly sourceStoragePath: string;
+    readonly sourceChecksumSha256: string;
+  },
+  artifact: ArtifactRecord,
+): SourceBridgeFailureReason {
+  if (
+    artifact.checksumSha256.toLowerCase() !==
+    input.sourceChecksumSha256.toLowerCase()
+  ) {
+    return "source_checksum_mismatch";
+  }
+  if (
+    artifact.role !== "square_original" ||
+    artifact.format !== "1:1" ||
+    artifact.width !== 1024 ||
+    artifact.height !== 1024 ||
+    artifact.mimeType !== "image/jpeg" ||
+    artifact.storageBucket !== "campaign-internal-artifacts" ||
+    artifact.storagePath !==
+      canonicalSquareOriginalPath(
+        input.storeId,
+        input.campaignId,
+        input.sourceRegistrationOperationId,
+      )
+  ) {
+    return "bridge_metadata_conflict";
+  }
+  if (
+    (artifact.origin !== "provider_generation" &&
+      artifact.origin !== "delivered_campaign_reuse") ||
+    (artifact.origin === "provider_generation" &&
+      (artifact.sourceCampaignId !== null ||
+        artifact.derivedFromArtifactId !== null)) ||
+    (artifact.origin === "delivered_campaign_reuse" &&
+      (artifact.sourceCampaignId !== input.campaignId.toLowerCase() ||
+        artifact.provenance.sourceStoragePath !== input.sourceStoragePath ||
+        artifact.provenance.sourceChecksumSha256 !==
+          input.sourceChecksumSha256.toLowerCase()))
+  ) {
+    return "bridge_provenance_conflict";
+  }
+  return "bridge_provenance_conflict";
 }
 
 /**
@@ -376,6 +506,71 @@ export async function ensureFormatAdditionSourceBridge(
     operationId: sourceRegistrationOperationId,
     role: "square_original" as const,
   };
+
+  // A fonte pode já existir como `square_original` original da campanha. Nesse
+  // caso reutiliza a linha íntegra; só cria `delivered_campaign_reuse` quando
+  // não há original correspondente.
+  const existingRow = deps.readExisting
+    ? await deps.readExisting(identity)
+    : await getArtifactByIdentity(identity, client);
+  if (existingRow.kind === "read_failed") {
+    return fail("indeterminate", { detail: existingRow.message });
+  }
+  if (existingRow.kind === "found") {
+    const existing = await retrieve(
+      { identity, authorization: authorizationResult.authorization },
+      { client },
+    );
+    if (existing.kind === "integral") {
+      if (
+        verifyReusableSourceArtifact(
+          {
+            storeId,
+            campaignId,
+            sourceOrigin: input.sourceOrigin,
+            sourceRegistrationOperationId,
+            sourceStoragePath: source.storagePath,
+            sourceChecksumSha256: source.checksumSha256,
+          },
+          existing.artifact,
+        )
+      ) {
+        return Object.freeze({
+          ok: true as const,
+          artifact: existing.artifact,
+          sourceOrigin: input.sourceOrigin,
+          sourceRegistrationOperationId,
+          persistence: "reused" as const,
+        });
+      }
+      return fail(
+        classifyExistingSourceConflict(
+          {
+            storeId,
+            campaignId,
+            sourceRegistrationOperationId,
+            sourceStoragePath: source.storagePath,
+            sourceChecksumSha256: source.checksumSha256,
+          },
+          existing.artifact,
+        ),
+        { existing: existing.artifact },
+      );
+    }
+    if (existing.kind === "metadata_conflict") {
+      return fail("bridge_metadata_conflict", {
+        detail: existing.reason,
+        existing: existing.artifact,
+      });
+    }
+    if (existing.kind === "indeterminate") {
+      return fail("indeterminate", { detail: "existing_source_indeterminate" });
+    }
+    if (existing.kind === "absent") {
+      return fail("artifact_absent", { existing: existingRow.record });
+    }
+    return fail("bridge_metadata_conflict", { detail: existing.reason });
+  }
 
   const persisted = await persist(
     {

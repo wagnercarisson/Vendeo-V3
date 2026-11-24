@@ -31,6 +31,7 @@ import {
 } from "@/lib/campaign/format-addition/orchestration/deps";
 import { runFormatAddition } from "@/lib/campaign/format-addition/orchestration/run-addition";
 import { continueFormatAddition } from "@/lib/campaign/format-addition/orchestration/resume-addition";
+import { statusForRun } from "@/lib/campaign/format-addition/status";
 import type { FormatAdditionRunResult } from "@/lib/campaign/format-addition/orchestration/types";
 import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
 import {
@@ -449,32 +450,13 @@ export const GET = apiHandler(
   },
 );
 
-function statusForRun(result: FormatAdditionRunResult): number {
-  if (result.ok) {
-    return result.kind === "processing" ? 202 : 200;
-  }
-  if (result.code === "gate_blocked") {
-    if (result.reason === "rate_limit_exceeded") return 429;
-    if (result.reason === "insufficient_credits") return 402;
-    if (
-      result.reason === "addition_disabled" ||
-      result.reason === "engine_disabled" ||
-      result.reason === "legal_blocked" ||
-      result.reason === "store_not_ready"
-    ) {
-      return 403;
-    }
-    return 409;
-  }
-  if (result.code === "rpc_failed" || result.code === "durable_context_read_failed") {
-    return 503;
-  }
-  return 409;
-}
-
 function runDto(result: FormatAdditionRunResult): Record<string, unknown> {
   if (!result.ok) {
-    return { state: "unavailable", reason: result.reason };
+    return {
+      state: "unavailable",
+      code: result.code,
+      reason: result.reason,
+    };
   }
   switch (result.kind) {
     case "delivered":

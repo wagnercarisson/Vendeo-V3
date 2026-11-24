@@ -103,6 +103,7 @@ function depsFor(options: {
   primary?: PrimaryOperationRead;
   persistResult?: PersistArtifactResult;
   retrieveFactory?: (registration: string) => RetrieveArtifactResult;
+  readExisting?: SourceBridgeDeps["readExisting"];
   resolveResult?: ResolveSquareSourceResult;
 }): { deps: SourceBridgeDeps; captured: Captured } {
   const captured: Captured = { persist: [], downloads: [], primaryReads: 0 };
@@ -130,6 +131,7 @@ function depsFor(options: {
         bytes,
       };
     },
+    readExisting: options.readExisting ?? (async () => ({ kind: "absent" as const })),
     readPrimaryOperation: async () => {
       captured.primaryReads += 1;
       return options.primary ?? { kind: "found", operationId: PRIMARY, status: "delivered" };
@@ -169,6 +171,98 @@ describe("F62-03 — ponte de proveniência", () => {
       acceptLegacy1024: true,
       source: { kind: "delivered_campaign_source" },
     });
+  });
+
+  it("reutiliza square_original original provider_generation com bytes iguais", async () => {
+    const source = sourceFor("new_flow_1_1");
+    const original = artifactFor(source, PRIMARY, {
+      origin: "provider_generation",
+      sourceCampaignId: null,
+      derivedFromArtifactId: null,
+      provenance: {},
+    });
+    const { deps, captured } = depsFor({
+      source,
+      readExisting: async () => ({ kind: "found" as const, record: original }),
+      retrieveFactory: () => ({
+        kind: "integral" as const,
+        artifact: original,
+        bytes: BYTES,
+      }),
+    });
+
+    const result = await ensureFormatAdditionSourceBridge(
+      { storeId: STORE, campaignId: CAMPAIGN, sourceOrigin: "new_flow_1_1", authorization: SYSTEM },
+      deps,
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      persistence: "reused",
+      sourceRegistrationOperationId: PRIMARY,
+    });
+    if (result.ok) {
+      expect(result.artifact.origin).toBe("provider_generation");
+      expect(result.artifact.id).toBe(original.id);
+    }
+    expect(captured.persist).toHaveLength(0);
+  });
+
+  it("recusa checksum divergente do original sem persistir nem sobrescrever", async () => {
+    const source = sourceFor("new_flow_1_1");
+    const original = artifactFor(source, PRIMARY, {
+      origin: "provider_generation",
+      sourceCampaignId: null,
+      derivedFromArtifactId: null,
+      provenance: {},
+      checksumSha256: "f".repeat(64),
+    });
+    const { deps, captured } = depsFor({
+      source,
+      readExisting: async () => ({ kind: "found" as const, record: original }),
+      retrieveFactory: () => ({
+        kind: "integral" as const,
+        artifact: original,
+        bytes: BYTES,
+      }),
+    });
+
+    const result = await ensureFormatAdditionSourceBridge(
+      { storeId: STORE, campaignId: CAMPAIGN, sourceOrigin: "new_flow_1_1", authorization: SYSTEM },
+      deps,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: "source_checksum_mismatch" });
+    expect(captured.persist).toHaveLength(0);
+  });
+
+  it("recusa metadados divergentes do original sem persistir", async () => {
+    const source = sourceFor("new_flow_1_1");
+    const original = artifactFor(source, PRIMARY, {
+      origin: "provider_generation",
+      sourceCampaignId: null,
+      derivedFromArtifactId: null,
+      provenance: {},
+      width: 1080,
+      height: 1080,
+    });
+    const { deps, captured } = depsFor({
+      source,
+      readExisting: async () => ({ kind: "found" as const, record: original }),
+      retrieveFactory: () => ({
+        kind: "integral" as const,
+        artifact: original,
+        bytes: BYTES,
+      }),
+    });
+
+    const result = await ensureFormatAdditionSourceBridge(
+      { storeId: STORE, campaignId: CAMPAIGN, sourceOrigin: "new_flow_1_1", authorization: SYSTEM },
+      deps,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: "bridge_metadata_conflict" });
+    expect(captured.persist).toHaveLength(0);
   });
 
   it("legado usa identidade sintética determinística e não lê operação primária", async () => {

@@ -433,6 +433,7 @@ describe("F60.4 boundaries — migrations, rotas e UI intocadas", () => {
     ]);
     // F62/62-05 — jornada autorizada da adição vertical.
     const allowedF62 = new Set([
+      "supabase/migrations/20261123130252_campaign_format_addition.sql",
       "src/app/(app)/campanhas/[id]/__tests__/format-addition.test.tsx",
       "src/app/(app)/campanhas/[id]/__tests__/format-presentation.test.tsx",
       "src/app/api/campaign/[id]/format-additions/",

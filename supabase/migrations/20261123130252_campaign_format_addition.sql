@@ -401,14 +401,29 @@ BEGIN
   END IF;
   IF v_artifact.role <> 'square_original'
      OR v_artifact.format <> '1:1'
-     OR v_artifact.origin <> 'delivered_campaign_reuse'
      OR v_artifact.operation_id <> p_source_registration_operation_id
-     OR v_artifact.source_campaign_id IS DISTINCT FROM p_campaign_id
      OR v_artifact.width <> 1024
      OR v_artifact.height <> 1024
      OR v_artifact.mime_type <> 'image/jpeg'
      OR v_artifact.checksum_sha256::text <> p_source_checksum_sha256
   THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'source_artifact_invalid');
+  END IF;
+
+  -- A fonte pode ser a ponte de reuso ou o square_original original da
+  -- campanha nova. A identidade e os bytes/checksum acima precisam bater.
+  IF v_artifact.origin = 'delivered_campaign_reuse' THEN
+    IF v_artifact.source_campaign_id IS DISTINCT FROM p_campaign_id THEN
+      RETURN jsonb_build_object('success', false, 'reason', 'source_artifact_invalid');
+    END IF;
+  ELSIF v_artifact.origin = 'provider_generation' THEN
+    IF p_source_origin <> 'new_flow_1_1'
+       OR v_artifact.source_campaign_id IS NOT NULL
+       OR v_artifact.derived_from_artifact_id IS NOT NULL
+    THEN
+      RETURN jsonb_build_object('success', false, 'reason', 'source_artifact_invalid');
+    END IF;
+  ELSE
     RETURN jsonb_build_object('success', false, 'reason', 'source_artifact_invalid');
   END IF;
 
@@ -447,16 +462,20 @@ BEGIN
     END IF;
   END IF;
 
-  -- Proveniência gravada na ponte deve apontar para o MESMO path/checksum/origem
-  -- e para a dimensão/MIME validados. Ponte antiga da mesma campanha falha aqui.
-  IF v_artifact.provenance->>'sourceOrigin' IS DISTINCT FROM p_source_origin
-     OR v_artifact.provenance->>'sourceStoragePath' IS DISTINCT FROM v_campaign_storage_path
-     OR v_artifact.provenance->>'sourceChecksumSha256' IS DISTINCT FROM p_source_checksum_sha256
-     OR v_artifact.provenance->>'sourceWidth' IS DISTINCT FROM '1024'
-     OR v_artifact.provenance->>'sourceHeight' IS DISTINCT FROM '1024'
-     OR v_artifact.provenance->>'sourceMimeType' IS DISTINCT FROM 'image/jpeg'
-  THEN
-    RETURN jsonb_build_object('success', false, 'reason', 'source_provenance_mismatch');
+  -- Proveniência gravada na ponte de reuso deve apontar para o MESMO
+  -- path/checksum/origem e para a dimensão/MIME validados. O square_original
+  -- original (provider_generation) não carrega proveniência de reuso; para ele
+  -- valem a identidade, o path canônico e os bytes/checksum acima.
+  IF v_artifact.origin = 'delivered_campaign_reuse' THEN
+    IF v_artifact.provenance->>'sourceOrigin' IS DISTINCT FROM p_source_origin
+       OR v_artifact.provenance->>'sourceStoragePath' IS DISTINCT FROM v_campaign_storage_path
+       OR v_artifact.provenance->>'sourceChecksumSha256' IS DISTINCT FROM p_source_checksum_sha256
+       OR v_artifact.provenance->>'sourceWidth' IS DISTINCT FROM '1024'
+       OR v_artifact.provenance->>'sourceHeight' IS DISTINCT FROM '1024'
+       OR v_artifact.provenance->>'sourceMimeType' IS DISTINCT FROM 'image/jpeg'
+    THEN
+      RETURN jsonb_build_object('success', false, 'reason', 'source_provenance_mismatch');
+    END IF;
   END IF;
 
   IF p_source_origin = 'new_flow_1_1' THEN

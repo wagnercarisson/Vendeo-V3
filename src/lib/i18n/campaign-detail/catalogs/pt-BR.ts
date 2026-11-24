@@ -77,6 +77,17 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
         "A confirmação não é mais válida. Feche e abra a modal novamente.",
       confirmationFailed:
         "Não foi possível confirmar a adição agora. Tente novamente.",
+      insufficientCredits:
+        "Saldo insuficiente para gerar o formato vertical.",
+      rateLimitExceeded:
+        "Limite de gerações atingido. Tente novamente mais tarde.",
+      authorizationUnavailable:
+        "Não foi possível validar a autorização agora. Tente novamente.",
+      legalBlocked:
+        "A geração está bloqueada por uma pendência legal.",
+      storeNotReady:
+        "A loja precisa concluir o cadastro para gerar o formato vertical.",
+      engineDisabled: "O motor de geração está indisponível.",
     }),
     selection: "Escolha acima o formato que deseja ver.",
     incompatible: Object.freeze({

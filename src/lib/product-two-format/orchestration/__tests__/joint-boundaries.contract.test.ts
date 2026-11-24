@@ -192,7 +192,18 @@ describe("F60.7-10 — fronteiras de não conexão", () => {
       (file) => file.includes("f60_7"),
     );
     expect(migrations).toEqual(["20261118002139_f60_7_two_format_foundation.sql"]);
-    expect(gitStatus(["supabase/migrations"])).toBe("");
+    // A migration F62 (20261123130252) é a correção autorizada do 62-08;
+    // não altera a migration F60.7. O restante do diretório deve estar limpo.
+    const migrationStatus = gitStatus(["supabase/migrations"])
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .filter(
+        (line) =>
+          !line.includes(
+            "20261123130252_campaign_format_addition.sql",
+          ),
+      );
+    expect(migrationStatus).toEqual([]);
   });
 
   it("Teste 5: nenhum provider/DB real nos módulos conjuntos", () => {

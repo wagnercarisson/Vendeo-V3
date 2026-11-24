@@ -18,6 +18,7 @@ interface AdditionDto {
   readonly state: AdditionState;
   readonly sourceOrigin?: "new_flow_1_1" | "legacy_campaign" | null;
   readonly costCredits?: number;
+  readonly code?: string;
   readonly reason?: string;
   readonly refunded?: boolean;
   readonly requestId?: string;
@@ -75,8 +76,17 @@ function reasonMessage(
     confirmation_expired: "confirmationExpired",
     invalid_confirmation: "invalidConfirmation",
     confirmation_failed: "confirmationFailed",
+    insufficient_credits: "insufficientCredits",
+    rate_limit_exceeded: "rateLimitExceeded",
+    authorization_unavailable: "authorizationUnavailable",
+    authorization_resolver_not_configured: "authorizationUnavailable",
+    gate_read_failed: "authorizationUnavailable",
+    legal_blocked: "legalBlocked",
+    store_not_ready: "storeNotReady",
+    engine_disabled: "engineDisabled",
   };
-  const mappedConflict = conflictKey[dto.reason];
+  const mappedConflict =
+    conflictKey[dto.code ?? ""] ?? conflictKey[dto.reason];
   if (mappedConflict && conflict[mappedConflict]) return conflict[mappedConflict];
   if (dto.reason === "failed_outcome" || dto.reason === "definitive_failure") {
     return messages.failed;
@@ -90,24 +100,33 @@ function reasonMessage(
 
 const REJECTION_CODE_RE = /^[a-z0-9_]{1,64}$/;
 
+function safeCode(value: unknown): string | null {
+  return typeof value === "string" && REJECTION_CODE_RE.test(value)
+    ? value
+    : null;
+}
+
 /**
- * Preserva apenas o CÓDIGO técnico seguro da rejeição — nunca a mensagem crua
- * do servidor. O código permanece no estado/DOM para diagnóstico.
+ * Preserva apenas CÓDIGOS técnicos seguros da rejeição — nunca a mensagem crua
+ * do servidor. `code` identifica a classe; `reason` preserva o detalhe seguro.
  */
-function rejectionReason(json: unknown): string | null {
-  if (json === null || typeof json !== "object") return null;
+function rejectionDetails(json: unknown): {
+  readonly code: string | null;
+  readonly reason: string | null;
+} {
+  if (json === null || typeof json !== "object") {
+    return { code: null, reason: null };
+  }
   const record = json as Record<string, unknown>;
   const error = record.error;
   const errorCode =
     error !== null && typeof error === "object"
       ? (error as Record<string, unknown>).code
       : null;
-  for (const candidate of [errorCode, record.reason]) {
-    if (typeof candidate === "string" && REJECTION_CODE_RE.test(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
+  const code =
+    safeCode(errorCode) ?? safeCode(record.code) ?? safeCode(record.reason);
+  const reason = safeCode(record.reason) ?? code;
+  return { code, reason };
 }
 
 /**
@@ -127,6 +146,7 @@ export function AddVerticalDialog({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const abortRef = useRef<AbortController | null>(null);
   const postAbortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -254,7 +274,6 @@ export function AddVerticalDialog({
     activePostRef.current = null;
     if (!open) {
       abortRef.current?.abort();
-      postAbortRef.current?.abort();
       clearTimer();
       setDto(null);
       setLoading(false);
@@ -266,7 +285,6 @@ export function AddVerticalDialog({
     return () => {
       if (sessionRef.current === session) sessionRef.current += 1;
       abortRef.current?.abort();
-      postAbortRef.current?.abort();
       clearTimer();
     };
   }, [open, campaignId, clearTimer]);
@@ -286,6 +304,13 @@ export function AddVerticalDialog({
   useEffect(() => {
     if (open) cancelRef.current?.focus();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !dto?.expiresAt) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [open, dto?.expiresAt]);
 
   const submit = useCallback(async () => {
     if (!dto?.confirmationToken) return;
@@ -322,10 +347,12 @@ export function AddVerticalDialog({
       }
       appliedSeqRef.current = seq;
       if (!response.ok || json === null || !("state" in json)) {
-        const reason = rejectionReason(json) ?? "confirmation_failed";
+        const rejection = rejectionDetails(json);
+        const code = rejection.code ?? "confirmation_failed";
+        const reason = rejection.reason ?? code;
         setFailed(true);
         setDto((prev) =>
-          prev ? { ...prev, state: "unavailable", reason } : prev,
+          prev ? { ...prev, state: "unavailable", code, reason } : prev,
         );
         return;
       }
@@ -359,7 +386,14 @@ export function AddVerticalDialog({
       appliedSeqRef.current = seq;
       setFailed(true);
       setDto((prev) =>
-        prev ? { ...prev, state: "unavailable", reason: "confirmation_failed" } : prev,
+        prev
+          ? {
+              ...prev,
+              state: "unavailable",
+              code: "confirmation_failed",
+              reason: "confirmation_failed",
+            }
+          : prev,
       );
       clearTimer();
     } finally {
@@ -384,6 +418,12 @@ export function AddVerticalDialog({
   if (!open) return null;
 
   const reason = reasonMessage(dto, messages, failed);
+  const expiresAtMs = dto?.expiresAt ? Date.parse(dto.expiresAt) : null;
+  const expired =
+    dto?.state === "eligible" &&
+    expiresAtMs !== null &&
+    Number.isFinite(expiresAtMs) &&
+    now >= expiresAtMs;
   const retryable =
     dto?.state === "refunded" &&
     typeof dto.confirmationToken === "string" &&
@@ -395,6 +435,7 @@ export function AddVerticalDialog({
     dto.confirmationToken.length > 0;
   const canConfirm =
     dto?.state === "eligible" &&
+    !expired &&
     typeof dto.confirmationToken === "string" &&
     dto.confirmationToken.length > 0;
 
@@ -412,6 +453,7 @@ export function AddVerticalDialog({
         aria-describedby={descriptionId}
         lang={locale === "es-419" ? "es-419" : undefined}
         data-state={dto?.state ?? undefined}
+        data-code={dto?.code ?? undefined}
         data-reason={dto?.reason ?? undefined}
         className="w-full max-w-md rounded-xl border border-border bg-bg-surface p-5 shadow-xl"
       >
@@ -432,7 +474,11 @@ export function AddVerticalDialog({
           {loading && !dto ? (
             <p>{messages.processing}</p>
           ) : dto?.state === "eligible" ? (
-            <p className="font-semibold text-text-primary">{messages.cost}</p>
+            expired ? (
+              <p>{messages.conflict.confirmationExpired}</p>
+            ) : (
+              <p className="font-semibold text-text-primary">{messages.cost}</p>
+            )
           ) : dto?.state === "processing" ? (
             <>
               <p>{messages.processing}</p>
@@ -468,6 +514,14 @@ export function AddVerticalDialog({
           {canConfirm ? (
             <Button type="button" onClick={submit} disabled={submitting}>
               {submitting ? messages.processing : messages.confirm}
+            </Button>
+          ) : expired ? (
+            <Button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              {loading ? messages.processing : messages.retry}
             </Button>
           ) : retryable ? (
             <Button type="button" onClick={submit} disabled={submitting}>

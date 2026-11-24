@@ -156,6 +156,17 @@ describe("F62-02 RPC grupo 2 — abertura/replay atômica", () => {
     }
   });
 
+  it("aceita o square_original original provider_generation ou a ponte de reuso", () => {
+    expect(OPEN).toContain("v_artifact.origin = 'delivered_campaign_reuse'");
+    expect(OPEN).toContain("ELSIF v_artifact.origin = 'provider_generation'");
+    expect(OPEN).toContain("v_artifact.source_campaign_id IS NOT NULL");
+    expect(OPEN).toContain("v_artifact.derived_from_artifact_id IS NOT NULL");
+    expect(OPEN).toContain("p_source_origin <> 'new_flow_1_1'");
+    expect(OPEN).toContain(
+      "IF v_artifact.origin = 'delivered_campaign_reuse' THEN",
+    );
+  });
+
   it("legado não exige operação financeira original", () => {
     expect(OPEN).toContain("legacy_source_operation_forbidden");
     expect(OPEN).toContain("source_origin = 'legacy_campaign'");

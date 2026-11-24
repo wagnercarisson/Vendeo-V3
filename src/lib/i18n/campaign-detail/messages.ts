@@ -94,6 +94,12 @@ export interface CampaignDetailFormatAdditionMessages {
     readonly confirmationExpired: string;
     readonly invalidConfirmation: string;
     readonly confirmationFailed: string;
+    readonly insufficientCredits: string;
+    readonly rateLimitExceeded: string;
+    readonly authorizationUnavailable: string;
+    readonly legalBlocked: string;
+    readonly storeNotReady: string;
+    readonly engineDisabled: string;
   };
   readonly selection: string;
   readonly incompatible: CampaignDetailFormatAdditionIncompatibleMessages;
