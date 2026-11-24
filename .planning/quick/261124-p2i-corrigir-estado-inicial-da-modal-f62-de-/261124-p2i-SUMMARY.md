@@ -18,9 +18,24 @@ sem acompanhamento e sem confirmação habilitada. A descrição normal permanec
 O estado elegível mostra custo/confirmação; o processamento real mantém
 mensagem de geração, spinner, acompanhamento e bloqueios já aprovados.
 
+Escopo versionado em `src/`: **6 arquivos** — 4 de produto/catálogo
+(`add-vertical-dialog.tsx`, `messages.ts`, `pt-BR.ts`, `es-419.ts`) e 2 de
+teste (`add-vertical-dialog.test.tsx`, `catalogs.test.ts`).
+
 Nenhum backend, contabilidade, banco, migration, Storage, flag, segredo,
 provider ou configuração foi alterado. Nenhum POST ou geração paga foi
 executado.
+
+## Aceite técnico e reexecuções (responsável, 2026-11-24)
+
+- **Aceite:** correção aprovada tecnicamente, com a limitação visual
+  preservada e explicitamente aceita.
+- **Reexecuções do responsável:** gates afetados reexecutados e aprovados
+  (testes afetados, typecheck, lint e diff-check), conforme o aceite. As
+  contagens detalhadas da reexecução do responsável não foram repassadas nesta
+  entrada e não são reconstituídas aqui; os números abaixo são os da execução
+  do agente.
+- **Contagem documental:** 6 arquivos em `src/`, incluindo os dois testes.
 
 ## Causa
 
@@ -58,7 +73,7 @@ uma classificação visual incorreta, não uma segunda operação.
 |---|---|
 | `npx vitest run src/components/campaign/__tests__/add-vertical-dialog.test.tsx` | 26/26 PASS |
 | `npx vitest run src/lib/i18n/campaign-detail/__tests__/catalogs.test.ts src/__tests__/app/campaign-detail-format.test.tsx` | 22/22 PASS |
-| Reexecução conjunta dos 3 arquivos | 48/48 PASS |
+| Reexecução conjunta dos 3 arquivos | 48/48 PASS (3 arquivos de teste) |
 | `npm.cmd run typecheck` | exit 0 |
 | `npm.cmd run lint` | exit 0 |
 | `git diff --check` | exit 0 |
