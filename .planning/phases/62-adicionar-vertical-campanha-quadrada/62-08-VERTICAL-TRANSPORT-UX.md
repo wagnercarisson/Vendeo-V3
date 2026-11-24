@@ -1,6 +1,7 @@
 # 62-08 — Página vertical 3001 + transporte Node HTTP + UX da modal
 
-**Status:** **TRANSPORTE CORRIGIDO E VALIDADO NA PÁGINA REAL 3001; MODAL AJUSTADA; `62-08` NÃO CONCLUÍDO.**
+**Status:** **TRANSPORTE CORRIGIDO E VALIDADO NA PÁGINA REAL 3001; MODAL AJUSTADA; `62-08` NÃO CONCLUÍDO NO MOMENTO DESTA EVIDÊNCIA.**
+> **Atualização 2026-11-24:** o `62-08` foi consolidado e aceito localmente em `62-ACCEPTANCE.md`/`62-08-SUMMARY.md`; o status acima permanece como registro histórico.
 **Data:** 2026-11-24.
 **Aba/instância:** Microsoft Edge, `http://localhost:3001`.
 **Campanha:** `c06b16f5-f126-429c-b5b0-9567fe4adb95` (Jarra).

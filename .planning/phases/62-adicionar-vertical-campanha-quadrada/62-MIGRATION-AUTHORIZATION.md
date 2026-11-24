@@ -1,9 +1,9 @@
 ﻿# F62 — Pacote de autorização da migration
 
-**Status:** **NÃO APLICADA.** Este documento **prepara** autorização; **não a concede** e não executa banco, Storage ou provider.
+**Status:** **NÃO APLICADA EM PRODUÇÃO/REMOTO; APLICADA SOMENTE NA HOMOLOGAÇÃO LOCAL.** Este documento **prepara** a autorização remota; **não a concede** e não executa banco, Storage ou provider. A aplicação local está em `62-08-MIGRATION-APPLY.md`; após a correção de integração, o hash do arquivo evoluiu de `61c72719…` para `56dc3423…` e somente a definição da RPC foi reaplicada seletivamente.
 **Migration:** `supabase/migrations/20261123130252_campaign_format_addition.sql`
 **Timestamp UTC:** `2026-11-23 13:02:52`
-**SHA-256 da migration:** `61c727198f8ad7519e6cb3b9c79dba6fd1d9bbb9f948b9600d37bc43c7f5b878`
+**SHA-256 atual da migration:** `56dc3423c9be5d7363bd663a694a7e20f9bb9faed3569eb3e1c9574a76b9272a` (a aplicação local inicial usou `61c72719…`; após a correção da RPC, somente a função foi reaplicada)
 **Tamanho:** 43.009 bytes
 **Branch de integração:** `feat/campaign-add-vertical`
 **HEAD de referência:** `5572378b` (antes deste pacote documental)

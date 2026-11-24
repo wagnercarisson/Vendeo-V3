@@ -1,6 +1,7 @@
 # 62-08 — Provas PostgreSQL reais da F62 (homologação local)
 
-**Status:** **PROVAS POSTGRESQL REAIS EXECUTADAS; 12/12 CENÁRIOS PASS; CLEANUP BLOQUEADO POR GUARDS INTENCIONAIS; `62-08` NÃO CONCLUÍDO; REVIEW STOP.**
+**Status:** **PROVAS POSTGRESQL REAIS EXECUTADAS; 12/12 CENÁRIOS PASS; CLEANUP BLOQUEADO POR GUARDS INTENCIONAIS; `62-08` NÃO CONCLUÍDO NO MOMENTO DESTA EVIDÊNCIA; REVIEW STOP.**
+> **Atualização 2026-11-24:** o `62-08` foi consolidado e aceito localmente em `62-ACCEPTANCE.md`/`62-08-SUMMARY.md`; ressalvas de cleanup/artefatos sintéticos preservadas.
 **Data:** 2026-11-23 (UTC).
 **Produção, provider pago, geração, Storage, flags, migrations, merge, push, deploy, sync e archive:** não acionados.
 **Validação visual:** não executada.

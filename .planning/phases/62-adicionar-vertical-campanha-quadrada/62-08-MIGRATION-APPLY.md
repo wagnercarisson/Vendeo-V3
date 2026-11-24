@@ -3,7 +3,8 @@
 **Status:** **APLICADA E CONFERIDA NA HOMOLOGAÇÃO LOCAL.**
 **Data/UTC da aplicação:** 2026-11-23 (janela 19:20Z–21:00Z)
 **Produção:** não acessada. **Provider pago, geração, flags, Storage, merge, push e deploy:** não executados.
-**`62-08` NÃO está concluído.** Esta evidência cobre somente a migration F62.
+**`62-08` NÃO está concluído no momento desta evidência.** Esta evidência cobre somente a migration F62.
+> **Atualização 2026-11-24:** o `62-08` foi consolidado e aceito localmente em `62-ACCEPTANCE.md`/`62-08-SUMMARY.md`; a migration continua aplicada **somente** na homologação local.
 
 ## Alvo e identidade
 

@@ -1,6 +1,7 @@
 # 62-08 — Provas reais de Storage, leitura e download da F62
 
-**Status:** **RODADA STORAGE/DOWNLOAD EXECUTADA; PROVAS DE PERSISTÊNCIA, INTEGRIDADE, PROBE, DOWNLOAD E SELEÇÃO PASS; `62-08` NÃO CONCLUÍDO; REVIEW STOP.**
+**Status:** **RODADA STORAGE/DOWNLOAD EXECUTADA; PROVAS DE PERSISTÊNCIA, INTEGRIDADE, PROBE, DOWNLOAD E SELEÇÃO PASS; `62-08` NÃO CONCLUÍDO NO MOMENTO DESTA EVIDÊNCIA; REVIEW STOP.**
+> **Atualização 2026-11-24:** o `62-08` foi consolidado e aceito localmente em `62-ACCEPTANCE.md`/`62-08-SUMMARY.md`; as 4 fixtures sintéticas permanecem como ressalva. A nova geração **Vellora** (`682dafa2-…`) foi avaliada visualmente e considerada publicável; as fixtures sintéticas desta rodada continuam não representando qualidade de IA.
 **Data:** 2026-11-23 (UTC).
 **Produção, provider pago, geração por IA, flags, migrations, RPCs/guards, dependências, merge, push, deploy, sync e archive:** não acionados.
 **Validação visual da qualidade da geração:** não executada.

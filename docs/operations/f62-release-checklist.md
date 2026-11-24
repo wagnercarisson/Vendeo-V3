@@ -1,8 +1,17 @@
 ﻿# F62 — Checklist de release (adição vertical 9:16)
 
-**Status:** **PRÉ-RELEASE — NADA APLICADO, PUBLICADO OU ATIVADO.**
+**Status:** **PRÉ-RELEASE - NADA APLICADO, PUBLICADO OU ATIVADO.**
 **Escopo:** preparação do release da F62 após validação offline. Não substitui os gates reais do `62-08`.
 **Regra:** declaração de produção não é conferência técnica; evidência offline não é prova real.
+
+> **Atualização 2026-11-24:** a F62 foi concluída localmente e o aceite
+> visual/funcional/desempenho está em `62-ACCEPTANCE.md`; as provas locais de
+> PostgreSQL/Storage e a página 9:16 foram executadas. Este checklist continua
+> **pré-release**: migration remota, deploy, flag e ativação não foram
+> executados. O gate F60.4 (allowlist test-only do transporte) foi **fechado**
+> em 2026-11-24 (guard 8/8; suíte global verde). A nova jornada **Vellora**
+> (`682dafa2-…`) foi avaliada visualmente e considerada publicável. O release
+> continua pré-release e sem autorização de publicação.
 
 ## 0. Ordem obrigatória do release
 
@@ -24,8 +33,8 @@ migration aplicada e verificada. Inverter a ordem é critério de parada.
 | HEAD de execução offline | `5572378b` |
 | Migration | `20261123130252_campaign_format_addition.sql` |
 | Timestamp UTC | `2026-11-23 13:02:52` |
-| SHA-256 da migration | `61c727198f8ad7519e6cb3b9c79dba6fd1d9bbb9f948b9600d37bc43c7f5b878` |
-| Estado | **não aplicada** |
+| SHA-256 atual da migration | `56dc3423c9be5d7363bd663a694a7e20f9bb9faed3569eb3e1c9574a76b9272a` (aplicação local inicial: `61c72719…`; somente a RPC foi reaplicada) |
+| Estado | **aplicada somente na homologação local; não aplicada em produção/remoto** |
 | Deploy/merge/push | **não executados** |
 
 - [ ] Reconfirmar hash da migration no commit de release.
@@ -58,6 +67,12 @@ migration aplicada e verificada. Inverter a ordem é critério de parada.
 - [ ] Ativação funcional é gate posterior e explícito; não faz parte deste checklist.
 
 ## 5. Provas reais pendentes (62-08)
+
+> **Provas locais (2026-11-24):** PostgreSQL 12/12, Storage/download, página
+> 9:16 e aceite visual/funcional/desempenho estão em `62-08-DB-PROOFS.md`,
+> `62-08-STORAGE-PROOFS.md`, `62-08-VERTICAL-TRANSPORT-UX.md` e
+> `62-ACCEPTANCE.md`. As caixas abaixo permanecem para o gate de
+> produção/remoto, não para a homologação local.
 
 - [ ] PostgreSQL real: schema/RLS/grants/concorrência/financeiro/fixtures/cleanup.
 - [ ] Storage real: arte vertical, download, integridade e assinatura.

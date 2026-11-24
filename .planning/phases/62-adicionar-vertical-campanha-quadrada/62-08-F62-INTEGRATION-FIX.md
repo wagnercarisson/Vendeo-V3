@@ -1,6 +1,7 @@
 # 62-08 — Correção de integração F62 (ponte × original / RPC / erros / modal)
 
-**Status:** **CORRIGIDO E VALIDADO LOCALMENTE; REVISÃO HUMANA PENDENTE; `62-08` NÃO CONCLUÍDO.**
+**Status:** **CORRIGIDO E VALIDADO LOCALMENTE; REVISÃO HUMANA PENDENTE; `62-08` NÃO CONCLUÍDO NO MOMENTO DESTA EVIDÊNCIA.**
+> **Atualização 2026-11-24:** o `62-08` foi consolidado e aceito localmente em `62-ACCEPTANCE.md`/`62-08-SUMMARY.md`; o status acima permanece como registro histórico.
 **Data:** 2026-11-23.
 **Branch:** `feat/campaign-add-vertical`.
 **Migration única:** `supabase/migrations/20261123130252_campaign_format_addition.sql`.
