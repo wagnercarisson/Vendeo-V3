@@ -1,0 +1,17 @@
+Fonte: Chromium headless --dump-dom, componente real + catálogo real + CSS do
+build, apenas o GET de format-additions atrasado em 8 s. Sem POST.
+
+Estado "consulta pendente" (captura em 3 s):
+- "Você pode gerar o formato vertical 9:16 para essa campanha." presente 1x.
+- "Verificando disponibilidade…" presente no aria-label do status e no texto
+  visível (uma única mensagem visível).
+- "Estamos gerando a campanha no formato vertical." ausente.
+- "Você pode acompanhar o andamento nesta página." ausente.
+- "Confirmar adição" ausente.
+- "Cancelar" presente.
+
+Estado "elegível" (captura em 10 s):
+- "Custo: 1 crédito" presente.
+- "Confirmar adição" presente.
+- "Verificando disponibilidade…" ausente.
+- "Estamos gerando a campanha no formato vertical." ausente.
