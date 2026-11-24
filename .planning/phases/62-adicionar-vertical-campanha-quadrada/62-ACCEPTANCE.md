@@ -108,7 +108,8 @@ Nenhuma delas é necessária para o aceite atual.
 1. **Migration:** `20261123130252` aplicada **somente na homologação local**
    (ledger 157→158). Não aplicada em produção/remoto. O hash atual é
    `56dc3423…`; a aplicação local inicial usou `61c72719…` e, após a correção da
-   RPC, somente a função foi reaplicada.
+   RPC, somente a função foi reaplicada. Nenhuma migration corretiva foi criada
+   e o ledger não foi alterado nesta rodada.
 2. **Resíduo sintético:** 4 conjuntos de fixtures F62 de Storage permanecem
    identificados; cleanup bloqueado pelos guards intencionais.
 3. **Geração/qualidade:** a nova geração **Vellora** foi avaliada visualmente e

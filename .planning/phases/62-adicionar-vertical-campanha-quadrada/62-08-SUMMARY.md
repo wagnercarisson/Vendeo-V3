@@ -135,12 +135,19 @@ desempenho; a Vellora não teve medições separadas registradas.
 | `npx openspec validate --changes --strict` | **1/0** |
 | OpenSpec tasks | **71/71** |
 | Build de produção | **0** (evidência anterior; não reexecutado com 3100 ativo) |
-| `git diff --check` | **0** |
+| `git diff --check` (worktree) | **0** |
+| `git diff --check 241815fa..HEAD` (range F62) | **0** |
+| `git diff --check 55276323..HEAD` (base F60.4) | **2 (preexistente)** — whitespace em artefatos antigos fora da F62; não alterado |
 
 A falha intermitente `store-identity-form.direction-pending` **não reapareceu**
 na suíte global final; ela havia passado em isolamento e foi classificada como
 flake concorrente. A falha determinística do F60.4 foi corrigida pela allowlist
 test-only e não reapareceu.
+
+O runner global marca os gates de banco opt-in como **NÃO EXECUTADO**; as provas
+PostgreSQL/Storage da F62 permanecem evidências separadas (`62-08-DB-PROOFS.md` e
+`62-08-STORAGE-PROOFS.md`). Nenhuma migration corretiva foi criada e o ledger não
+foi alterado nesta rodada.
 
 ## 5. Fechamento do gate F60.4
 

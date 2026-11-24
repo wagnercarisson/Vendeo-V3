@@ -110,4 +110,10 @@ arquivamento documental com as ressalvas registradas**; `/opsx-sync` e
 | `npm run typecheck` | 0 | sem erros |
 | `npm run lint` | 0 | sem erros |
 | Suíte global | 0 | **867 arquivos / 10.805 testes PASS + 2 arquivos/10 skipped; 0 falhas** |
-| `git diff --check` | 0 | limpo (worktree) |
+| `git diff --check` (worktree) | 0 | limpo |
+| `git diff --check 241815fa..HEAD` | 0 | range F62 limpo |
+| `git diff --check 55276323..HEAD` | 2 | whitespace preexistente fora da F62; não alterado |
+
+> O runner global marca os gates de banco opt-in como **NÃO EXECUTADO**; as
+> provas PostgreSQL/Storage da F62 são evidências separadas. Nenhuma migration
+> corretiva foi criada e o ledger não foi alterado nesta rodada.
