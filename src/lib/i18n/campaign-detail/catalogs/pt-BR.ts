@@ -46,6 +46,7 @@ export const ptBRCampaignDetailMessages: CampaignDetailMessages = Object.freeze(
     title: "Adicionar formato vertical",
     description:
       "Você pode gerar o formato vertical 9:16 para essa campanha.",
+    checkingAvailability: "Verificando disponibilidade…",
     action: "Adicionar vertical 9:16",
     availableForGeneration: "Disponível para gerar",
     generateGuidance:

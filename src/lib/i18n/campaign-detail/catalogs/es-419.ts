@@ -46,6 +46,7 @@ export const es419CampaignDetailMessages = Object.freeze({
     title: "Agregar formato vertical",
     description:
       "Puedes generar el formato vertical 9:16 para esta campaña.",
+    checkingAvailability: "Verificando disponibilidad…",
     action: "Agregar vertical 9:16",
     availableForGeneration: "Disponible para generar",
     generateGuidance:

@@ -471,6 +471,7 @@ export function AddVerticalDialog({
     !expired &&
     typeof dto.confirmationToken === "string" &&
     dto.confirmationToken.length > 0;
+  const isCheckingAvailability = loading && !dto;
   const busy = submitting || dto?.state === "processing";
   busyRef.current = busy;
 
@@ -503,11 +504,18 @@ export function AddVerticalDialog({
           id={descriptionId}
           className="mt-2 text-sm font-body text-text-secondary"
         >
-          {loading && !dto ? messages.processing : messages.description}
+          {messages.description}
         </p>
 
         <div aria-live="polite" className="mt-3 text-sm font-body">
-          {busy || (loading && !dto) ? (
+          {isCheckingAvailability ? (
+            <div className="flex items-center gap-2">
+              <Spinner label={messages.checkingAvailability} />
+              <p className="text-text-secondary">
+                {messages.checkingAvailability}
+              </p>
+            </div>
+          ) : busy ? (
             <div className="flex items-start gap-2">
               <Spinner label={messages.processing} />
               <div>
@@ -561,7 +569,7 @@ export function AddVerticalDialog({
               onClick={() => void load()}
               disabled={loading}
             >
-              {loading ? messages.processing : messages.retry}
+              {loading ? messages.checkingAvailability : messages.retry}
             </Button>
           ) : retryable ? (
             <Button type="button" onClick={submit} disabled={submitting}>
@@ -577,7 +585,7 @@ export function AddVerticalDialog({
               onClick={() => void load()}
               disabled={loading}
             >
-              {loading ? messages.processing : messages.retry}
+              {loading ? messages.checkingAvailability : messages.retry}
             </Button>
           ) : null}
         </div>

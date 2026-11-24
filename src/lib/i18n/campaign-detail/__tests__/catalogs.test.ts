@@ -41,6 +41,7 @@ const EXPECTED_PT_KEYS = [
   "formatAddition.action",
   "formatAddition.availableForGeneration",
   "formatAddition.cancel",
+  "formatAddition.checkingAvailability",
   "formatAddition.confirm",
   "formatAddition.conflict.confirmationExpired",
   "formatAddition.conflict.confirmationFailed",
@@ -244,6 +245,12 @@ describe("catálogos do namespace da campanha pronta pt-BR e es-419", () => {
     expect(es419CampaignDetailMessages.formatAddition.cost).toBe(
       "Costo: 1 crédito",
     );
+    expect(
+      ptBRCampaignDetailMessages.formatAddition.checkingAvailability,
+    ).toBe("Verificando disponibilidade…");
+    expect(
+      es419CampaignDetailMessages.formatAddition.checkingAvailability,
+    ).toBe("Verificando disponibilidad…");
   });
 
   it("F62 — incompatibilidade e indisponibilidade têm texto por motivo", () => {

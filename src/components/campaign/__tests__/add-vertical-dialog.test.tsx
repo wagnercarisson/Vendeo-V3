@@ -918,6 +918,242 @@ describe("F62-05 — modal de adição vertical", () => {
     await waitFor(() => expect(onDelivered).toHaveBeenCalledTimes(1));
   });
 
+  it("F62 — GET pendente mostra verificação, não geração, e permite cancelar", async () => {
+    const get = deferred<Response>();
+    const onClose = vi.fn();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(() => get.promise);
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(messages.description)).toBeInTheDocument();
+    expect(screen.getByText(messages.checkingAvailability)).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: messages.checkingAvailability }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(messages.processing)).toBeNull();
+    expect(screen.queryByText(messages.tracking)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: messages.confirm }),
+    ).not.toBeInTheDocument();
+
+    const cancel = screen.getByRole("button", { name: messages.cancel });
+    expect(cancel).toBeEnabled();
+    fireEvent.click(cancel);
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "GET" });
+    expect(
+      fetchMock.mock.calls.every(([, init]) => init?.method !== "POST"),
+    ).toBe(true);
+
+    get.resolve(jsonResponse({ state: "eligible", confirmationToken: "token" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+  });
+
+  it("F62 — GET pendente transita para custo e confirmação", async () => {
+    const get = deferred<Response>();
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(() => get.promise);
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={vi.fn()}
+        onDelivered={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText(messages.checkingAvailability)).toBeInTheDocument();
+
+    get.resolve(
+      jsonResponse({
+        state: "eligible",
+        sourceOrigin: "new_flow_1_1",
+        costCredits: 1,
+        confirmationToken: "token-1",
+      }),
+    );
+
+    expect(await screen.findByText(messages.cost)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: messages.confirm }),
+    ).toBeEnabled();
+    expect(screen.queryByText(messages.checkingAvailability)).toBeNull();
+    expect(screen.queryByText(messages.tracking)).toBeNull();
+  });
+
+  it("F62 — fechar durante o GET ignora a resposta e não faz POST", async () => {
+    const get = deferred<Response>();
+    const onClose = vi.fn();
+    const onDelivered = vi.fn();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(() => get.promise);
+
+    const view = render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={onDelivered}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText(messages.checkingAvailability)).toBeInTheDocument();
+
+    view.rerender(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open={false}
+        onClose={onClose}
+        onDelivered={onDelivered}
+      />,
+    );
+    get.resolve(
+      jsonResponse({ state: "eligible", confirmationToken: "token-late" }),
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onDelivered).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      fetchMock.mock.calls.every(([, init]) => init?.method !== "POST"),
+    ).toBe(true);
+  });
+
+  it("F62 — GET inicial em processing acompanha e bloqueia sem novo clique", async () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ state: "processing", confirmationToken: "token-1" }),
+      );
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(messages.processing)).toBeInTheDocument();
+    expect(screen.getByText(messages.tracking)).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: messages.processing }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: messages.cancel }),
+    ).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    const dialog = screen.getByRole("dialog");
+    fireEvent.mouseDown(dialog.parentElement as HTMLElement);
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("F62 — POST pendente mostra geração uma única vez e bloqueia fechamento", async () => {
+    const post = deferred<Response>();
+    const onClose = vi.fn();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          state: "eligible",
+          sourceOrigin: "new_flow_1_1",
+          costCredits: 1,
+          confirmationToken: "token-1",
+        }),
+      )
+      .mockImplementationOnce(() => post.promise);
+
+    render(
+      <AddVerticalDialog
+        campaignId={CAMPAIGN}
+        messages={messages}
+        locale="pt-BR"
+        open
+        onClose={onClose}
+        onDelivered={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(messages.cost);
+    fireEvent.click(screen.getByRole("button", { name: messages.confirm }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "POST" });
+    expect(screen.getAllByText(messages.processing)).toHaveLength(1);
+    expect(
+      screen.getByRole("status", { name: messages.processing }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(messages.checkingAvailability)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: messages.cancel }),
+    ).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    const dialog = screen.getByRole("dialog");
+    fireEvent.mouseDown(dialog.parentElement as HTMLElement);
+    expect(onClose).not.toHaveBeenCalled();
+
+    post.resolve(jsonResponse({ state: "processing", confirmationToken: "token-1" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+  });
+
   it("incompatível mostra explicação sem prometer confirmação", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       jsonResponse({

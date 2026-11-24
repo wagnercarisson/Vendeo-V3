@@ -71,6 +71,7 @@ export interface CampaignDetailFormatAdditionReadUnavailableMessages {
 export interface CampaignDetailFormatAdditionMessages {
   readonly title: string;
   readonly description: string;
+  readonly checkingAvailability: string;
   readonly action: string;
   readonly availableForGeneration: string;
   readonly generateGuidance: string;
