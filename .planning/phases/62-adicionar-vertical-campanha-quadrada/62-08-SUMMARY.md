@@ -50,6 +50,8 @@ completed: 2026-11-24
 
 # F62-08 — Consolidação, aceite local, Vellora e gates finais
 
+> **Adendo remoto 2026-11-24 (vigente):** migration final `56dc3423…` aplicada e verificada no projeto `Vendeo-V3`; ledger 158→159, F62 uma vez, 11 fingerprints preservados. Backup/restauração/ensaio comprovados. Segredo server-side cadastrado como Sensitive em Production na Vercel; flag dedicada permanece desligada. Branch liberada para integração pelo responsável; merge/push/deploy/ativação e aceite pós-deploy não executados pelo revisor. Detalhes e ocorrência de rollback controlado em `62-08-RELEASE-GATE.md`. O texto abaixo preserva o fechamento local anterior.
+
 **Status:** **CONCLUÍDA E ACEITA LOCALMENTE; SPECS SINCRONIZADAS; CHANGE
 ARQUIVADA; PUBLICAÇÃO REMOTA PENDENTE.**
 **Data:** 2026-11-24.

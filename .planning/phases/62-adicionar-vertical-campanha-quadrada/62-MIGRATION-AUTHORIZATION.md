@@ -2,6 +2,8 @@
 
 **Status:** **NÃO APLICADA EM PRODUÇÃO/REMOTO; APLICADA SOMENTE NA HOMOLOGAÇÃO LOCAL.** Este documento **prepara** a autorização remota; **não a concede** e não executa banco, Storage ou provider. A aplicação local está em `62-08-MIGRATION-APPLY.md`; após a correção de integração, o hash do arquivo evoluiu de `61c72719…` para `56dc3423…` e somente a definição da RPC foi reaplicada seletivamente.
 **Migration:** `supabase/migrations/20261123130252_campaign_format_addition.sql`
+> **Atualização vigente 2026-11-24:** autorização remota concedida pelo responsável e execução concluída; migration final `56dc3423…` aplicada e verificada em `Vendeo-V3`, ledger 158→159. Registro: `62-08-REMOTE-AUTHORIZATION.md` e `62-08-RELEASE-GATE.md`. O restante deste pacote preserva o planejamento e o estado anterior à autorização.
+
 **Timestamp UTC:** `2026-11-23 13:02:52`
 **SHA-256 atual da migration:** `56dc3423c9be5d7363bd663a694a7e20f9bb9faed3569eb3e1c9574a76b9272a` (a aplicação local inicial usou `61c72719…`; após a correção da RPC, somente a função foi reaplicada)
 **Tamanho:** 43.009 bytes

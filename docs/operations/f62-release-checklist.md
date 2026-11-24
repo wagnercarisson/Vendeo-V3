@@ -1,6 +1,8 @@
 ﻿# F62 — Checklist de release (adição vertical 9:16)
 
-**Status:** **PRÉ-RELEASE - NADA APLICADO, PUBLICADO OU ATIVADO.**
+**Status:** **MIGRATION REMOTA APLICADA E VERIFICADA; CÓDIGO NÃO PUBLICADO; FUNCIONALIDADE NÃO ATIVADA.**
+
+> **Gate remoto vigente 2026-11-24:** ledger 158→159, F62 uma vez e SHA-256 exato `56dc3423…`; 11 fingerprints preservados; backup/restauração isolada/ensaio PASS. Segredo de confirmação cadastrado como Sensitive em Production na Vercel. Flag dedicada permanece `false`. Branch liberada para merge/push pelo responsável; deploy, smoke, ativação e aceite remoto funcional continuam pendentes. Evidência: `.planning/phases/62-adicionar-vertical-campanha-quadrada/62-08-RELEASE-GATE.md`. As notas de pré-release anteriores abaixo são históricas.
 **Escopo:** preparação do release da F62 após validação offline. Não substitui os gates reais do `62-08`.
 **Regra:** declaração de produção não é conferência técnica; evidência offline não é prova real.
 
@@ -35,7 +37,7 @@ migration aplicada e verificada. Inverter a ordem é critério de parada.
 | Migration | `20261123130252_campaign_format_addition.sql` |
 | Timestamp UTC | `2026-11-23 13:02:52` |
 | SHA-256 atual da migration | `56dc3423c9be5d7363bd663a694a7e20f9bb9faed3569eb3e1c9574a76b9272a` (aplicação local inicial: `61c72719…`; somente a RPC foi reaplicada) |
-| Estado | **aplicada somente na homologação local; não aplicada em produção/remoto** |
+| Estado | **aplicada e verificada no remoto em 2026-11-24; ledger 158→159; F62 uma vez; SQL gravado no ledger com SHA-256 igual ao arquivo** |
 | Deploy/merge/push | **não executados** |
 
 - [ ] Reconfirmar hash da migration no commit de release.
@@ -44,18 +46,19 @@ migration aplicada e verificada. Inverter a ordem é critério de parada.
 
 ## 2. Ledger, schema e banco
 
-- [ ] Capturar ledger baseline read-only antes da migration.
-- [ ] Confirmar ledger esperado após aplicação = baseline + 1, exatamente `20261123130252`.
-- [ ] Confirmar schema pré e pós conforme `62-MIGRATION-AUTHORIZATION.md`.
-- [ ] Confirmar RLS/grants: SELECT somente `service_role`; `anon`/`authenticated` sem acesso.
-- [ ] Confirmar trigger/guard e RPCs `campaign_format_add_*`.
-- [ ] Confirmar flag dedicada semeada **desligada**.
-- [ ] Confirmar que operação original, copy, quadrado, snapshot e `campaigns.storage_path` permanecem intactos.
+- [x] Capturar ledger baseline read-only antes da migration.
+- [x] Confirmar ledger esperado após aplicação = baseline + 1, exatamente `20261123130252`.
+- [x] Confirmar schema pré e pós conforme `62-MIGRATION-AUTHORIZATION.md`.
+- [x] Confirmar RLS/grants: SELECT somente `service_role`; `anon`/`authenticated` sem acesso.
+- [x] Confirmar trigger/guard e RPCs `campaign_format_add_*`.
+- [x] Confirmar flag dedicada semeada **desligada**.
+- [x] Confirmar que operação original, copy, quadrado, snapshot e `campaigns.storage_path` permanecem intactos.
 
 ## 3. Backup e restore
 
-- [ ] Backup verificável do banco antes da migration.
-- [ ] Restore-list/objetos de Storage com bytes e checksums `sha256`.
+- [x] Backup verificável do banco antes da migration.
+- [x] Restore-list/objetos de Storage com bytes e checksums `sha256`.
+- [x] Restauração integral do banco em ambiente isolado sem rede; 11 fingerprints comparados. Storage verificado offline, sem restore em outro servidor Storage.
 - [ ] Manifesto imutável e teste de restauração em ambiente isolado.
 - [ ] Sem backup/restore comprovado ⇒ **não aplicar**.
 
@@ -63,7 +66,7 @@ migration aplicada e verificada. Inverter a ordem é critério de parada.
 
 - [ ] `campaign_format_addition_enabled` desligada antes e durante a migration.
 - [ ] `product_9_16_two_stage_enabled` conferida separadamente; não usar como rollback da adição.
-- [ ] `FORMAT_ADDITION_CONFIRMATION_SECRET` configurado server-side no ambiente autorizado, com verificação de disponibilidade **sem expor o valor**.
+- [x] `FORMAT_ADDITION_CONFIRMATION_SECRET` configurado server-side em Production como Sensitive; nome/tipo/destino conferidos sem expor o valor. Validação no runtime aguarda novo deploy.
 - [ ] Segredo ausente mantém a funcionalidade indisponível (GET/POST fail-closed); conferir apenas flags não basta.
 - [ ] Ativação funcional é gate posterior e explícito; não faz parte deste checklist.
 
@@ -103,4 +106,4 @@ migration aplicada e verificada. Inverter a ordem é critério de parada.
 - [ ] Aprovação separada para merge/push/deploy/publicação.
 - [ ] Nenhuma dessas aprovações é presumida por este documento.
 
-**Conclusão:** o release permanece **bloqueado** até os gates reais e as autorizações explícitas. Este checklist não aplica migration, não acessa ambientes, não configura flags/segredos e não publica.
+**Conclusão vigente (2026-11-24):** banco remoto preparado e verificado, configuração server-side cadastrada, integração do código liberada ao responsável. Deploy, smoke e ativação funcional continuam pendentes; não declarar aceite funcional remoto antes deles. O histórico de pré-release acima não exige repetir gerações ou testes destrutivos em produção.
