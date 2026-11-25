@@ -127,13 +127,20 @@ comprovante durável.
 | `npm run build` | exit 0 (porta 3000 parada antes; reiniciada depois) |
 | `git diff --check` | exit 0 |
 | Suíte global | 875 arquivos PASS + 2 skipped; 10.860 testes PASS + 10 skipped; **exit 0** |
-| Suíte global após o rótulo | 877 arquivos: 2 falhas transitórias nos guards de contrato F60.4/F60.7-10 por `src/app/(app)/conta/page.tsx` ainda **não commitado**; após o commit, 875 PASS + 2 skipped e 10.860 testes PASS + 10 skipped, **exit 0** |
+| Suíte global após o rótulo | 875 arquivos PASS + 2 skipped; 10.861 testes PASS + 10 skipped (1 teste novo es-419); **exit 0** |
+| Guards de contrato F60.4/F60.7-10 | 13/13 PASS após o commit (antes falhavam só por `conta/page.tsx` não commitado) |
+| Isolamento do teste instável `store-identity-form.direction-pending` | 16/16 PASS isolado; falha apenas sob carga da suíte completa em uma execução, sem relação com crédito/extrato |
 
 > Nota: os guards F60.4/F60.7-10 inspecionam `git status` do working tree e
 > sinalizaram a página de conta como UI alterada fora da allowlist. A alteração
 > é a autorizada nesta tarefa (passar o locale ao extrato); nada foi
 > enfraquecido nos guards. Com o commit, o working tree ficou limpo e ambos
 > passaram.
+
+> Nota: uma execução global intermediária falhou apenas em
+> `store-identity-form.direction-pending` (`expected 1 to be greater than 1`,
+> refetch de readiness sob carga). O arquivo passa 16/16 isolado e a execução
+> global seguinte ficou verde; nenhum código foi alterado por causa disso.
 
 ### Validador F62
 
