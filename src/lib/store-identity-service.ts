@@ -99,6 +99,7 @@ export async function resolveStoreIdentity(
         brand_personality: profile.brand_personality,
         campaign_guidelines: profile.campaign_guidelines,
         campaign_brief: profile.campaign_brief,
+        typography_direction: profile.typography_direction ?? null,
       };
 
       if (profile.brand_colors_chosen?.length > 0) {
@@ -135,6 +136,7 @@ export async function resolveStoreIdentity(
             brand_personality: withoutLogoProfile.brand_personality,
             campaign_guidelines: withoutLogoProfile.campaign_guidelines,
             campaign_brief: withoutLogoProfile.campaign_brief,
+            typography_direction: withoutLogoProfile.typography_direction ?? null,
           };
 
           if (withoutLogoProfile.brand_colors_chosen?.length > 0) {

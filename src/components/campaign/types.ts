@@ -12,6 +12,12 @@ export interface BrandProfileSnapshot {
   brand_personality: string | null;
   campaign_guidelines: string | null;
   campaign_brief: string | null;
+  /**
+   * Quick 261125-i06 — direção tipográfica já persistida no perfil sincronizado.
+   * Opcional para leitura de snapshots antigos; usada apenas para transportar a
+   * orientação ao bloco de identidade do 1:1 `text_only` (nunca para inferir fonte).
+   */
+  typography_direction?: string | null;
 }
 
 export interface StoreIdentitySnapshot {

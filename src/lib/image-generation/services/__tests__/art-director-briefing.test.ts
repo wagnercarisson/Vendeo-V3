@@ -278,6 +278,31 @@ describe('buildBrandProfileSection', () => {
     expect(section).toContain('| **Personalidade da marca** | Próxima e confiável |');
     expect(section).toContain('| **Brief do Diretor de Marca** | Campanha de verão |');
   });
+
+  it('Quick 261125-i06: typography_direction não vaza para a seção legada (byte-idêntica sem o campo)', () => {
+    const shared = {
+      brand_colors_chosen: ['#22C55E', '#FFFFFF'],
+      visual_style: 'Moderno e clean',
+      visual_tone: 'Acolhedor',
+      brand_personality: 'Próxima e confiável',
+      campaign_guidelines: 'Usar paleta vibrante',
+      campaign_brief: 'Campanha de verão',
+    };
+
+    const withoutTypography = createBrandProfile(shared);
+    const withTypography = createBrandProfile({
+      ...shared,
+      typography_direction: 'Serifada editorial elegante',
+    });
+
+    const section = buildBrandProfileSection(withTypography);
+    // Equivalência byte a byte com o perfil idêntico SEM o campo: o prompt legado
+    // não ganha linha tipográfica nem o valor persistido.
+    expect(section).toBe(buildBrandProfileSection(withoutTypography));
+    expect(section).not.toContain('Direção tipográfica');
+    expect(section).not.toContain('typography');
+    expect(section).not.toContain('Serifada editorial elegante');
+  });
 });
 
 describe('blocos contextuais — presente/ausente + deduplicação + saneamento (45-05, F45-21)', () => {
