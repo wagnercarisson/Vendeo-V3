@@ -458,11 +458,71 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
         restoredForm = null;
       }
     }
+    let squareReleaseSummary: SquareReleaseSummary | null = null;
+    let squareReleaseSelected = false;
     if (newFlowState === "delivered") {
       const generationOrigin = resolveCampaignGenerationOrigin(
         campaign.input_snapshot,
       );
-      if (generationOrigin.kind === "two_stage_9_16") {
+      const requestedFormat =
+        individualFormatRequest.kind === "valid"
+          ? individualFormatRequest.format
+          : undefined;
+      const isVerticalCampaign =
+        generationOrigin.kind === "two_stage_9_16" &&
+        formatResolution.kind === "9:16";
+
+      // Resolve o formato solicitado ANTES de qualquer probe binário do
+      // vertical. O estado da liberação vem apenas do banco (sem Storage).
+      if (isVerticalCampaign) {
+        squareReleaseSummary = await readSquareReleaseSummary(
+          {
+            storeId: campaign.store_id,
+            campaignId: id,
+            verticalOperationId: newFlowOperation.operationId,
+          },
+          { client: supabaseAdmin },
+        );
+      }
+
+      const squareRequestedAndPaid =
+        isVerticalCampaign &&
+        requestedFormat === "1:1" &&
+        squareReleaseSummary?.state === "delivered";
+
+      if (squareRequestedAndPaid) {
+        // Caminho do quadrado JÁ PAGO: valida/exibe o square_original e NÃO
+        // baixa nem assina o vertical. Falha de preview não cai para o vertical
+        // com aparência de quadrado: a imagem fica ausente e o download continua
+        // recuperável pela rota dedicada.
+        const preview = await readSquareReleasePreview(
+          {
+            storeId: campaign.store_id,
+            campaignId: id,
+            verticalOperationId: newFlowOperation.operationId,
+          },
+          { client: supabaseAdmin },
+        );
+        props.newFlowFormat = "1:1";
+        props.downloadUrl = `/api/campaign/${id}/download?format=1:1`;
+        props.downloadDisabled = false;
+        if (preview !== null) {
+          props.imageUrl = preview.previewUrl;
+          squareReleaseSelected = true;
+        }
+      } else if (isVerticalCampaign) {
+        // Caminho vertical/default: reutiliza o probe existente com transporte
+        // Node HTTP, sem troca global de transporte.
+        const verticalProbe = new CompositionVerticalProbe({
+          client: supabaseAdmin,
+          downloadBytes: createNodeHttpDownloadTransport((input) =>
+            downloadStorageObjectViaNodeHttp({
+              bucket: input.bucket,
+              path: input.path,
+              timeoutMs: 15000,
+            }),
+          ),
+        });
         const access = await nineSixteenVerticalAccess(
           {
             storeId: campaign.store_id,
@@ -470,7 +530,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
             operationId: newFlowOperation.operationId,
             mode: "preview",
           },
-          { client: supabaseAdmin },
+          { client: supabaseAdmin, probe: verticalProbe },
         );
         if (access.kind === "previewUrl") props.imageUrl = access.url;
       } else if (formatResolution.kind !== "unavailable") {
@@ -598,47 +658,6 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
         }
       } catch {
         // Fail-closed: sem preview comprovado, mantém o quadrado.
-      }
-    }
-    const releaseGenerationOrigin = resolveCampaignGenerationOrigin(
-      campaign.input_snapshot,
-    );
-    let squareReleaseSummary: SquareReleaseSummary | null = null;
-    let squareReleaseSelected = false;
-    if (
-      newFlowState === "delivered" &&
-      releaseGenerationOrigin.kind === "two_stage_9_16" &&
-      formatResolution.kind === "9:16"
-    ) {
-      squareReleaseSummary = await readSquareReleaseSummary(
-        {
-          storeId: campaign.store_id,
-          campaignId: id,
-          verticalOperationId: newFlowOperation.operationId,
-        },
-        { client: supabaseAdmin },
-      );
-      if (squareReleaseSummary.state === "delivered") {
-        if (
-          individualFormatRequest.kind === "valid" &&
-          individualFormatRequest.format === "1:1"
-        ) {
-          const preview = await readSquareReleasePreview(
-            {
-              storeId: campaign.store_id,
-              campaignId: id,
-              verticalOperationId: newFlowOperation.operationId,
-            },
-            { client: supabaseAdmin },
-          );
-          if (preview !== null) {
-            props.imageUrl = preview.previewUrl;
-            props.newFlowFormat = "1:1";
-            props.downloadUrl = preview.downloadUrl;
-            props.downloadDisabled = false;
-            squareReleaseSelected = true;
-          }
-        }
       }
     }
     const squareReleaseInput = squareReleasePresentation(

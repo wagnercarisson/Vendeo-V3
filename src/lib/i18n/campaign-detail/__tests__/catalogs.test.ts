@@ -273,11 +273,35 @@ describe("catálogos do namespace da campanha pronta pt-BR e es-419", () => {
     expect(es419CampaignDetailMessages.squareRelease.cost).toBe(
       "Costo: 1 crédito",
     );
+    expect(ptBRCampaignDetailMessages.squareRelease.title).toBe(
+      "Gerar formato quadrado",
+    );
+    expect(es419CampaignDetailMessages.squareRelease.title).toBe(
+      "Generar formato cuadrado",
+    );
+    expect(ptBRCampaignDetailMessages.squareRelease.description).toBe(
+      "Você pode gerar o formato quadrado 1:1 para esta campanha.",
+    );
+    expect(es419CampaignDetailMessages.squareRelease.description).toBe(
+      "Puedes generar el formato cuadrado 1:1 para esta campaña.",
+    );
+    expect(ptBRCampaignDetailMessages.squareRelease.confirm).toBe(
+      "Gerar formato quadrado",
+    );
+    expect(es419CampaignDetailMessages.squareRelease.confirm).toBe(
+      "Generar formato cuadrado",
+    );
+    expect(ptBRCampaignDetailMessages.squareRelease.actionHelp).toBe(
+      "Clique para gerar o formato quadrado. Custo: 1 crédito.",
+    );
+    expect(es419CampaignDetailMessages.squareRelease.actionHelp).toBe(
+      "Haz clic para generar el formato cuadrado. Costo: 1 crédito.",
+    );
     expect(ptBRCampaignDetailMessages.squareRelease.processing).toBe(
-      "Estamos disponibilizando o formato quadrado.",
+      "Estamos preparando sua campanha no formato quadrado.",
     );
     expect(es419CampaignDetailMessages.squareRelease.processing).toBe(
-      "Estamos habilitando el formato cuadrado.",
+      "Estamos preparando tu campaña en el formato cuadrado.",
     );
   });
 

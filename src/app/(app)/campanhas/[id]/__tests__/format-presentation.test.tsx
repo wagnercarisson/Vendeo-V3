@@ -78,6 +78,7 @@ const h = vi.hoisted(() => {
       refunded: false,
     } as Record<string, unknown>,
     squarePreview: null as Record<string, unknown> | null,
+    verticalAccess: vi.fn(),
     reset(): void {
       for (const key of Object.keys(counters)) counters[key] = 0;
       this.approvalEnabled = false;
@@ -252,10 +253,7 @@ vi.mock("@/lib/product-vertical-9-16/artifact/artifact-store", () => ({
 }));
 
 vi.mock("@/lib/product-9-16-two-stage/orchestration/vertical-access", () => ({
-  nineSixteenVerticalAccess: async () => ({
-    kind: "previewUrl",
-    url: "https://signed/vertical-preview",
-  }),
+  nineSixteenVerticalAccess: h.verticalAccess,
 }));
 
 vi.mock("@/lib/supabase/server", () => {
@@ -422,6 +420,11 @@ function presentation(props: Record<string, unknown>): PresentationShape {
 
 beforeEach(() => {
   h.reset();
+  h.verticalAccess.mockReset();
+  h.verticalAccess.mockResolvedValue({
+    kind: "previewUrl",
+    url: "https://signed/vertical-preview",
+  });
   h.campaign = campaignRecord();
   h.operation = null;
   h.controlResult = { kind: "not_found" };
@@ -747,6 +750,34 @@ describe("F61 — detalhe do NOVO fluxo (individual)", () => {
       "1:1": `/campanhas/${CAMPAIGN_ID}?format=1:1`,
       "9:16": `/campanhas/${CAMPAIGN_ID}?format=9:16`,
     });
+    expect(h.verticalAccess).not.toHaveBeenCalled();
+  });
+
+  it("falha no preview do quadrado pago não cai para o vertical com aparência de quadrado", async () => {
+    newFlowFixture(VERTICAL_EXPANSION_SNAPSHOT, "delivered");
+    h.squareReleaseSummary = {
+      campaignId: CAMPAIGN_ID,
+      state: "delivered",
+      refunded: false,
+    };
+    h.squarePreview = null;
+
+    const props = await renderProps("1:1");
+
+    expect(props.imageUrl).toBeNull();
+    expect(props.newFlowFormat).toBe("1:1");
+    expect(props.downloadUrl).toBe(
+      `/api/campaign/${CAMPAIGN_ID}/download?format=1:1`,
+    );
+    expect(presentation(props).formats["1:1"]).toMatchObject({
+      state: "delivered",
+      active: false,
+    });
+    expect(presentation(props).formats["9:16"]).toMatchObject({
+      state: "delivered",
+      active: false,
+    });
+    expect(h.verticalAccess).not.toHaveBeenCalled();
   });
 
   it("quadrado liberado sem ?format ⇒ 9:16 permanece ativo e ambos ficam linkáveis", async () => {
@@ -770,6 +801,14 @@ describe("F61 — detalhe do NOVO fluxo (individual)", () => {
       "1:1": `/campanhas/${CAMPAIGN_ID}?format=1:1`,
       "9:16": `/campanhas/${CAMPAIGN_ID}?format=9:16`,
     });
+    expect(h.verticalAccess).toHaveBeenCalledTimes(1);
+    expect(h.verticalAccess).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: "preview" }),
+      expect.objectContaining({
+        client: expect.anything(),
+        probe: expect.anything(),
+      }),
+    );
   });
 
   it("quadrado elegível ⇒ sem link, sem preview e quadrado continua ausente/not_requested", async () => {
