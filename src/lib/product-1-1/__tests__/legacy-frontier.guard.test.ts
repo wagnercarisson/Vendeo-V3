@@ -678,6 +678,16 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
       "quick 261107-qvo (persistência da bancada de expansão 4:5 — laboratório; código offline)",
     commit: "7e297770",
   },
+  // Reconciliação 2026-11-25 (quick 261125-i10) — quick 261125-eo7: teto
+  // produtivo de 2 arquivos e bancada desacoplada em 4 (1 principal + 3
+  // adicionais). Caminho específico, com autorização e commit imutável; o
+  // conteúdo atual permanece comparado ao commit aprovado.
+  {
+    path: "src/lib/lab/bench/domain/form-rules.ts",
+    authorization:
+      "quick 261125-eo7 (limite de 2 arquivos na campanha; bancada desacoplada com 4 arquivos — somente laboratório)",
+    commit: "65d00e75",
+  },
 ];
 
 const ADDITIONAL_AUTHORIZED_FILES = AUTHORIZED_FRONTIER_CHANGES.filter(
