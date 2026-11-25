@@ -1045,15 +1045,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
           identityState: newFlowEffectiveIdentitySnapshot.identityState,
           hasIdentityAsset: newFlowIdentityImage !== null,
           // Quick 261125-i06 — transporte da direção tipográfica persistida e
-          // opt-in EXPLÍCITO apenas do 1:1 novo. Joint e 9:16 isolado não recebem
-          // a flag e mantêm o texto reconciliado anterior.
+          // opt-in EXPLÍCITO do 1:1 novo e do 9:16 isolado. O joint 1:1+9:16 tem
+          // ramo próprio e mantém o texto reconciliado anterior.
           typographyDirection:
             newFlowEffectiveIdentitySnapshot.brandProfile?.typography_direction ??
             null,
-          textOnlyInstitutionalIdentity: requestedFormat === "1:1",
-          // Quick 261125-i07 — opt-in EXPLÍCITO do 1:1 novo para a redação do
-          // logotipo oficial; joint e 9:16 isolado mantêm o texto anterior.
-          logoInstitutionalIdentity: requestedFormat === "1:1",
+          // Quick 261125-i08 — a base 1:1 do 9:16 isolado recebe as mesmas
+          // instruções institucionais aprovadas do 1:1 isolado.
+          textOnlyInstitutionalIdentity:
+            requestedFormat === "1:1" || requestedFormat === "9:16",
+          // Quick 261125-i07 — opt-in EXPLÍCITO da redação do logotipo oficial
+          // no 1:1 novo e no 9:16 isolado; o joint permanece com o texto anterior.
+          logoInstitutionalIdentity:
+            requestedFormat === "1:1" || requestedFormat === "9:16",
         });
         newFlowIdentityDirective = newFlowIdentityBlock.directive;
         newFlowIdentityContextFrozen = newFlowIdentityBlock.context;

@@ -18,7 +18,7 @@ vi.mock("@/lib/economic/economic-parameter-service", () => ({
 import { runBaseStep } from "../base-step";
 import type { TwoStageOperationView } from "../../types";
 import type { SquareBaseInput } from "@/lib/campaign/square-base/types";
-import { durableReconstruction } from "./fixtures";
+import { durableReconstruction, durableRow } from "./fixtures";
 
 const content = {
   briefing: { product: { name: "P" }, commercial: { intent: "offer" }, constraints: {} },
@@ -143,6 +143,34 @@ describe("runBaseStep", () => {
     expect(baseCalls).toHaveLength(1);
     expect(baseCalls[0][0].productImagesDataUrls).toHaveLength(1);
     expect(baseCalls[0][0].productImagesDataUrls[0]).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it("forwards the frozen identityDirective verbatim to the base input", async () => {
+    const directive = [
+      'Inclua obrigatoriamente o nome da loja "Loja Teste" como identificação institucional, em texto legível.',
+      "Títulos promocionais, mesmo contendo o nome da loja, não substituem essa identificação.",
+      "Não invente nem acrescente logotipo, símbolo de marca ou assinatura gráfica para identificar a loja.",
+      "Direção tipográfica da loja: Serifada editorial elegante.",
+    ].join("\n");
+    const row = durableRow();
+    const customRow = {
+      ...row,
+      input_snapshot: {
+        ...row.input_snapshot,
+        resumeContext: {
+          ...row.input_snapshot.resumeContext,
+          identityDirective: directive,
+        },
+      },
+    };
+    const d = deps(durableReconstruction(customRow));
+
+    const result = await runBaseStep(stepInput({ kind: "complete" }), d);
+
+    expect(result).toEqual({ kind: "completed" });
+    const baseCalls = calls(d, "base") as Array<[SquareBaseInput]>;
+    expect(baseCalls).toHaveLength(1);
+    expect(baseCalls[0][0].identityDirective).toBe(directive);
   });
 
   it("never advances when finish is refused and the step is not done", async () => {

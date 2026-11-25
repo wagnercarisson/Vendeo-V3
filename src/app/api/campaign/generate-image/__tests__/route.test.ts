@@ -3002,6 +3002,16 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: CANONICAL_PRIMARY_IMAGE },
   ];
 
+  // Quick 261125-i08 — redações aprovadas reutilizadas pelo 9:16 isolado.
+  const INSTITUTIONAL_HEAD_916 =
+    'Inclua obrigatoriamente o nome da loja "Loja Teste" como identificação institucional, em texto legível.';
+  const TYPOGRAPHY_LINE_916 =
+    'Direção tipográfica da loja: Serifada editorial elegante.';
+  const APPROVED_LOGO_HEAD_916 =
+    'Use obrigatoriamente o logotipo oficial da loja "Loja Teste", fornecido como imagem de referência de identidade.';
+  const APPROVED_SIGNATURE_HEAD_916 =
+    'Use obrigatoriamente a assinatura visual oficial da loja "Loja Teste", fornecida como imagem de referência de identidade.';
+
   it('9:16 nova persiste origem/versão e executa upload durável antes da delegação', async () => {
     setup();
     mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
@@ -3021,7 +3031,7 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
   });
 
-  it('Quick 261125-i06: 9:16 isolado text_only com tipografia NÃO recebe a nova instrução institucional', async () => {
+  it('Quick 261125-i08: 9:16 isolado text_only + tipografia ⇒ identificação institucional uma vez; nome do produto com o nome da loja coexiste', async () => {
     setup();
     mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
 
@@ -3053,24 +3063,37 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     });
 
     const { POST } = await import('../route');
-    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16', productImages: NINE_SIXTEEN_IMAGES }));
+    const res = await POST(
+      makeRequest({
+        ...BASE_NEW_FLOW_BODY,
+        campaignFormat: '9:16',
+        productName: 'Loja Teste Combo Especial',
+        productImages: NINE_SIXTEEN_IMAGES,
+      }),
+    );
     expect(res.status).toBe(200);
     await res.text();
 
-    const resume = persistedSnapshot().resumeContext as {
+    const snapshot = persistedSnapshot();
+    const resume = snapshot.resumeContext as {
       identityDirective: string | null;
     };
+    expect(resume.identityDirective).toContain(INSTITUTIONAL_HEAD_916);
+    expect(resume.identityDirective.split(INSTITUTIONAL_HEAD_916)).toHaveLength(2);
+    expect(resume.identityDirective).toContain(TYPOGRAPHY_LINE_916);
+    expect(resume.identityDirective.split(TYPOGRAPHY_LINE_916)).toHaveLength(2);
     expect(resume.identityDirective).not.toContain(
-      'Inclua obrigatoriamente o nome da loja',
-    );
-    expect(resume.identityDirective).not.toContain('Direção tipográfica');
-    expect(resume.identityDirective).toContain(
       'Não colocar logotipo. Não gerar assinatura visual.',
     );
     expect(resume.identityDirective).toContain('Paleta da loja');
+    // O nome do produto contendo o nome da loja coexiste com a identificação
+    // institucional. Este teste NÃO é evidência sobre título promocional.
+    expect((snapshot as any).product.name).toBe('Loja Teste Combo Especial');
+    // Congelamento existente: snapshot e resumeContext carregam a MESMA diretiva.
+    expect(snapshot.identityDirective).toBe(resume.identityDirective);
   });
 
-  it('Quick 261125-i07: 9:16 isolado logo com arquivo NÃO recebe a nova instrução do 1:1', async () => {
+  it('Quick 261125-i08: 9:16 isolado logo com arquivo recebe a instrução oficial do logotipo uma vez', async () => {
     setup();
     mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
 
@@ -3111,15 +3134,114 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     expect(res.status).toBe(200);
     await res.text();
 
+    const snapshot = persistedSnapshot();
+    const resume = snapshot.resumeContext as {
+      identityDirective: string | null;
+    };
+    expect(resume.identityDirective).toContain(APPROVED_LOGO_HEAD_916);
+    expect(resume.identityDirective.split(APPROVED_LOGO_HEAD_916)).toHaveLength(2);
+    expect(resume.identityDirective).not.toContain(
+      'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.',
+    );
+    expect(resume.identityDirective).not.toContain('Direção tipográfica');
+    expect(snapshot.identityDirective).toBe(resume.identityDirective);
+  });
+
+  it('Quick 261125-i08: 9:16 isolado logo SEM arquivo mantém o fallback anterior', async () => {
+    setup();
+    mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
+
+    const logoIdentity = {
+      storeName: 'Loja Teste',
+      storeSegment: 'outros',
+      brandColor: '#111111',
+      identityState: 'logo',
+      signature: { url: null, type: 'logo' },
+      brandProfile: {
+        brand_colors_chosen: ['#242422'],
+        safe_color_tokens: { primary: '#242422' },
+        visual_style: null,
+        visual_tone: null,
+        brand_personality: null,
+        campaign_guidelines: null,
+        campaign_brief: null,
+      },
+    };
+    (resolveStoreIdentity as any).mockResolvedValue(logoIdentity);
+    (validateIdentityReference as any).mockResolvedValue(logoIdentity);
+    (resolveIdentityImageAsDataUrl as any).mockResolvedValue(null);
+    (buildCampaignBrief as any).mockResolvedValue({
+      store: { name: 'Loja Teste', segment: 'outros' },
+      identity: {
+        directive:
+          'Não inventar logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      },
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16', productImages: NINE_SIXTEEN_IMAGES }));
+    expect(res.status).toBe(200);
+    await res.text();
+
     const resume = persistedSnapshot().resumeContext as {
       identityDirective: string | null;
     };
+    expect(resume.identityDirective).toContain('Não inventar logotipo.');
+    expect(resume.identityDirective).not.toContain(APPROVED_LOGO_HEAD_916);
+  });
+
+  it('Quick 261125-i08: 9:16 isolado visual_signature com arquivo mantém a instrução aprovada da assinatura', async () => {
+    setup();
+    mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
+
+    const signatureIdentity = {
+      storeName: 'Loja Teste',
+      storeSegment: 'outros',
+      brandColor: '#111111',
+      identityState: 'visual_signature',
+      signature: { url: 'https://signed.example/sig.png', type: 'visual_signature' },
+      brandProfile: {
+        brand_colors_chosen: ['#242422'],
+        safe_color_tokens: { primary: '#242422' },
+        typography_direction: 'Serifada editorial elegante',
+        visual_style: null,
+        visual_tone: null,
+        brand_personality: null,
+        campaign_guidelines: null,
+        campaign_brief: null,
+      },
+    };
+    (resolveStoreIdentity as any).mockResolvedValue(signatureIdentity);
+    (validateIdentityReference as any).mockResolvedValue(signatureIdentity);
+    (resolveIdentityImageAsDataUrl as any).mockResolvedValue({
+      dataUrl: 'data:image/png;base64,U0lH',
+      contentId: 'cid-sig',
+      mimeType: 'image/png',
+      byteLength: 3,
+    });
+    (buildCampaignBrief as any).mockResolvedValue({
+      store: { name: 'Loja Teste', segment: 'outros' },
+      identity: {
+        directive:
+          'Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido. Não adicionar logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      },
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16', productImages: NINE_SIXTEEN_IMAGES }));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    const resume = persistedSnapshot().resumeContext as {
+      identityDirective: string | null;
+    };
+    expect(resume.identityDirective).toContain(APPROVED_SIGNATURE_HEAD_916);
+    expect(resume.identityDirective.split(APPROVED_SIGNATURE_HEAD_916)).toHaveLength(2);
     expect(resume.identityDirective).not.toContain(
-      'Use obrigatoriamente o logotipo oficial da loja',
+      'Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido.',
     );
-    expect(resume.identityDirective).toContain(
-      'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.',
-    );
+    expect(resume.identityDirective).not.toContain('Direção tipográfica');
+    expect(resume.identityDirective).not.toContain(APPROVED_LOGO_HEAD_916);
   });
 
   it('flag OFF + 9:16 nova geração ⇒ 503 antes de campanha/reserva/provider', async () => {

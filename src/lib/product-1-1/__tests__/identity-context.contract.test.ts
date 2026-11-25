@@ -603,7 +603,7 @@ describe("Quick 261125-i06 — identificação institucional em texto no 1:1", (
     }
   });
 
-  it("text_only SEM opt-in preserva o texto reconciliado anterior (fronteira joint/9:16)", () => {
+  it("text_only SEM opt-in preserva o texto reconciliado anterior (fronteira joint)", () => {
     const block = buildNewFlowIdentityBlock({
       legacyDirective: LEGACY_TEXT_ONLY,
       backgroundDirection: "original",
@@ -821,7 +821,7 @@ describe("Quick 261125-i07 — logotipo oficial no 1:1", () => {
     expect(block.directive).not.toContain("Use obrigatoriamente o logotipo");
   });
 
-  it("logo + arquivo + SEM opt-in ⇒ texto reconciliado anterior exato (fronteira joint/9:16)", () => {
+  it("logo + arquivo + SEM opt-in ⇒ texto reconciliado anterior exato (fronteira joint)", () => {
     const block = buildNewFlowIdentityBlock({
       legacyDirective: LEGACY_LOGO_ASSET,
       backgroundDirection: "original",
