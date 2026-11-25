@@ -1,10 +1,10 @@
 ---
 quick_id: 261124-pmo
-status: implementation-complete-pending-manual-review
+status: complete
 date: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
-commit: d1a1d2ab
+commit: 51dbcf8f
 scope: square-release-ledger
 ---
 
@@ -155,7 +155,10 @@ por este runner global (mensagem padrão de gate não executado); a prova de
 concorrência/recuperação do ledger já foi feita nesta quick em stack descartável
 e está em `evidence/ledger-proof-results.json` (46/46).
 
-## Teste manual local
+## Roteiro de teste manual (referência)
+
+Procedimento executado pelo responsável na instância local 3001, onde o aceite
+funcional foi declarado em 2026-11-24:
 
 1. Servidor local em `http://localhost:3000` (porta 3000, processo 15880;
    build de produção atual).
@@ -171,7 +174,8 @@ e está em `evidence/ledger-proof-results.json` (46/46).
 
 ## Limitações
 
-- Teste manual completo ainda pendente.
+- O roteiro acima é referência do aceite declarado na instância 3001; não há
+  bloqueio de teste manual em aberto.
 - O 500 relatado não foi reproduzido no build local anterior; a remoção do
   caminho vertical desnecessário está coberta por teste e validada na página
   real após a correção.

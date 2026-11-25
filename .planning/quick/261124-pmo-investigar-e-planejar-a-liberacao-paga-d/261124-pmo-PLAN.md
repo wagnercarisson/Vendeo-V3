@@ -2,14 +2,14 @@
 quick_id: 261124-pmo
 slug: investigar-e-planejar-a-liberacao-paga-d
 title: Plano revisado — liberação 1:1 pelo ledger, sem migration
-status: implementation-complete-pending-manual-review
+status: complete
 created: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
 mode: implementacao-focada
 approval:
   status: approved
-  note: Desenho aprovado; implementação concluída. Teste manual completo pendente no Review Stop.
+  note: Desenho aprovado; implementação concluída; aceite funcional declarado pelo responsável na instância 3001 (2026-11-24).
 ---
 
 # Plano revisado 261124-pmo — liberação 1:1 pelo ledger
@@ -81,8 +81,10 @@ Liberar o quadrado 1:1 já armazenado de uma campanha entregue em 9:16,
 cobrando exatamente 1 crédito, usando a dedução no ledger existente como
 comprovante durável. Sem migration, tabela, RPC, flag ou segredo novo.
 
-**Status:** prova técnica **PASS** em PostgreSQL local descartável; implementação
-de UI/API ainda **não iniciada**, aguardando o Review Stop.
+**Status no momento da redação deste plano:** prova técnica **PASS** em
+PostgreSQL local descartável; implementação de UI/API ainda **não iniciada**,
+aguardando o Review Stop. (Histórico: a implementação e o aceite na instância
+3001 vieram depois, em 2026-11-24.)
 
 ## Prova técnica executada (2026-11-24)
 
