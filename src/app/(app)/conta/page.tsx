@@ -13,6 +13,7 @@ import { InstallHint } from "@/components/pwa/install-hint";
 import { User, Coins, Key, LogOut, MessageCircle, Shield } from "lucide-react";
 import { NotificationList } from "@/components/notifications/notification-list";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { getUiRenderContext } from "@/lib/i18n/server";
 
 export default async function ContaPage({
   searchParams,
@@ -21,6 +22,8 @@ export default async function ContaPage({
 }) {
   const user = await requirePageUser();
   const email = user.claims.email || user.claims.sub?.slice(0, 8) || "—";
+  const ui = await getUiRenderContext(user.userId);
+  const locale = ui.ok ? ui.locale : "pt-BR";
   const sp = await searchParams;
 
   const supabase = await createServerClient();
@@ -119,6 +122,7 @@ export default async function ContaPage({
                   transactions={history}
                   totalPages={totalPages}
                   currentPage={page}
+                  locale={locale}
                 />
               </>
             )}

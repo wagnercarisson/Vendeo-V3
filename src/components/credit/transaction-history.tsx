@@ -14,6 +14,8 @@ interface TransactionHistoryProps {
   transactions: CreditTransaction[];
   totalPages: number;
   currentPage: number;
+  /** Locale apenas do rótulo visual; não altera classificação/valor. */
+  locale?: "pt-BR" | "es-419";
 }
 
 function formatValue(type: string, amount: number): string {
@@ -21,10 +23,13 @@ function formatValue(type: string, amount: number): string {
   return `${prefix}${Math.abs(amount)}`;
 }
 
-function getTransactionLabel(tx: CreditTransaction): string {
+function getTransactionLabel(
+  tx: CreditTransaction,
+  locale: "pt-BR" | "es-419",
+): string {
   const metadata = (tx.metadata ?? {}) as Record<string, unknown>;
   if (tx.type === "deduction" && metadata.kind === "square_release") {
-    return "Liberação do formato 1:1";
+    return locale === "es-419" ? "Generación 1:1" : "Geração 1:1";
   }
   const program = metadata.credit_program;
   if (program === "trial_28d") {
@@ -43,6 +48,7 @@ export function TransactionHistory({
   transactions,
   totalPages,
   currentPage,
+  locale = "pt-BR",
 }: TransactionHistoryProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -96,7 +102,7 @@ export function TransactionHistory({
                     <Badge
                       variant={CREDIT_TYPE_BADGE[tx.type] ?? "default"}
                     >
-                      {getTransactionLabel(tx)}
+                      {getTransactionLabel(tx, locale)}
                     </Badge>
                   </td>
                   <td className="py-3 pr-4 text-text-primary font-body tabular-nums">
@@ -123,7 +129,7 @@ export function TransactionHistory({
               <div key={tx.id} className="rounded-lg border border-border bg-bg-surface p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <Badge variant={CREDIT_TYPE_BADGE[tx.type] ?? "default"}>
-                    {getTransactionLabel(tx)}
+                    {getTransactionLabel(tx, locale)}
                   </Badge>
                   <span className="text-sm font-semibold tabular-nums text-text-primary">
                     {formatValue(tx.type, tx.amount)}
