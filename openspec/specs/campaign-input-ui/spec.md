@@ -6,8 +6,9 @@
 > Modified by `fase-34-store-readiness` (MODIFIED + ADDED). Added readiness guard after store-exists check; redirect based on missing readiness item.
 > Modified by `fase-38-credit-operation-costs` (MODIFIED). Cost display is dynamic (`Custo: {cost}` via `useOperationCosts`); submit disabled when `balance < costCredits`, operation disabled, or cost unavailable (503) — without presumed "1 crédito".
 > Modified by `fase-40-campos-comerciais-avisos-brief` (D2/D3/D4/D8): o formulário ganha o agrupamento Produto / Oferta / Avisos e texto obrigatório, o checkbox "Exibir 'Imagem meramente ilustrativa'" (default marcado) coexistindo com o textarea livre, e a seção "Validade da oferta" (6 modos, visível apenas para `offer`). O body do submit passa a incluir `validity` (antes nunca enviado) e `mandatoryArtworkText` concatenado (checkbox + texto livre). A Descrição existente (`product.description`) permanece inalterada — nenhum campo adormecido ganha UI (D8).
-> Modified by `fase-41-midia-de-campanha-mobile` (D2/D3/D4/D10): o campo de imagem evolui de 1 arquivo para **primary obrigatória + até `MAX_CAMPAIGN_IMAGES - 1` auxiliares opcionais** (role interna `reference`) via **galeria + câmera** (`capture="environment"`, HEIC via canvas, EXIF respeitado, preview grid, remoção por item). O body do submit passa a enviar `productImages[]` (com auxiliares) ou `productImageDataUrl` (legado, sem auxiliares) — **nunca ambos**.
+> Modified by `fase-41-midia-de-campanha-mobile` (D2/D3/D4/D10): o campo de imagem evolui de 1 arquivo para **primary obrigatória + até `MAX_CAMPAIGN_IMAGES - 1` auxiliares opcionais** (hoje 1 adicional, com o teto de 2 da quick `261125-eo7`; role interna `reference`) via **galeria + câmera** (`capture="environment"`, HEIC via canvas, EXIF respeitado, preview grid, remoção por item). O body do submit passa a enviar `productImages[]` (com auxiliares) ou `productImageDataUrl` (legado, sem auxiliares) — **nunca ambos**.
 > Modified by `fase-43-revisao-brief-pre-geracao` (D2/D3/D4): o submit passa pela **tela de revisão do brief** — botão "Criar Campanha" → **"Revisar e gerar"**; `reviewMode` no hook; body via `buildCampaignGenerationBody` (mesmos derivados exibidos); confirmação envia `inputValidationOverride.productImageCheck: "brief_review_confirmed"`.
+> Modified by quick `261125-eo7` (MODIFIED): o teto de arquivos de imagem da campanha cai de 4 para **2** (`MAX_CAMPAIGN_IMAGES = 2`: 1 principal + 1 adicional). A orientação sob "Imagens adicionais" passa a ser estática e o limite é explicitamente de **arquivos enviados**, não de produtos retratados — um único arquivo pode mostrar combos, variedades, ângulos ou detalhes.
 
 ## Purpose
 
@@ -117,7 +118,7 @@ The system SHALL render the following form fields, agrupados por seção:
 - **Produto**: Nome do Produto (required, max 60) · **Descrição do produto** (opcional, max 120) — microcopy sobre características/benefícios/formas de uso; placeholder real de produto
 - **Oferta**: **Preço anterior (original)** (opcional, BRL) · **Preço de venda (final)** (obrigatório para offer) · Badge Promocional (obrigatório para offer) · **Validade da oferta** (6 modos, apenas `offer`, ver `offer-validity-modes`) · **ajuda expansível** "Como os preços mudam a campanha?" · **feedback dinâmico** das combinações de preço (incluindo o estado intermediário "só preço anterior", com mensagem neutra)
 - **Avisos e texto obrigatório**: checkbox "Exibir 'Imagem meramente ilustrativa'" (default marcado, ver `illustrative-notice-control`) · **Informações obrigatórias na arte** (textarea livre, maxLength 200, multi-linha, ver `mandatory-artwork-text`)
-- **Imagens do produto**: **Imagem do Produto *** (obrigatória, primary — comportamento atual) + **Imagens adicionais** (opcionais, até `MAX_CAMPAIGN_IMAGES - 1`, role interna `reference`) — multi-imagem com galeria + câmera, ver `campaign-media-upload`
+- **Imagens do produto**: **Imagem do Produto *** (obrigatória, primary — comportamento atual) + **Imagens adicionais** (opcionais, até `MAX_CAMPAIGN_IMAGES - 1`, ou seja, 1 com o teto de 2, role interna `reference`) — multi-imagem com galeria + câmera, ver `campaign-media-upload`
 - **Formato da campanha** (apenas fluxo novo elegível e flag vertical ligada): `Quadrado 1:1 — feed` · `Vertical 9:16 — Stories e Reels (imagem estática)` — exatamente um, default `1:1`
 - Demais campos inalterados: Intenção Comercial (radio) · Preservar Imagem Original (checkbox, apenas spotlight/exclusive)
 
@@ -160,7 +161,7 @@ The system SHALL render the following form fields, agrupados por seção:
 
 - **WHEN** o formulário de campanha é renderizado
 - **THEN** há o campo "Imagem do Produto *" (obrigatório, primary)
-- **AND** há a seção "Imagens adicionais" (opcionais, até 3, role `reference` interna)
+- **AND** há a seção "Imagens adicionais" (opcionais, até 1, role `reference` interna)
 
 #### Scenario: Checkbox e textarea coexistem na seção de avisos
 
@@ -184,7 +185,7 @@ The system SHALL render the following form fields, agrupados por seção:
 - **THEN** Descrição Breve input SHALL be present
 - **AND** Preço Original input SHALL be present
 - **AND** Preservar Imagem Original checkbox SHALL be present (apenas quando intent != offer)
-- **AND** Imagens adicionais SHALL be present (opcionais, até `MAX_CAMPAIGN_IMAGES - 1`)
+- **AND** Imagens adicionais SHALL be present (opcionais, até `MAX_CAMPAIGN_IMAGES - 1`, ou seja, 1 com o teto de 2)
 - **AND** they SHALL NOT be marked as required
 
 #### Scenario: Intent selector renderizado entre badge e botão Criar
@@ -573,13 +574,14 @@ O sistema SHALL manter no estado do form um array de imagens do tipo `{ id, role
 - `role: "primary"` na primeira imagem; `role: "reference"` nas auxiliares.
 - `compressImage` roda **por item** (JPEG ≤1MB, downscale 1200px), com HEIC decode via canvas e orientação EXIF respeitada (`createImageBitmap from-image` — ver `campaign-media-upload`).
 - `source: "upload" | "camera"` atribuído conforme a origem real (D4).
-- **Teto no cliente:** a UI impede adicionar além de `MAX_CAMPAIGN_IMAGES` (D10).
+- **Teto no cliente:** a UI impede adicionar além de `MAX_CAMPAIGN_IMAGES = 2` (1 principal + 1 adicional) — D10; quick `261125-eo7`. O teto conta **arquivos de imagem enviados**, não produtos distintos retratados: cada arquivo pode mostrar combos, variedades, ângulos ou detalhes.
+- **Orientação sob "Imagens adicionais":** o formulário exibe o texto estático `Opcional — Uma imagem de apoio (ângulos, variações, combos), como fonte auxiliar para a imagem principal.` (sem interpolação de contagem).
 - **Draft/autosave:** o rascunho salva e restaura as **N imagens** (estado multi preservado) — ao recarregar, o grid reaparece com as mesmas imagens e roles.
 
 #### Scenario: state multi com roles por item
 
-- **WHEN** o usuário adiciona 1 primary + 2 auxiliares
-- **THEN** o estado do form tem 3 itens: o primeiro com `role: "primary"` e os demais com `role: "reference"`
+- **WHEN** o usuário adiciona 1 primary + 1 auxiliar
+- **THEN** o estado do form tem 2 itens: o primeiro com `role: "primary"` e o segundo com `role: "reference"`
 - **AND** cada item mantém `source`/`mimeType`/`dataUrl` próprios
 
 #### Scenario: id interno não entra no body
@@ -595,14 +597,21 @@ O sistema SHALL manter no estado do form um array de imagens do tipo `{ id, role
 
 #### Scenario: draft/autosave restaura N imagens
 
-- **WHEN** um rascunho com 3 imagens é salvo e o form é recarregado
-- **THEN** o grid reaparece com as 3 imagens (estado multi preservado — D3)
+- **WHEN** um rascunho com 2 imagens é salvo e o form é recarregado
+- **THEN** o grid reaparece com as 2 imagens (estado multi preservado — D3)
 - **AND** a primary continua identificada
 
 #### Scenario: teto no cliente impede exceder MAX_CAMPAIGN_IMAGES
 
 - **WHEN** o usuário já adicionou `MAX_CAMPAIGN_IMAGES` imagens
 - **THEN** a UI não oferece mais adicionar imagem (teto respeitado no cliente — D10)
+- **AND** exibe a mensagem "Máximo de 2 imagens"
+
+#### Scenario: orientação estática sob "Imagens adicionais"
+
+- **WHEN** o formulário de campanha é renderizado (fora da revisão/geração)
+- **THEN** abaixo do título "Imagens adicionais" aparece o texto `Opcional — Uma imagem de apoio (ângulos, variações, combos), como fonte auxiliar para a imagem principal.`
+- **AND** o texto não interpola contagem de arquivos
 
 ### Requirement: Botão principal vira "Revisar e gerar" (F43 D2)
 

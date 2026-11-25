@@ -4,27 +4,28 @@
 
 ## Purpose
 
-Upload de mídia multi-imagem no formulário de campanha (F41 D3/D4/D10 — cliente): 1 imagem **primary** obrigatória + até `MAX_CAMPAIGN_IMAGES - 1` auxiliares opcionais, via **galeria e câmera** (`capture="environment"`), preview grid com remoção por item, atribuição de `source: "upload" | "camera"`, decode HEIC via canvas, orientação EXIF respeitada e limites por item/teto no cliente. As auxiliares entram como `role: "reference"` — roles avançadas não são expostas ao lojista na v1.
+Upload de mídia multi-imagem no formulário de campanha (F41 D3/D4/D10 — cliente; teto atualizado para **2 arquivos** na quick `261125-eo7`): 1 imagem **primary** obrigatória + 1 auxiliar opcional (`MAX_CAMPAIGN_IMAGES - 1`), via **galeria e câmera** (`capture="environment"`), preview grid com remoção por item, atribuição de `source: "upload" | "camera"`, decode HEIC via canvas, orientação EXIF respeitada e limites por item/teto no cliente. As auxiliares entram como `role: "reference"` — roles avançadas não são expostas ao lojista na v1. O limite conta **arquivos de imagem enviados**, não produtos distintos retratados: cada arquivo pode mostrar combos, variedades, ângulos ou detalhes.
 
 ## Requirements
 
 ### Requirement: Imagem principal obrigatória + auxiliares opcionais
 
-O sistema SHALL prover um upload de mídia no formulário de campanha com **1 imagem do produto obrigatória** (primary, comportamento atual) e **imagens adicionais opcionais** (até `MAX_CAMPAIGN_IMAGES - 1`, ou seja, 3 com o teto de 4) — D3/D10.
+O sistema SHALL prover um upload de mídia no formulário de campanha com **1 imagem do produto obrigatória** (primary, comportamento atual) e **imagens adicionais opcionais** (até `MAX_CAMPAIGN_IMAGES - 1`, ou seja, 1 com o teto de 2) — D3/D10.
 
 - A primeira imagem é sempre `role: "primary"`; as auxiliares são tratadas internamente como `role: "reference"` (semântica neutra de imagem de apoio/referência visual para o diretor de arte).
 - Roles avançadas (`variation`/`combo_item`) **não** são expostas ao lojista na v1 — permanecem no domínio/zod para extensão futura (F37/catálogo).
 - O total de imagens no form SHALL respeitar `MAX_CAMPAIGN_IMAGES` — a UI não permite adicionar além do teto.
+- O teto conta **arquivos de imagem enviados**, não produtos distintos: um único arquivo pode retratar combos, variedades, ângulos ou detalhes do mesmo produto.
 
 #### Scenario: Primary obrigatória renderizada
 
 - **WHEN** o formulário de campanha é renderizado
 - **THEN** há um campo "Imagem do Produto *" (obrigatório) para a imagem principal
-- **AND** uma seção "Imagens adicionais" (opcionais, até 3) para as auxiliares
+- **AND** uma seção "Imagens adicionais" (opcionais, até 1) para as auxiliares
 
 #### Scenario: Primeira imagem é primary e auxiliares são reference
 
-- **WHEN** o usuário adiciona a imagem principal e 2 auxiliares
+- **WHEN** o usuário adiciona a imagem principal e 1 auxiliar
 - **THEN** o estado do form marca a primeira como `role: "primary"`
 - **AND** as auxiliares são marcadas como `role: "reference"`
 
@@ -66,8 +67,8 @@ O sistema SHALL exibir um **preview grid** com todas as imagens adicionadas, cad
 
 #### Scenario: Preview grid exibe todas as imagens
 
-- **WHEN** o usuário adiciona 1 primary + 2 auxiliares
-- **THEN** o grid de preview exibe 3 itens com a primary identificada
+- **WHEN** o usuário adiciona 1 primary + 1 auxiliar
+- **THEN** o grid de preview exibe 2 itens com a primary identificada
 - **AND** cada item tem um controle de remoção
 
 #### Scenario: Remover primary aciona validação de obrigatoriedade

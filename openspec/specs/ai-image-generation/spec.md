@@ -7,7 +7,7 @@ Core image generation pipeline: orchestrates prompt assembly, model invocation, 
 > Modified by `fase-34-store-readiness` (ADDED). Added readiness guard in the handler, after ownership/auth and before rate limit/balance check.
 > Modified by `fase-39-brief-estruturado-campanha` (MODIFIED). O `ImageGenerationService` passa a consumir o **domínio estruturado** `CampaignBrief` (`brief.product`/`brief.commercial`/`brief.media`/`brief.creativeContext`) em vez do corpo flat (`body.*`). O conjunto de variáveis de prompt permanece **idêntico** para o mesmo input. `buildCommercialRepertoire` decide `validity` por `enabled/displayText` (D8) — sem heurística de string. A ponte `media.primary.dataUrl` → provider/input-validation torna-se explícita (D11).
 > Modified by `fase-40-campos-comerciais-avisos-brief` (D6): os 4 prompts do diretor (`campaign-image-director.md`, `-offer.md`, `-spotlight.md`, `-exclusive.md`) perdem a instrução **incondicional** "SEMPRE acrescente ... 'Imagem meramente ilustrativa'" (herança UAT-3) e ganham um **bloco condicional de composição** — o aviso ilustrativo só entra na arte quando houver texto obrigatório/aviso legal informado. O conjunto de variáveis/keys do prompt permanece **idêntico** para o mesmo input (golden `EXPECTED_KEYS = 38`); o texto do prompt muda intencionalmente (D6). O comportamento visual default é preservado (checkbox marcado → aviso na arte como hoje). As superfícies de validade (`buildCommercialRepertoire` → `- Oferta válida:` e template offer/base → `**Validade da oferta:**`) NÃO mudam (D5).
-> Modified by `fase-41-midia-de-campanha-mobile` (D2/D6/D7/D9/D10): transporte aditivo `productImages[]` (D2) com `MAX_CAMPAIGN_IMAGES = 4` e invariante exactly-1-primary; `productImageDataUrl` deixa de ser required no Zod (obrigatoriedade passa à regra de exclusividade da rota); provider monta **N `input_image`** (D7); fallback `images.edit` **gated por primary única** (D7); prompt ganha **bloco descritivo 1+N** sem nova variável (D6); revisor recebe a **primary** como referência (D9); limites por item + teto agregado → 413 (D10).
+> Modified by `fase-41-midia-de-campanha-mobile` (D2/D6/D7/D9/D10): transporte aditivo `productImages[]` (D2) com `MAX_CAMPAIGN_IMAGES` e invariante exactly-1-primary; `productImageDataUrl` deixa de ser required no Zod (obrigatoriedade passa à regra de exclusividade da rota); provider monta **N `input_image`** (D7); fallback `images.edit` **gated por primary única** (D7); prompt ganha **bloco descritivo 1+N** sem nova variável (D6); revisor recebe a **primary** como referência (D9); limites por item + teto agregado → 413 (D10). Modified by quick `261125-eo7`: `MAX_CAMPAIGN_IMAGES = 2` (1 primary + 1 auxiliar); o teto conta arquivos enviados, não produtos retratados; payload legado de imagem única e `superRefine` exactly-1-primary permanecem.
 > Modified by `fase-37-1-approval-gate-candidata-unica` (D8/D10): quando a flag `campaign_approval_enabled` está ligada, o `POST /api/campaign/generate-image` **também** insere a v1 em `campaign_art_versions` (candidata `pending`/`active`, `brief_snapshot` = snapshot `campaign_brief_v1` persistido) — mudança mínima, flag off → comportamento atual inalterado; falha no insert → log + continua (fail-safe, campanha exibida como legacy).
 > Modified by `fase-45-briefing-contextual-do-diretor-de-arte` (F45 — Briefing Contextual do Diretor de Arte, v1.5, concluída 2026-09-05): a montagem do prompt do diretor passa a ser **contextual por blocos** (ver capability `art-director-contextual-briefing`). O texto interno do prompt do diretor e o conjunto de chaves de montagem **mudam intencionalmente** (D5); a **superfície externa** permanece inalterada (contrato HTTP/schema/snapshot/domínio, UI/form, Copy Director e comportamento percebido pelo lojista). A preservação da **intenção/qualidade visual** é alvo da fase (regras de conteúdo + UAT humano comparativo), não uma garantia formal de resultado visual idêntico. Requisitos supersedidos de paridade/reframe textual foram REMOVED (paridade de keys → invariantes; reframe condicional F40 e bloco 1+N F41 → seções/blocos da capability nova).
 > Modified by `fase-37-2-correcao-unica-por-nao-conformidade` (ADDED): hook aditivo opcional `onBeforeImageProviderCall` (consumo da oportunidade no fluxo corretivo), bloco único de não conformidade na montagem do prompt da v2 (sem editar os `.md`), `input_validation` `skipped` via `brief_review_confirmed` (F43), e eventos da v2 no mesmo `operation_run_id` (sem nova operação financeira). A rota `generate-image` e o comportamento default permanecem inalterados.
@@ -128,7 +128,7 @@ The interface SHALL define:
 
 ### Requirement: GenerateImageRequestSchema with campaignIntent e preserveImageContext
 
-> Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-41-midia-de-campanha-mobile` (D2/D10): campo aditivo `productImages[]` + `MAX_CAMPAIGN_IMAGES`; `productImageDataUrl` deixa de ser required no Zod (preservação **comportamental** — a obrigatoriedade passa a ser garantida pela regra de exclusividade validada na rota). Modified by `fase-43-revisao-brief-pre-geracao` (D5): `inputValidationOverride.productImageCheck` ganha o literal `"brief_review_confirmed"` (revisão humana explícita do brief) — `.strict()` preservado.
+> Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-41-midia-de-campanha-mobile` (D2/D10): campo aditivo `productImages[]` + `MAX_CAMPAIGN_IMAGES`; `productImageDataUrl` deixa de ser required no Zod (preservação **comportamental** — a obrigatoriedade passa a ser garantida pela regra de exclusividade validada na rota). Modified by `fase-43-revisao-brief-pre-geracao` (D5): `inputValidationOverride.productImageCheck` ganha o literal `"brief_review_confirmed"` (revisão humana explícita do brief) — `.strict()` preservado. Modified by quick `261125-eo7`: `MAX_CAMPAIGN_IMAGES = 2` (1 primary + 1 auxiliar; teto de arquivos enviados, não de produtos).
 
 O schema `GenerateImageRequestSchema` em `src/lib/image-generation/schema.ts` SHALL ser modificado para aceitar:
 
@@ -163,7 +163,7 @@ export const GenerateImageRequestSchema = z.object({
 | `user_confirmed_continue` | Usuário recebeu 409 de conflito e **insistiu mesmo assim** | Pula a IA de visão (comportamento atual, "continuar mesmo assim"); fase `input_validation` emitida com **obrigatoriamente** `status: "skipped"` (detail opcional "Validação dispensada") |
 | (sem override) | Cliente legado / fallback | Validação IA produto×imagem roda como rede de segurança (comportamento atual); fase `input_validation` normal |
 
-O schema SHALL definir `MAX_CAMPAIGN_IMAGES = 4` (1 primary + 3 auxiliares — D10) e `ProductImageInputSchema`:
+O schema SHALL definir `MAX_CAMPAIGN_IMAGES = 2` (1 primary + 1 auxiliar — D10; quick `261125-eo7`, antes 4) e `ProductImageInputSchema`:
 
 ```ts
 export const ProductImageInputSchema = z.object({
@@ -206,9 +206,9 @@ A validação semântica de preço é externalizada: offer exige preço no front
 
 #### Scenario: productImages aceito com exatamente 1 primary (D2)
 
-- **WHEN** o body inclui `productImages` com 1 `primary` + 2 `reference`
+- **WHEN** o body inclui `productImages` com 1 `primary` + 1 `reference`
 - **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true, data }`
-- **AND** `data.productImages` tem 3 itens com roles/source/mimeType/dataUrl preservados
+- **AND** `data.productImages` tem 2 itens com roles/source/mimeType/dataUrl preservados
 
 #### Scenario: productImages sem primary é rejeitado (D2)
 

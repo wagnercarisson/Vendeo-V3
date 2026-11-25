@@ -12,6 +12,8 @@ Define a paridade programática do formulário produtivo de campanha na bancada 
 
 A bancada SHALL oferecer os mesmos campos relevantes do formulário produtivo de campanha: nome do produto, descrição opcional, imagem principal obrigatória, até três imagens adicionais, preço anterior/original, preço de venda/final, selo promocional, intenção da campanha, preservação da imagem original (Destaque/Exclusivo), validade da oferta, aviso de "Imagem meramente ilustrativa" e informações obrigatórias na arte. A interface visual pode permanecer específica da bancada e desktop-only.
 
+**Exceção explícita de paridade (quick `261125-eo7`):** a bancada mantém **4 arquivos no total** (1 principal + 3 adicionais) mesmo com o formulário produtivo limitado a **2 arquivos** (1 + 1) desde a quick `261125-eo7`. A paridade de campos e normalizações continua; a de limite de imagens é uma exceção deliberada para não alterar telas, APIs ou a execução experimental da bancada.
+
 #### Scenario: Campos relevantes estão disponíveis
 
 - **WHEN** o administrador preenche a bancada
@@ -21,6 +23,15 @@ A bancada SHALL oferecer os mesmos campos relevantes do formulário produtivo de
 ### Requirement: Limites e normalizações fiéis
 
 A bancada SHALL aplicar os mesmos limites e normalizações do formulário produtivo: nome do produto e descrição com os mesmos limites de caracteres; normalização monetária idêntica (entrada por dígitos convertida em centavos); imagem principal obrigatória e até três imagens adicionais com os mesmos tipos e tamanho; e informações obrigatórias na arte com o mesmo limite.
+
+- **Exceção explícita:** o limite de imagens da bancada (4 no total: 1 principal + 3 adicionais) é independente do limite do formulário produtivo (2 arquivos desde a quick `261125-eo7`). Os demais limites (caracteres, tipos, tamanho) permanecem fiéis.
+
+#### Scenario: Limite da bancada independe do produtivo
+
+- **WHEN** a bancada valida a contagem de imagens
+- **THEN** aceita 4 arquivos no total (1 principal + 3 adicionais) e rejeita 5 com a mensagem "Máximo de 4 imagens"
+- **AND** o formulário produtivo aceita 2 arquivos e rejeita 3
+- **AND** a paridade de campos e normalizações permanece comprovada pelos contratos de paridade
 
 #### Scenario: Normalização monetária é idêntica
 
