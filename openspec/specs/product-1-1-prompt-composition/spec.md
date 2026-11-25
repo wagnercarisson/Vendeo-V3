@@ -56,6 +56,8 @@ A composição SHALL transportar a **paleta canônica resolvida** da loja **uma 
 
 Nos fundos **recriados** (estúdio/ambientado), o fundo SHALL priorizar a paleta da loja e garantir contraste/separação visual do produto; SHALL ser emitida **uma única vez** uma orientação comum de contraste. A direção `original` SHALL permanecer sem imposição de paleta.
 
+Quando o estado de identidade é `visual_signature` **e** o ativo está efetivamente disponível após validação/conversão para `data URL`, o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` SHALL **substituir** a instrução de identidade pela redação oficial aprovada, com o nome da loja resolvido no servidor interpolado (sem placeholder), emitida **uma única vez**, sem manter a instrução antiga nem "Não adicionar logotipo.", preservando a paleta e as demais instruções. Títulos promocionais que contenham o nome da loja SHALL NOT substituir a assinatura. Para `text_only`, `logo` e assinatura **sem** arquivo disponível, o texto reconciliado atual SHALL ser preservado. A versão das regras de identidade SHALL avançar de forma coerente (`48.2.6-identity-context-v2`) e permanecer registrada em `policyVersions.identidade`.
+
 #### Scenario: Paleta uma única vez, com precedência
 
 - **WHEN** a loja possui paleta resolvida (perfil ou `brand_color`)
@@ -79,6 +81,25 @@ Nos fundos **recriados** (estúdio/ambientado), o fundo SHALL priorizar a paleta
 - **WHEN** a direção é original
 - **THEN** a instrução de fundo permanece inalterada
 - **AND** nenhuma orientação de contraste é acrescentada
+
+#### Scenario: Assinatura visual com arquivo disponível ⇒ instrução explícita
+
+- **WHEN** o estado é `visual_signature` e o arquivo está disponível após validação/conversão
+- **THEN** o bloco de identidade emite a redação aprovada com o nome da loja interpolado, uma única vez, sem a instrução antiga
+- **AND** a paleta e as demais instruções permanecem preservadas
+- **AND** o título promocional não substitui a assinatura
+
+#### Scenario: Instrução de assinatura independe da paleta
+
+- **WHEN** há ou não paleta resolvida para a loja
+- **THEN** a instrução de assinatura é a mesma
+- **AND** a paleta ou a orientação neutra segue a regra existente
+
+#### Scenario: Sem arquivo ou outros estados ⇒ comportamento preservado
+
+- **WHEN** o estado é `text_only`, `logo` ou `visual_signature` sem arquivo disponível
+- **THEN** o texto reconciliado anterior permanece
+- **AND** a instrução explícita de assinatura não é emitida
 
 ### Requirement: Separação entre referências de produto e imagem de identidade
 
