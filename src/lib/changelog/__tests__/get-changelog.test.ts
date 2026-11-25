@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { renderMarkdown } from "../render-markdown";
 import {
   getAllEntries,
   getLatestAnnouncement,
@@ -33,33 +34,41 @@ afterEach(async () => {
 });
 
 describe("get-changelog", () => {
-  it("getAllEntries lê o diretório real e retorna a F58 antes das entradas históricas em data DESC", async () => {
+  it("getAllEntries lê o diretório real e retorna a novidade de formatos antes das entradas históricas em data DESC", async () => {
     const entries = await getAllEntries();
 
     expect(entries.length).toBeGreaterThanOrEqual(3);
     expect(entries[0].frontmatter).toMatchObject({
+      id: "sua-campanha-em-mais-de-um-formato",
+      date: "2026-11-24",
+      category: "feature",
+      importance: "major",
+      announcement: "card",
+    });
+    expect(entries[1].frontmatter).toMatchObject({
       id: "painel-mais-organizado-facil-de-usar",
       date: "2026-11-02",
       category: "improvement",
       importance: "major",
       announcement: "card",
     });
-    expect(entries[1].frontmatter.id).toBe("campanhas-mais-qualidade-novos-cenarios");
-    expect(entries[1].frontmatter.date).toBe("2026-10-19");
-    expect(entries[2].frontmatter.id).toBe("tom-de-voz-seletor-descritivo");
-    expect(entries[2].frontmatter.date).toBe("2026-09-19");
-    expect(entries[3].frontmatter.id).toBe("fase-43-revisao-brief-pre-geracao");
-    expect(entries[3].frontmatter.date).toBe("2026-08-21");
-    expect(entries[4].frontmatter.id).toBe("criacao-campanhas-mais-clara-confiavel");
-    expect(entries[4].frontmatter.date).toBe("2026-08-20");
-    expect(entries[5].frontmatter.id).toBe("fase-42-signup-controlado-elegibilidade-freemium");
-    expect(entries[5].frontmatter.date).toBe("2026-08-19");
-    expect(entries[6].frontmatter.id).toBe("fase-41-midia-de-campanha-mobile");
-    expect(entries[6].frontmatter.date).toBe("2026-08-15");
-    expect(entries[7].frontmatter.id).toBe("fase-40-campos-comerciais-avisos-brief");
-    expect(entries[7].frontmatter.date).toBe("2026-08-14");
+    expect(entries[2].frontmatter.id).toBe("campanhas-mais-qualidade-novos-cenarios");
+    expect(entries[2].frontmatter.date).toBe("2026-10-19");
+    expect(entries[3].frontmatter.id).toBe("tom-de-voz-seletor-descritivo");
+    expect(entries[3].frontmatter.date).toBe("2026-09-19");
+    expect(entries[4].frontmatter.id).toBe("fase-43-revisao-brief-pre-geracao");
+    expect(entries[4].frontmatter.date).toBe("2026-08-21");
+    expect(entries[5].frontmatter.id).toBe("criacao-campanhas-mais-clara-confiavel");
+    expect(entries[5].frontmatter.date).toBe("2026-08-20");
+    expect(entries[6].frontmatter.id).toBe("fase-42-signup-controlado-elegibilidade-freemium");
+    expect(entries[6].frontmatter.date).toBe("2026-08-19");
+    expect(entries[7].frontmatter.id).toBe("fase-41-midia-de-campanha-mobile");
+    expect(entries[7].frontmatter.date).toBe("2026-08-15");
+    expect(entries[8].frontmatter.id).toBe("fase-40-campos-comerciais-avisos-brief");
+    expect(entries[8].frontmatter.date).toBe("2026-08-14");
 
     const ids = entries.map((entry) => entry.frontmatter.id);
+    expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain("fase-30-legal-foundation");
     expect(ids).toContain("fase-32-freemium-cnpj");
     expect(ids).toContain("fase-34-store-readiness");
@@ -75,6 +84,7 @@ describe("get-changelog", () => {
       expect(entry.slug).toBeTruthy();
       expect(entry.slug.endsWith(".md")).toBe(false);
       expect(entry.body.length).toBeGreaterThan(0);
+      expect(() => renderMarkdown(entry.body)).not.toThrow();
     }
   });
 
@@ -111,14 +121,20 @@ describe("get-changelog", () => {
     expect(result).toBeNull();
   });
 
-  it("getLatestAnnouncement retorna o anúncio da F58 no diretório real", async () => {
+  it("getLatestAnnouncement retorna os formatos com custo e elegibilidade explícitos", async () => {
     const result = await getLatestAnnouncement();
 
     expect(result).not.toBeNull();
-    expect(result!.frontmatter.id).toBe("painel-mais-organizado-facil-de-usar");
+    expect(result!.frontmatter.id).toBe("sua-campanha-em-mais-de-um-formato");
     expect(result!.frontmatter.announcement).toBe("card");
-    expect(result!.body).toContain("Suas campanhas recentes, créditos e novidades");
-    expect(result!.body).toContain("baixá-lo para publicar");
+    expect(result!.body).toContain("**Quadrado 1:1**");
+    expect(result!.body).toContain("**Vertical 9:16**");
+    expect(result!.body).toContain("**1 crédito**");
+    expect(result!.body).toContain("novas campanhas verticais compatíveis");
+    expect(result!.body).toContain("abre direto na campanha");
+    expect(result!.body).toContain("**Geração 1:1**");
+    expect(result!.body).toContain("Nem toda campanha oferece o formato adicional");
+    expect(result!.body).toContain("sem uma nova cobrança por alternar ou baixar novamente");
   });
 
   it("getEntryById retorna entry parseada do diretório real", async () => {

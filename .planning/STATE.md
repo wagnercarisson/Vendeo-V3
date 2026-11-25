@@ -14,6 +14,10 @@ progress:
 
 # Project State
 
+## Quick changelog de formatos — 2026-11-24
+
+`261124-changelog-formatos`: entrada “Sua campanha em mais de um formato” preparada em `content/changelog/2026-11-24-sua-campanha-em-mais-de-um-formato.md`, com custo de 1 crédito por versão adicional, elegibilidade explícita e destaque leve (`card`, sem modal). Gates: 13 arquivos/77 testes, typecheck/lint e diff-check exit 0. Conteúdo local ainda sem commit/push/deploy; não presume conclusão do deploy funcional aguardado pelo responsável. Plano/SUMMARY: `.planning/quick/261124-changelog-formatos/`. Sem banco, geração ou cobrança; `.f62-check/` preservada.
+
 ## Gate remoto F62 — atualização vigente 2026-11-24
 
 Migration `20261123130252` final (`56dc3423…`) aplicada e verificada em produção no projeto Supabase `Vendeo-V3`: ledger **158→159**, versão uma vez; conteúdo dos 11 conjuntos preservado. Backup de banco/Storage, restauração isolada e ensaio passaram. `FORMAT_ADDITION_CONFIRMATION_SECRET` cadastrado como Sensitive em Production na Vercel; flag dedicada **false**. Código/merge/push/deploy e ativação **não executados**. Próximo: responsável integra/publica, confere deploy e realiza smoke/ativação pós-deploy. Fonte vigente: `.planning/phases/62-adicionar-vertical-campanha-quadrada/62-08-RELEASE-GATE.md`. As menções anteriores a migration somente local são históricas, superadas por este gate.
