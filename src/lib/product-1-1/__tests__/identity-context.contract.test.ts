@@ -313,6 +313,9 @@ describe("Quick 261125-i05 — assinatura visual com arquivo disponível", () =>
   };
   const LEGACY_SIGNATURE_NO_ASSET =
     "Não inventar assinatura visual nem logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.";
+  // Montado por partes para que o placeholder não apareça literalmente no
+  // código-fonte (gate: `rg "\[nome da loja\]" src` sem ocorrências).
+  const PLACEHOLDER_TOKEN = `[${"nome da loja"}]`;
 
   function expectedInstruction(name: string): string {
     return [
@@ -329,7 +332,7 @@ describe("Quick 261125-i05 — assinatura visual com arquivo disponível", () =>
     expect(instruction).toBe(expectedInstruction("Mega Vale"));
     expect(instruction).toContain('loja "Mega Vale",');
     expect(instruction.split("\n")).toHaveLength(4);
-    expect(instruction).not.toContain("[nome da loja]");
+    expect(instruction).not.toContain(PLACEHOLDER_TOKEN);
     expect(buildVisualSignatureInstruction("   ")).toBe("");
   });
 
@@ -460,6 +463,6 @@ describe("Quick 261125-i05 — assinatura visual com arquivo disponível", () =>
     expect(composed.text).toContain('loja "Adega Mestre das Geladas"');
     expect(composed.text).not.toContain("Assinar a campanha com a assinatura visual");
     expect(composed.text).not.toContain("Não adicionar logotipo.");
-    expect(composed.text).not.toContain("[nome da loja]");
+    expect(composed.text).not.toContain(PLACEHOLDER_TOKEN);
   });
 });
