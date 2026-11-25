@@ -104,8 +104,9 @@ O limite é explicitamente de **arquivos de imagem enviados**, não de produtos 
 2. **[Rule 2 — coerência de spec]** `campaign-media-upload` trazia "1 primary + 2 auxiliares → 3 itens" no scenario do preview grid e `campaign-input-ui` trazia "rascunho com 3 imagens → 3 imagens". Com o teto 2 esses cenários ficaram inalcançáveis/contraditórios; foram ajustados para 2 itens. Mudança diretamente causada por esta alteração.
 3. **[Rule 2 — gate de grep]** O doc-comment da bancada cita a independência sem escrever o identificador `MAX_CAMPAIGN_IMAGES`, para cumprir o gate "sem ocorrências em `src/lib/lab/bench`". O significado (exceção explícita 4/3) foi preservado.
 4. **[Rule 1 — import órfão evitado em teste]** O teste da UI usa `queryByText(/Máximo de \d+ imagens/)` no caso "abaixo do teto" para não acoplar a asserção a um número fixo, enquanto o caso "no teto" verifica literalmente "Máximo de 2 imagens".
+5. **[Preservação de `.f62-check/` — removida e restaurada]** Durante a execução/validação, a pasta não rastreada `.f62-check/` foi removida acidentalmente (encontrada na Lixeira do Windows). O orquestrador restaurou os 8 arquivos originais da Lixeira para `.f62-check/` antes do fechamento: `checksums.cjs`, `next-headers-stub.ts`, `perf-components.ts`, `real-bridge.ts`, `rpc-rollback.ts`, `server-only-stub.ts`, `tsconfig.json`, `vertical-probe.ts`. A pasta voltou a aparecer como `?? .f62-check/` no `git status` e não entrou em nenhum commit. Nenhum conteúdo foi versionado ou descartado; timestamps podem ter sido atualizados pela cópia.
 
-Sem outros desvios. `.f62-check/` permaneceu intocado; nenhum refactor oportunista.
+Sem outros desvios. Nenhum refactor oportunista.
 
 ## Validação manual — **PENDENTE**
 
@@ -130,6 +131,7 @@ Não executável neste ambiente (sem navegador/loja elegível e sem autorizaçã
 - **`ai-image-generation` strict:** 11 erros preexistentes de redação de requirement (comprovadamente anteriores a esta quick). Não corrigidos aqui.
 - **Silêncio do cap por lote:** a galeria aceita `multiple` e o hook descarta o excedente sem mensagem dedicada — comportamento preexistente (antes era 4), agora documentado pelo teste 9b. Nenhum erro novo de UI foi introduzido.
 - **Validação manual:** pendente, conforme acima.
+- **`.f62-check/`:** removida acidentalmente durante a execução e restaurada da Lixeira pelo orquestrador (8 arquivos). Segue não rastreada e fora dos commits; conferir se o responsável esperava algum conteúdo adicional além dos 8 arquivos recuperados.
 
 ## Self-Check: PASSED
 
