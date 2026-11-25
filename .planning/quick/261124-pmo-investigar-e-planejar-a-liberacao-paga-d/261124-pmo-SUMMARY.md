@@ -59,6 +59,14 @@ scope: square-release-ledger
 Evidências: `evidence/real-validation.json`, `evidence/01-real-9x16.png`,
 `evidence/02-real-1x1.png`, `evidence/03-real-direct-1x1.png`.
 
+## Aceite funcional declarado (instância 3001)
+
+Em 2026-11-24 o responsável declarou **aceite funcional na instância local
+3001**. Este registro é declarativo: o agente não reexecutou a validação nessa
+instância nesta etapa. O ajuste posterior é apenas o rótulo visual do extrato
+(“Geração 1:1” / “Generación 1:1”), sem mudança de metadados, classificação,
+valor, idempotência ou histórico financeiro.
+
 ## Resultado
 
 Implementada a liberação paga do **quadrado 1:1 já armazenado** de uma campanha
@@ -102,8 +110,11 @@ comprovante durável.
 - Lista/dashboard:
   - leitura em lote do estado; sem N+1, sem Storage e sem binário por card.
 - Extrato:
-  - dedução com `metadata.kind='square_release'` rotulada “Liberação do formato
-    1:1”; `reason` permanece NULL porque `reserve_credit` não o recebe.
+  - dedução com `metadata.kind='square_release'` rotulada **“Geração 1:1”**
+    (pt-BR) / **“Generación 1:1”** (es-419);
+  - metadados, classificação interna (`deduction`), valor, idempotência e
+    histórico financeiro preservados;
+  - `reason` permanece NULL porque `reserve_credit` não o recebe.
 
 ## Gates
 
@@ -116,6 +127,13 @@ comprovante durável.
 | `npm run build` | exit 0 (porta 3000 parada antes; reiniciada depois) |
 | `git diff --check` | exit 0 |
 | Suíte global | 875 arquivos PASS + 2 skipped; 10.860 testes PASS + 10 skipped; **exit 0** |
+| Suíte global após o rótulo | 877 arquivos: 2 falhas transitórias nos guards de contrato F60.4/F60.7-10 por `src/app/(app)/conta/page.tsx` ainda **não commitado**; após o commit, 875 PASS + 2 skipped e 10.860 testes PASS + 10 skipped, **exit 0** |
+
+> Nota: os guards F60.4/F60.7-10 inspecionam `git status` do working tree e
+> sinalizaram a página de conta como UI alterada fora da allowlist. A alteração
+> é a autorizada nesta tarefa (passar o locale ao extrato); nada foi
+> enfraquecido nos guards. Com o commit, o working tree ficou limpo e ambos
+> passaram.
 
 ### Validador F62
 
@@ -139,7 +157,7 @@ e está em `evidence/ledger-proof-results.json` (46/46).
 4. Confirmar o custo de 1 crédito e observar “Estamos preparando sua campanha no
    formato quadrado.” com spinner; Cancelar/Escape/clique fora bloqueados.
 5. Conferir **um único débito de 1 crédito** no extrato, com o rótulo
-   “Liberação do formato 1:1”.
+   “Geração 1:1” (pt-BR) / “Generación 1:1” (es-419).
 6. Alternar `?format=1:1` / `?format=9:16`, baixar ambos e reabrir a campanha:
    não deve haver nova cobrança.
 7. Repetir o clique/refresh: deve recuperar a mesma dedução, sem novo débito.

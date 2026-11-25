@@ -1,0 +1,25 @@
+{
+  "hasLogin": false,
+  "hasExtract": true,
+  "hasPtLabel": true,
+  "pt": {
+    "label": "Geração 1:1",
+    "width": 87,
+    "height": 20,
+    "scrollWidth": 87,
+    "clientWidth": 87,
+    "fits": true
+  },
+  "es": {
+    "label": "Generación 1:1",
+    "width": 105,
+    "height": 20,
+    "scrollWidth": 105,
+    "clientWidth": 105,
+    "fits": true
+  },
+  "viewport": {
+    "width": 375,
+    "height": 812
+  }
+}
