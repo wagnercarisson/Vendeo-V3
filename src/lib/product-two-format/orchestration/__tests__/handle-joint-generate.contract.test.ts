@@ -459,6 +459,11 @@ describe("F60.7 C1 — helper → composition root → componentes reais", () =>
         index: 1,
       });
       expect(resume.identityDirective.length).toBeGreaterThan(0);
+      // Quick 261125-i07 — o joint NÃO recebe a instrução do logotipo oficial
+      // restrita ao 1:1 novo com opt-in.
+      expect(resume.identityDirective).not.toContain(
+        "Use obrigatoriamente o logotipo oficial da loja",
+      );
       // Quick 261125-i06 — o joint NÃO recebe a instrução institucional em texto
       // do 1:1 `text_only` (a loja semeada é `text_only`).
       expect(resume.identityDirective).not.toContain(

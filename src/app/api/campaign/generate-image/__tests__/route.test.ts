@@ -2457,7 +2457,19 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     setupNewFlowMocks({
       existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: stored },
     });
-    mockIdentityResolution({ directive: 'Direção B', image: IMAGE_A });
+    // Quick 261125-i07 — no 1:1 `logo` com ativo a diretiva é determinística;
+    // a diferença vem da paleta resolvida, que entra no mesmo bloco congelado.
+    mockIdentityResolution({
+      identity: {
+        ...IDENTITY_SERVER,
+        brandProfile: {
+          brand_colors_chosen: ['#123456'],
+          safe_color_tokens: { primary: '#123456' },
+        },
+      },
+      directive: 'Direção B',
+      image: IMAGE_A,
+    });
 
     const { POST } = await import('../route');
     const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
@@ -2533,6 +2545,8 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     'Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido. Não adicionar logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.';
   const APPROVED_INSTRUCTION_HEAD =
     'Use obrigatoriamente a assinatura visual oficial da loja "Loja Teste", fornecida como imagem de referência de identidade.';
+  const APPROVED_LOGO_HEAD =
+    'Use obrigatoriamente o logotipo oficial da loja "Loja Teste", fornecido como imagem de referência de identidade.';
 
   it('Quick 261125-i05: visual_signature + arquivo ⇒ instrução aprovada uma única vez, congelada no snapshot', async () => {
     setupNewFlowMocks();
@@ -2768,7 +2782,7 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     );
   });
 
-  it('Quick 261125-i06: logo e assinatura sem arquivo mantêm o texto anterior e textOnlyIdentity=false', async () => {
+  it('Quick 261125-i07: 1:1 logo com arquivo recebe a nova instrução; assinatura sem arquivo mantém o texto anterior', async () => {
     setupNewFlowMocks();
     mockIdentityResolution({
       identity: IDENTITY_SERVER,
@@ -2781,11 +2795,17 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     await (await POST(makeRequest(VALID_NEW_FLOW_BODY))).text();
 
     const logoInput = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
-    expect(logoInput.identityDirective).toContain(
-      'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.',
+    const sentDirective = logoInput.identityDirective as string;
+    expect(sentDirective).toContain(APPROVED_LOGO_HEAD);
+    expect(sentDirective.split(APPROVED_LOGO_HEAD)).toHaveLength(2);
+    expect(sentDirective).not.toContain(
+      'Assinar a campanha com o logotipo da loja fornecido como imagem de referência',
     );
-    expect(logoInput.identityDirective).not.toContain('Inclua obrigatoriamente');
+    expect(sentDirective).not.toContain(PLACEHOLDER_TOKEN);
     expect(logoInput.textOnlyIdentity).toBe(false);
+    expect(
+      (createCampaign as any).mock.calls[0][1].inputSnapshot.identityDirective,
+    ).toBe(sentDirective);
 
     (createCampaign as any).mockClear();
     mockRunProductOneToOneGeneration.mockClear();
@@ -2808,7 +2828,108 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     expect(signatureInput.identityDirective).not.toContain(
       'Inclua obrigatoriamente',
     );
+    expect(signatureInput.identityDirective).not.toContain(APPROVED_LOGO_HEAD);
     expect(signatureInput.textOnlyIdentity).toBe(false);
+  });
+
+  it('Quick 261125-i07: 1:1 logo independe da paleta e preserva a linha da paleta quando existe', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: {
+        ...IDENTITY_SERVER,
+        brandProfile: {
+          brand_colors_chosen: ['#242422', '#AABBCC'],
+          safe_color_tokens: { primary: '#242422', accent: '#445566' },
+        },
+      },
+      directive:
+        'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      image: IMAGE_A,
+    });
+
+    const { POST } = await import('../route');
+    await (await POST(makeRequest(VALID_NEW_FLOW_BODY))).text();
+
+    const withPalette = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(withPalette.identityDirective).toContain(APPROVED_LOGO_HEAD);
+    expect(withPalette.identityDirective).toContain(
+      'Paleta da loja "Loja Teste": cor principal #242422; cor de apoio #AABBCC.',
+    );
+    expect(withPalette.identityDirective).not.toContain(
+      'Sem paleta da loja definida',
+    );
+
+    (createCampaign as any).mockClear();
+    mockRunProductOneToOneGeneration.mockClear();
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: IDENTITY_SERVER,
+      directive:
+        'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      image: IMAGE_A,
+    });
+
+    const res = await POST(
+      makeRequest({ ...VALID_NEW_FLOW_BODY, backgroundDirection: 'original' }),
+    );
+    expect(res.status).toBe(200);
+
+    const withoutPalette = mockRunProductOneToOneGeneration.mock
+      .calls[0][0] as any;
+    expect(withoutPalette.identityDirective).toContain(APPROVED_LOGO_HEAD);
+    expect(withoutPalette.identityDirective).not.toContain('Paleta da loja');
+    expect(withoutPalette.identityDirective).not.toContain(
+      'Sem paleta da loja definida',
+    );
+  });
+
+  it('Quick 261125-i07: título promocional com o nome da loja não substitui a instrução do logotipo', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: IDENTITY_SERVER,
+      directive:
+        'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      image: IMAGE_A,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(
+      makeRequest({
+        ...VALID_NEW_FLOW_BODY,
+        productName: 'Loja Teste Combo Especial',
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(sent.briefing.product.name).toBe('Loja Teste Combo Especial');
+    expect(sent.identityDirective).toContain(APPROVED_LOGO_HEAD);
+    expect(sent.identityDirective).toContain(
+      'Títulos promocionais, mesmo contendo o nome da loja, não substituem esse logotipo.',
+    );
+  });
+
+  it('Quick 261125-i07: logo SEM arquivo mantém o fallback anterior', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: {
+        ...IDENTITY_SERVER,
+        signature: { url: null, type: 'logo' },
+      },
+      directive:
+        'Não inventar logotipo. Usar apenas a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      image: null,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(
+      makeRequest({ ...VALID_NEW_FLOW_BODY, backgroundDirection: 'original' }),
+    );
+    expect(res.status).toBe(200);
+
+    const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(sent.identityDirective).toBe('Não inventar logotipo.');
+    expect(sent.identityDirective).not.toContain(APPROVED_LOGO_HEAD);
   });
 });
 
@@ -2947,6 +3068,58 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
       'Não colocar logotipo. Não gerar assinatura visual.',
     );
     expect(resume.identityDirective).toContain('Paleta da loja');
+  });
+
+  it('Quick 261125-i07: 9:16 isolado logo com arquivo NÃO recebe a nova instrução do 1:1', async () => {
+    setup();
+    mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
+
+    const logoIdentity = {
+      storeName: 'Loja Teste',
+      storeSegment: 'outros',
+      brandColor: '#111111',
+      identityState: 'logo',
+      signature: { url: 'https://signed.example/logo.png', type: 'logo' },
+      brandProfile: {
+        brand_colors_chosen: ['#242422'],
+        safe_color_tokens: { primary: '#242422' },
+        visual_style: null,
+        visual_tone: null,
+        brand_personality: null,
+        campaign_guidelines: null,
+        campaign_brief: null,
+      },
+    };
+    (resolveStoreIdentity as any).mockResolvedValue(logoIdentity);
+    (validateIdentityReference as any).mockResolvedValue(logoIdentity);
+    (resolveIdentityImageAsDataUrl as any).mockResolvedValue({
+      dataUrl: 'data:image/png;base64,LOGO',
+      contentId: 'cid-logo',
+      mimeType: 'image/png',
+      byteLength: 3,
+    });
+    (buildCampaignBrief as any).mockResolvedValue({
+      store: { name: 'Loja Teste', segment: 'outros' },
+      identity: {
+        directive:
+          'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      },
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16', productImages: NINE_SIXTEEN_IMAGES }));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    const resume = persistedSnapshot().resumeContext as {
+      identityDirective: string | null;
+    };
+    expect(resume.identityDirective).not.toContain(
+      'Use obrigatoriamente o logotipo oficial da loja',
+    );
+    expect(resume.identityDirective).toContain(
+      'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.',
+    );
   });
 
   it('flag OFF + 9:16 nova geração ⇒ 503 antes de campanha/reserva/provider', async () => {

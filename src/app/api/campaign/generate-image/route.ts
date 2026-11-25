@@ -1051,6 +1051,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
             newFlowEffectiveIdentitySnapshot.brandProfile?.typography_direction ??
             null,
           textOnlyInstitutionalIdentity: requestedFormat === "1:1",
+          // Quick 261125-i07 — opt-in EXPLÍCITO do 1:1 novo para a redação do
+          // logotipo oficial; joint e 9:16 isolado mantêm o texto anterior.
+          logoInstitutionalIdentity: requestedFormat === "1:1",
         });
         newFlowIdentityDirective = newFlowIdentityBlock.directive;
         newFlowIdentityContextFrozen = newFlowIdentityBlock.context;

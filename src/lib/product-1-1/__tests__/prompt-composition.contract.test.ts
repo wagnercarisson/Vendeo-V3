@@ -95,7 +95,7 @@ describe("Product 1:1 prompt composition contract", () => {
       tema: "48.2.4-tema-nenhum-v1",
       geral: GENERAL_INTEGRITY_POLICY_VERSION,
       fundo: "48.2.6-background-direction-v2",
-      identidade: "48.2.6-identity-context-v3",
+      identidade: "48.2.6-identity-context-v4",
     });
 
     for (const line of PRODUCT_1_1_GENERAL_INTEGRITY_LINES) {

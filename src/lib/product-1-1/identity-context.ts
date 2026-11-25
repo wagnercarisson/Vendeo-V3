@@ -37,9 +37,18 @@ import { isRecreatedBackgroundDirection } from "./background-direction";
  * a linha tipográfica é omitida. Joint 1:1+9:16, 9:16 isolado, legado, `logo`,
  * `visual_signature` e fallbacks preservam o comportamento anterior. Por isso as
  * regras de identidade avançam para `v3`.
+ *
+ * Quick 261125-i07 — SOMENTE no 1:1 novo com opt-in explícito
+ * (`logoInstitutionalIdentity === true`), estado declarado `logo`, ativo
+ * efetivamente disponível (validação + conversão para data URL) e nome não vazio,
+ * a instrução é SUBSTITUÍDA pela redação oficial do logotipo
+ * (`buildLogoInstruction`), com o nome interpolado e sem exigir o nome em texto
+ * separado nem direção tipográfica. `text_only`, `visual_signature`, logo sem
+ * arquivo, joint 1:1+9:16, 9:16 isolado, legado e Laboratório preservam o
+ * comportamento anterior. Por isso as regras de identidade avançam para `v4`.
  */
 export const PRODUCT_1_1_IDENTITY_CONTEXT_VERSION =
-  "48.2.6-identity-context-v3";
+  "48.2.6-identity-context-v4";
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
@@ -164,6 +173,13 @@ export interface BuildNewFlowIdentityInput {
    * comportamento anterior (joint, 9:16 isolado, legado e Laboratório).
    */
   readonly textOnlyInstitutionalIdentity?: boolean;
+  /**
+   * Quick 261125-i07 — opt-in EXPLÍCITO do 1:1 novo para a redação oficial do
+   * logotipo. Exige também estado `logo`, ativo disponível e nome não vazio.
+   * Omitido/`false` preserva o comportamento anterior (joint, 9:16 isolado,
+   * legado e Laboratório).
+   */
+  readonly logoInstitutionalIdentity?: boolean;
 }
 
 export interface NewFlowIdentityBlock {
@@ -220,6 +236,24 @@ export function buildTextOnlyInstruction(
 }
 
 /**
+ * Quick 261125-i07 — redação oficial aprovada do logotipo (1:1 `logo` com
+ * opt-in e arquivo efetivamente disponível). As QUATRO linhas formam um único
+ * bloco (`join("\n")`); somente o nome resolvido no servidor é interpolado, já
+ * entre aspas retas. Nome vazio ⇒ `""` (o chamador cai no fallback; nunca emitir
+ * nome vazio nem placeholder). Não menciona posição do anexo, filename ou hash.
+ */
+export function buildLogoInstruction(storeName: string): string {
+  const name = storeName.trim();
+  if (name.length === 0) return "";
+  return [
+    `Use obrigatoriamente o logotipo oficial da loja "${name}", fornecido como imagem de referência de identidade.`,
+    "Inclua o logotipo de forma legível, preservando seus elementos gráficos, cores, proporções e textos. Ajuste sua posição e escala para integrá-lo à composição, sem redesenhá-lo ou substituir seus elementos.",
+    "Títulos promocionais, mesmo contendo o nome da loja, não substituem esse logotipo.",
+    "Não invente nem acrescente outro logotipo ou assinatura.",
+  ].join("\n");
+}
+
+/**
  * Monta o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` do novo fluxo, na ordem:
  *
  *   1. regra de presença/ausência da identidade (logo/assinatura), reconciliada;
@@ -246,11 +280,21 @@ export function buildNewFlowIdentityBlock(
     input.textOnlyInstitutionalIdentity === true &&
     input.identityState === "text_only" &&
     context.storeName.length > 0;
+  // Quick 261125-i07 — substituição CONDICIONAL do logotipo oficial: exige
+  // opt-in explícito, estado DECLARADO `logo`, ativo efetivamente disponível e
+  // nome não vazio. Sem arquivo, o fallback anterior é preservado.
+  const useLogoInstruction =
+    input.logoInstitutionalIdentity === true &&
+    input.identityState === "logo" &&
+    input.hasIdentityAsset === true &&
+    context.storeName.length > 0;
   const signature = useVisualSignatureInstruction
     ? buildVisualSignatureInstruction(context.storeName)
     : useTextOnlyInstruction
       ? buildTextOnlyInstruction(context.storeName, input.typographyDirection)
-      : reconcileLegacyIdentityDirective(input.legacyDirective);
+      : useLogoInstruction
+        ? buildLogoInstruction(context.storeName)
+        : reconcileLegacyIdentityDirective(input.legacyDirective);
   const name = context.storeName ? ` "${context.storeName}"` : "";
 
   const parts: string[] = [];

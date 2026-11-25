@@ -6,6 +6,7 @@ import {
 } from "../background-direction";
 import {
   PRODUCT_1_1_IDENTITY_CONTEXT_VERSION,
+  buildLogoInstruction,
   buildNewFlowIdentityBlock,
   buildTextOnlyInstruction,
   buildVisualSignatureInstruction,
@@ -29,7 +30,7 @@ const LEGACY_TEXT_ONLY =
 describe("Product 1:1 identity context (quick 261017-cdi)", () => {
   it("expõe a versão fixada do contexto de identidade", () => {
     expect(PRODUCT_1_1_IDENTITY_CONTEXT_VERSION).toBe(
-      "48.2.6-identity-context-v3",
+      "48.2.6-identity-context-v4",
     );
   });
 
@@ -290,7 +291,7 @@ describe("Product 1:1 fingerprint determinism (identidade)", () => {
     referenceSelections: [] as const,
     baseVersion: "48.2.6-produto-1-1-v1",
     composerVersion: "48.2.4-prompt-composer-v7",
-    policyVersions: { identidade: "48.2.6-identity-context-v3" },
+    policyVersions: { identidade: "48.2.6-identity-context-v4" },
   };
 
   const briefingWith = (primary: string) =>
@@ -719,4 +720,231 @@ describe("Quick 261125-i06 — identificação institucional em texto no 1:1", (
       }
     },
   );
+});
+
+// ── Quick 261125-i07 — logotipo oficial no 1:1 ───────────────────────────────
+describe("Quick 261125-i07 — logotipo oficial no 1:1", () => {
+  const STORE_NAME = "Adega Mestre das Geladas";
+  const TYPOGRAPHY = "Serifada editorial elegante";
+  const PALETTE_PROFILE = {
+    brand_colors_chosen: ["#242422", "#AABBCC"],
+    safe_color_tokens: { primary: "#242422", accent: "#445566" },
+  };
+  const PALETTE_LINE = `Paleta da loja "${STORE_NAME}": cor principal #242422; cor de apoio #AABBCC.`;
+  // Montado por partes para que o placeholder não apareça literalmente no
+  // código-fonte (gate: `rg "\[nome da loja\]" src` sem ocorrências).
+  const PLACEHOLDER_TOKEN = `[${"nome da loja"}]`;
+  const OLD_LOGO_ASSET =
+    "Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.";
+  const OLD_LOGO_NO_ASSET = "Não inventar logotipo.";
+
+  function expectedInstruction(name = STORE_NAME): string {
+    return [
+      `Use obrigatoriamente o logotipo oficial da loja "${name}", fornecido como imagem de referência de identidade.`,
+      "Inclua o logotipo de forma legível, preservando seus elementos gráficos, cores, proporções e textos. Ajuste sua posição e escala para integrá-lo à composição, sem redesenhá-lo ou substituir seus elementos.",
+      "Títulos promocionais, mesmo contendo o nome da loja, não substituem esse logotipo.",
+      "Não invente nem acrescente outro logotipo ou assinatura.",
+    ].join("\n");
+  }
+
+  it("redação exata: quatro linhas com o nome interpolado, sem placeholder; nome vazio ⇒ vazio", () => {
+    const instruction = buildLogoInstruction(STORE_NAME);
+
+    expect(instruction).toBe(expectedInstruction());
+    expect(instruction).toContain('loja "Adega Mestre das Geladas",');
+    expect(instruction.split("\n")).toHaveLength(4);
+    expect(instruction).not.toContain(PLACEHOLDER_TOKEN);
+    expect(buildLogoInstruction("   ")).toBe("");
+    expect(instruction).not.toMatch(/data:image|Imagem \d|\.png|\.jpe?g|sha|hash/i);
+  });
+
+  it("logo + opt-in + arquivo + paleta em original ⇒ instrução + linha da paleta; sem a instrução antiga", () => {
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_LOGO_ASSET,
+      backgroundDirection: "original",
+      storeName: STORE_NAME,
+      storeBrandColor: "#242422",
+      brandProfile: PALETTE_PROFILE,
+      identityState: "logo",
+      hasIdentityAsset: true,
+      logoInstitutionalIdentity: true,
+    });
+
+    expect(block.directive).toBe(`${expectedInstruction()}\n${PALETTE_LINE}`);
+    expect(block.directive.split(expectedInstruction())).toHaveLength(2);
+    expect(block.directive).not.toContain(OLD_LOGO_ASSET);
+    expect(block.directive).not.toContain(
+      "Assinar a campanha com o logotipo da loja fornecido",
+    );
+  });
+
+  it("independe da paleta: sem paleta + original = exatamente 4 linhas; estúdio = + neutra", () => {
+    const base = {
+      legacyDirective: LEGACY_LOGO_ASSET,
+      storeName: STORE_NAME,
+      storeBrandColor: null,
+      brandProfile: null,
+      identityState: "logo" as const,
+      hasIdentityAsset: true,
+      logoInstitutionalIdentity: true,
+    };
+
+    const original = buildNewFlowIdentityBlock({
+      ...base,
+      backgroundDirection: "original",
+    });
+    expect(original.directive).toBe(expectedInstruction());
+
+    const studio = buildNewFlowIdentityBlock({
+      ...base,
+      backgroundDirection: "studio",
+    });
+    expect(studio.directive).toBe(
+      `${expectedInstruction()}\nSem paleta da loja definida, use cores neutras e discretas.`,
+    );
+    expect(studio.directive).not.toContain("Paleta da loja");
+  });
+
+  it("logo + opt-in + SEM arquivo ⇒ fallback anterior 'Não inventar logotipo.'", () => {
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_LOGO_NO_ASSET,
+      backgroundDirection: "original",
+      storeName: STORE_NAME,
+      storeBrandColor: null,
+      brandProfile: null,
+      identityState: "logo",
+      hasIdentityAsset: false,
+      logoInstitutionalIdentity: true,
+    });
+
+    expect(block.directive).toBe(OLD_LOGO_NO_ASSET);
+    expect(block.directive).not.toContain("Use obrigatoriamente o logotipo");
+  });
+
+  it("logo + arquivo + SEM opt-in ⇒ texto reconciliado anterior exato (fronteira joint/9:16)", () => {
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_LOGO_ASSET,
+      backgroundDirection: "original",
+      storeName: STORE_NAME,
+      storeBrandColor: null,
+      brandProfile: null,
+      identityState: "logo",
+      hasIdentityAsset: true,
+    });
+
+    expect(block.directive).toBe(OLD_LOGO_ASSET);
+    expect(block.directive).not.toContain("Use obrigatoriamente o logotipo");
+  });
+
+  it("modo logo não recebe direção tipográfica, mesmo com orientação preenchida", () => {
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_LOGO_ASSET,
+      backgroundDirection: "original",
+      storeName: STORE_NAME,
+      storeBrandColor: null,
+      brandProfile: null,
+      typographyDirection: TYPOGRAPHY,
+      identityState: "logo",
+      hasIdentityAsset: true,
+      logoInstitutionalIdentity: true,
+    });
+
+    expect(block.directive).toBe(expectedInstruction());
+    expect(block.directive).not.toContain("Direção tipográfica");
+    expect(block.directive).not.toContain(TYPOGRAPHY);
+  });
+
+  it("nome vazio + opt-in + arquivo ⇒ fallback anterior, sem placeholder nem instrução inválida", () => {
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_LOGO_ASSET,
+      backgroundDirection: "original",
+      storeName: "   ",
+      storeBrandColor: null,
+      brandProfile: null,
+      identityState: "logo",
+      hasIdentityAsset: true,
+      logoInstitutionalIdentity: true,
+    });
+
+    expect(block.directive).toBe(OLD_LOGO_ASSET);
+    expect(block.directive).not.toContain(PLACEHOLDER_TOKEN);
+    expect(block.directive).not.toContain('loja ""');
+  });
+
+  it("text_only e visual_signature preservam seus textos com os respectivos opt-ins", () => {
+    const textOnly = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_TEXT_ONLY,
+      backgroundDirection: "original",
+      storeName: STORE_NAME,
+      storeBrandColor: null,
+      brandProfile: null,
+      identityState: "text_only",
+      textOnlyInstitutionalIdentity: true,
+      logoInstitutionalIdentity: true,
+    });
+    expect(textOnly.directive).toContain(
+      `Inclua obrigatoriamente o nome da loja "${STORE_NAME}"`,
+    );
+    expect(textOnly.directive).not.toContain("Use obrigatoriamente o logotipo");
+
+    const signature = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_SIGNATURE_ASSET,
+      backgroundDirection: "original",
+      storeName: STORE_NAME,
+      storeBrandColor: null,
+      brandProfile: null,
+      identityState: "visual_signature",
+      hasIdentityAsset: true,
+      logoInstitutionalIdentity: true,
+    });
+    expect(signature.directive).toContain(
+      `Use obrigatoriamente a assinatura visual oficial da loja "${STORE_NAME}"`,
+    );
+    expect(signature.directive).not.toContain("Use obrigatoriamente o logotipo");
+  });
+
+  it("prompt final real: instrução uma única vez, nome interpolado, sem instrução antiga nem metadados", () => {
+    const instruction = expectedInstruction();
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_LOGO_ASSET,
+      backgroundDirection: "studio",
+      storeName: STORE_NAME,
+      storeBrandColor: "#242422",
+      brandProfile: PALETTE_PROFILE,
+      identityState: "logo",
+      hasIdentityAsset: true,
+      logoInstitutionalIdentity: true,
+    });
+    const composed = composeProductPrompt({
+      briefing: {
+        backgroundDirection: "studio",
+        product: { name: `${STORE_NAME} Combo Especial`, description: null },
+        commercial: {
+          intent: "offer",
+          originalPriceText: "R$ 9,99",
+          discountedPriceText: "R$ 7,49",
+          badge: "Oferta",
+          validity: "somente hoje",
+        },
+        constraints: { mandatoryArtworkText: null },
+      },
+      promptBase: PROMPT_BASE_CONTENT,
+      references: ["product.png"],
+      contributions: [
+        { block: PROMPT_BLOCK_LABELS.identity, lines: [block.directive] },
+      ],
+    });
+
+    expect(composed.text.split(instruction)).toHaveLength(2);
+    expect(composed.text).toContain(`loja "${STORE_NAME}"`);
+    expect(composed.text).toContain(PALETTE_LINE);
+    expect(composed.text).not.toContain(
+      "Assinar a campanha com o logotipo da loja fornecido",
+    );
+    expect(composed.text).not.toContain(PLACEHOLDER_TOKEN);
+    expect(composed.text).not.toContain("Direção tipográfica");
+    expect(composed.text).not.toMatch(/data:image|Imagem \d|\.png|sha|hash/i);
+    // A linha comum do modo logo permanece (textOnlyIdentity não é ativado).
+    expect(composed.text).toContain(PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION);
+  });
 });
