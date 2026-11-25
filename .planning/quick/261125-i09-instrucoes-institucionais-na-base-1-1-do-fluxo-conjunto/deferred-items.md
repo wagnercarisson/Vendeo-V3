@@ -3,11 +3,16 @@
 Itens deliberadamente não tratados nesta quick. Nenhum foi planejado nem
 iniciado.
 
-## 1. Aceite visual
+## 1. Aceite visual — cobertura restrita
 
-- **Estado:** pendente. Cabe ao usuário gerar manualmente uma campanha conjunta
-  e avaliar a identificação institucional nos resultados 1:1 e 9:16.
-- Testes de montagem e transporte não comprovam aderência visual da IA.
+- **Registrado:** geração conjunta aprovada pelo usuário em 2026-11-25.
+  - 1:1: `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25 (2).jpg`
+  - 9:16: `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25 (1).jpg`
+- **Cobertura:** somente essa geração com logotipo (“LOJA MEGA VALE”), distinta
+  do título promocional “Natal Mega Vale”, com detalhes textuais preservados.
+- **Não validado manualmente:** `text_only`, `visual_signature`, outras lojas e
+  todas as gerações. Fidelidade ao ativo não medida independentemente.
+- **Não implica** publicação nem aprovação para produção.
 
 ## 2. Orientação comum de contraste
 
@@ -24,6 +29,8 @@ iniciado.
   `AUTHORIZED_FRONTIER_CHANGES` não foi atualizada naquela entrega.
 - **Estado nesta quick:** não corrigido por estar fora do escopo. Permanece
   registrado nas quicks 261125-i05/i07/i08.
+- **Relação com o typecheck:** não é um erro de typecheck e não foi afetado pela
+  correção pontual dos 4 `TS18047` dos testes da i08.
 
 ## 4. Campanha conjunta persistida com diretiva anterior
 
@@ -32,3 +39,11 @@ iniciado.
   reenviada sem operação existente, pode retornar `409
   operation_identity_conflict`.
 - **Estado:** comportamento existente preservado; snapshots não são reescritos.
+
+## 5. Interação entre cenário e tema natalino — hipótese
+
+- **Observação:** as gerações ambientadas apresentaram maior elaboração temática
+  natalina que os exemplos em estúdio.
+- **Status:** hipótese sobre a interação cenário×tema; **não comprova causa
+  técnica**. Não investigado, e prompts de cenário/tema não foram alterados nesta
+  quick. Candidato a trabalho futuro separado.

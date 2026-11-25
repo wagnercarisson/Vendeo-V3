@@ -44,6 +44,9 @@ somente no `text_only` quando disponível.
   congelamento e referência de identidade.
 - `src/lib/product-1-1/__tests__/identity-context.contract.test.ts` — somente
   rótulos “fronteira joint” → “chamador sem opt-in”.
+- `src/app/api/campaign/generate-image/__tests__/route.test.ts` — correção
+  pontual de typecheck (ver retificação abaixo); nenhuma asserção de produção ou
+  contrato alterada.
 
 **Documentação:**
 
@@ -51,20 +54,63 @@ somente no `text_only` quando disponível.
 - `.planning/quick/261125-i09-.../PLAN.md`, `deferred-items.md`, `SUMMARY.md`
 - `.planning/STATE.md`
 
-## Gates
+## Cross-check de testes executados
 
-- **Testes focados:** 7 arquivos / **268 testes PASS**
-  (`handle-joint-generate`, `joint-boundaries`, `identity-context`,
-  `non-activation`, `base-step`, `prompt`, `route`).
+- **7 arquivos / 268 testes PASS** na verificação focada:
+  `handle-joint-generate`, `joint-boundaries`, `identity-context`,
+  `non-activation`, `base-step`, `prompt` e `route`.
+- **`route.test.ts` reexecutado após a correção:** **121 testes PASS**.
 - **Lint:** exit 0.
 - **Build:** exit 0.
 - **OpenSpec strict** (`product-1-1-prompt-composition`): válido.
 - **`git diff --check`:** limpo.
-- **Typecheck:** **falha preexistente** — 4 erros `TS18047` em
-  `src/app/api/campaign/generate-image/__tests__/route.test.ts` (linhas
-  3082/3084/3142/3239, testes da quick 261125-i08). Baseline no `HEAD`
-  (`60bfa6b4`) reproduz exatamente os mesmos 4 erros; **0 erros novos**. Não
-  corrigidos por estarem fora do escopo desta quick.
+
+## Retificação do typecheck
+
+Os 4 erros `TS18047` (`resume.identityDirective` possivelmente `null`) vinham dos
+testes da **quick 261125-i08**, não desta quick. O registro anterior da i08
+declarava typecheck aprovado; essa declaração foi **contradita pela verificação
+posterior** da i09. O baseline no `HEAD` (`60bfa6b4`, antes das alterações da
+i09) reproduziu exatamente os mesmos 4 erros.
+
+Correção autorizada nesta etapa, restrita a
+`src/app/api/campaign/generate-image/__tests__/route.test.ts`: narrowing
+explícito (`expect(typeof directive).toBe('string')` + guarda `typeof` que
+lança erro se ausente) antes das chamadas `split`, preservando a exigência de
+diretiva presente e as verificações de conteúdo/ocorrência única. Sem
+non-null assertion, coerção de tipo, supressão do TypeScript ou alteração de
+produção/contratos/outras asserções.
+
+**`npm run typecheck` reexecutado: exit 0.** Nenhum outro erro surgiu.
+
+## Aceite visual registrado
+
+O usuário aprovou visualmente a geração conjunta:
+
+- **1:1:** `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25 (2).jpg`
+- **9:16:** `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25 (1).jpg`
+
+Evidências observadas:
+
+- logotipo institucional “LOJA MEGA VALE” presente e legível em ambos;
+- identificação institucional distinta do título promocional “Natal Mega Vale”;
+- detalhes textuais preservados e legíveis;
+- resultado conjunto aprovado visualmente pelo usuário.
+
+Limites do aceite:
+
+- restrito a essa geração com logotipo;
+- não valida manualmente `text_only`, `visual_signature`, outras lojas ou todas
+  as gerações;
+- fidelidade ao ativo não foi medida independentemente;
+- não implica publicação nem aprovação para produção.
+
+## Observação para trabalho futuro
+
+As gerações **ambientadas** apresentaram maior elaboração temática natalina que
+os exemplos em **estúdio**. Isso reforça uma hipótese sobre a interação entre
+cenário e tema; **não comprova a causa técnica**. Não investigado e não são
+alterados prompts de cenário/tema nesta quick.
 
 ## Limites e pendências
 
@@ -74,8 +120,7 @@ somente no `text_only` quando disponível.
 - Campanha conjunta persistida com diretiva anterior, reenviada sem operação
   existente, pode retornar `409 operation_identity_conflict`; snapshots não são
   reescritos.
-- **Aceite visual pendente:** o usuário fará uma geração conjunta e avaliará a
-  identificação institucional nos resultados 1:1 e 9:16. Testes de montagem e
-  transporte não comprovam aderência visual da IA.
-- Sem push, merge, deploy, migrations, banco/Storage ou chamadas pagas de IA.
-  `.f62-check/` preservada.
+- Demais cenários (`text_only`, `visual_signature`, outras lojas e todas as
+  gerações) permanecem **sem validação manual** nesta quick.
+- **Implementação local apenas.** Sem push, merge, deploy, migrations,
+  banco/Storage ou chamadas pagas de IA. `.f62-check/` preservada.

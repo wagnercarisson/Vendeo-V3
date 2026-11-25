@@ -2,7 +2,7 @@
 quick_id: 261125-i09
 title: Instruções institucionais aprovadas na base 1:1 do fluxo conjunto 1:1+9:16
 date: 2026-11-25
-status: approved
+status: completed
 entrypoint: /gsd-quick
 scope: product-1-1-prompt-composition
 plan_type: execute
@@ -20,6 +20,7 @@ files_modified:
   - src/app/api/campaign/generate-image/route.ts
   - src/lib/product-two-format/orchestration/__tests__/handle-joint-generate.contract.test.ts
   - src/lib/product-1-1/__tests__/identity-context.contract.test.ts
+  - src/app/api/campaign/generate-image/__tests__/route.test.ts
   - openspec/specs/product-1-1-prompt-composition/spec.md
 ---
 
@@ -106,3 +107,28 @@ Não há alteração do mecanismo de transporte e congelamento de `identityDirec
 Testes focados, `typecheck`, `lint`, `build`, OpenSpec strict da spec afetada e
 `git diff --check`. Falhas preexistentes são separadas. `.f62-check/` preservada.
 Sem push, merge, deploy, migrations, banco/Storage ou chamadas pagas de IA.
+
+## Encerramento local (2026-11-25)
+
+- **Implementação local concluída** em `7ec6b868` (código e testes) e
+  `dcdae5a0` (spec, plano e resumo). Sem publicação.
+- **Correção pontual de typecheck autorizada** em `route.test.ts`: os 4 erros
+  `TS18047` vinham dos testes da quick 261125-i08; o registro anterior de
+  typecheck aprovado foi contradito pela verificação posterior da i09. Narrowing
+  explícito antes de `split`, sem non-null assertion/coerção/supressão.
+  `npm run typecheck` reexecutado: **exit 0**. `route.test.ts`: **121 testes
+  PASS**.
+- **Aceite visual registrado (restrito):** geração conjunta aprovada pelo
+  usuário — 1:1 `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25 (2).jpg`
+  e 9:16 `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25 (1).jpg`.
+  Logotipo “LOJA MEGA VALE” presente e legível em ambos, distinto do título
+  promocional “Natal Mega Vale”; detalhes textuais preservados e legíveis.
+- **Escopo do aceite:** somente essa geração com logotipo. Não valida
+  `text_only`, `visual_signature`, outras lojas ou todas as gerações; fidelidade
+  ao ativo não medida independentemente; não implica publicação ou aprovação para
+  produção.
+- **Observação futura:** gerações ambientadas apresentaram maior elaboração
+  temática natalina que exemplos em estúdio; hipótese sobre interação
+  cenário×tema, sem comprovação de causa. Não investigado nesta quick.
+- **Sem push, merge, deploy, migrations, banco/Storage ou IA paga.**
+  `.f62-check/` preservada.
