@@ -56,11 +56,11 @@ A composição SHALL transportar a **paleta canônica resolvida** da loja **uma 
 
 Nos fundos **recriados** (estúdio/ambientado), o fundo SHALL priorizar a paleta da loja e garantir contraste/separação visual do produto; SHALL ser emitida **uma única vez** uma orientação comum de contraste. A direção `original` SHALL permanecer sem imposição de paleta.
 
-Quando o estado de identidade é `visual_signature` **e** o ativo está efetivamente disponível após validação/conversão para `data URL`, o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` SHALL **substituir** a instrução de identidade pela redação oficial aprovada, com o nome da loja resolvido no servidor interpolado (sem placeholder), emitida **uma única vez**, sem manter a instrução antiga nem "Não adicionar logotipo.", preservando a paleta e as demais instruções. Títulos promocionais que contenham o nome da loja SHALL NOT substituir a assinatura. Para `logo` **sem** arquivo disponível e assinatura **sem** arquivo disponível, o texto reconciliado atual SHALL ser preservado. A versão das regras de identidade SHALL avançar de forma coerente (`48.2.6-identity-context-v4`) e permanecer registrada em `policyVersions.identidade`.
+Quando o estado de identidade é `visual_signature` **e** o ativo está efetivamente disponível após validação/conversão para `data URL`, no 1:1 novo, no 9:16 isolado e na montagem inicial conjunta 1:1+9:16, o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` SHALL **substituir** a instrução de identidade pela redação oficial aprovada, com o nome da loja resolvido no servidor interpolado (sem placeholder), emitida **uma única vez**, sem manter a instrução antiga nem "Não adicionar logotipo.", preservando a paleta e as demais instruções. Títulos promocionais que contenham o nome da loja SHALL NOT substituir a assinatura. Para `logo` **sem** arquivo disponível e assinatura **sem** arquivo disponível, o texto reconciliado atual SHALL ser preservado. A versão das regras de identidade SHALL avançar de forma coerente (`48.2.6-identity-context-v4`) e permanecer registrada em `policyVersions.identidade`.
 
-No 1:1 novo e no 9:16 isolado, quando o estado é `text_only`, o nome da loja está resolvido (não vazio) e o opt-in do fluxo está ativo (`textOnlyInstitutionalIdentity === true`), o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` SHALL **substituir** a instrução de identidade pela redação oficial de identificação institucional em texto, com o nome interpolado no servidor (sem placeholder) e emitida **uma única vez**. A redação SHALL exigir o nome como identificação institucional legível, SHALL declarar que títulos promocionais — mesmo contendo o nome da loja — não substituem essa identificação e SHALL proibir inventar ou acrescentar logotipo, símbolo de marca ou assinatura gráfica para identificar a loja. Quando houver `typography_direction` persistido não vazio no perfil sincronizado selecionado, a orientação SHALL ser transportada **verbatim** (apenas `trim` e pontuação final idempotente; sem tradução, inferência ou fonte genérica) em linha própria; orientação ausente, vazia ou só com espaços SHALL omitir a linha tipográfica sem remover a exigência do nome. A instrução independe da paleta e SHALL NOT ser aplicada ao joint 1:1+9:16, ao legado, ao Laboratório, a `logo`/`visual_signature` nem a assinatura sem arquivo disponível.
+No 1:1 novo, no 9:16 isolado e na montagem inicial conjunta 1:1+9:16, quando o estado é `text_only`, o nome da loja está resolvido (não vazio) e o opt-in do caminho está ativo (`textOnlyInstitutionalIdentity === true`), o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` SHALL **substituir** a instrução de identidade pela redação oficial de identificação institucional em texto, com o nome interpolado no servidor (sem placeholder) e emitida **uma única vez**. A redação SHALL exigir o nome como identificação institucional legível, SHALL declarar que títulos promocionais — mesmo contendo o nome da loja — não substituem essa identificação e SHALL proibir inventar ou acrescentar logotipo, símbolo de marca ou assinatura gráfica para identificar a loja. Quando houver `typography_direction` persistido não vazio no perfil sincronizado selecionado, a orientação SHALL ser transportada **verbatim** (apenas `trim` e pontuação final idempotente; sem tradução, inferência ou fonte genérica) em linha própria; orientação ausente, vazia ou só com espaços SHALL omitir a linha tipográfica sem remover a exigência do nome. A instrução independe da paleta e SHALL NOT ser aplicada ao legado, ao Laboratório, a `logo`/`visual_signature` nem a assinatura sem arquivo disponível.
 
-No 1:1 novo e no 9:16 isolado, quando o estado é `logo`, o nome da loja está resolvido (não vazio), o ativo está efetivamente disponível após validação/conversão para `data URL` e o opt-in do fluxo está ativo (`logoInstitutionalIdentity === true`), o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` SHALL **substituir** a instrução de identidade pela redação oficial do logotipo, com o nome interpolado no servidor (sem placeholder) e emitida **uma única vez**, sem manter a instrução antiga. A redação SHALL exigir o uso do logotipo oficial fornecido como imagem de referência de identidade, legível e com preservação de seus elementos gráficos, cores, proporções e textos, ajustando posição e escala para integrá-lo à composição, sem redesenhá-lo ou substituir seus elementos; SHALL declarar que títulos promocionais — mesmo contendo o nome da loja — não substituem esse logotipo; e SHALL proibir inventar ou acrescentar outro logotipo ou assinatura. A instrução independe da paleta, SHALL NOT exigir o nome da loja também em texto separado, SHALL NOT acrescentar direção tipográfica ao modo `logo` e SHALL NOT ser aplicada ao joint 1:1+9:16, ao legado, ao Laboratório, a `text_only`/`visual_signature` nem a `logo` sem arquivo disponível.
+No 1:1 novo, no 9:16 isolado e na montagem inicial conjunta 1:1+9:16, quando o estado é `logo`, o nome da loja está resolvido (não vazio), o ativo está efetivamente disponível após validação/conversão para `data URL` e o opt-in do caminho está ativo (`logoInstitutionalIdentity === true`), o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` SHALL **substituir** a instrução de identidade pela redação oficial do logotipo, com o nome interpolado no servidor (sem placeholder) e emitida **uma única vez**, sem manter a instrução antiga. A redação SHALL exigir o uso do logotipo oficial fornecido como imagem de referência de identidade, legível e com preservação de seus elementos gráficos, cores, proporções e textos, ajustando posição e escala para integrá-lo à composição, sem redesenhá-lo ou substituir seus elementos; SHALL declarar que títulos promocionais — mesmo contendo o nome da loja — não substituem esse logotipo; e SHALL proibir inventar ou acrescentar outro logotipo ou assinatura. A instrução independe da paleta, SHALL NOT exigir o nome da loja também em texto separado, SHALL NOT acrescentar direção tipográfica ao modo `logo` e SHALL NOT ser aplicada ao legado, ao Laboratório, a `text_only`/`visual_signature` nem a `logo` sem arquivo disponível.
 
 #### Scenario: Paleta uma única vez, com precedência
 
@@ -113,9 +113,9 @@ No 1:1 novo e no 9:16 isolado, quando o estado é `logo`, o nome da loja está r
 - **THEN** a instrução do logotipo é a mesma
 - **AND** a linha da paleta, quando existir, e a orientação neutra seguem a regra existente
 
-#### Scenario: Logotipo no joint, legado ou Laboratório ⇒ comportamento preservado
+#### Scenario: Logotipo no legado ou Laboratório ⇒ comportamento preservado
 
-- **WHEN** o estado é `logo` com arquivo em joint 1:1+9:16, legado ou Laboratório
+- **WHEN** o estado é `logo` com arquivo em legado ou Laboratório
 - **THEN** a instrução oficial do logotipo não é emitida
 - **AND** o texto reconciliado anterior permanece
 
@@ -165,7 +165,7 @@ No 1:1 novo e no 9:16 isolado, quando o estado é `logo`, o nome da loja está r
 
 #### Scenario: Formatos, estados e legado preservados
 
-- **WHEN** a geração é joint 1:1+9:16, legado, Laboratório, `text_only` fora do opt-in dos fluxos 1:1 e 9:16 isolado, `visual_signature` ou assinatura sem arquivo
+- **WHEN** a geração é legado, Laboratório, um chamador sem opt-in dos fluxos 1:1, 9:16 isolado e joint, `visual_signature` ou assinatura sem arquivo
 - **THEN** a instrução de identificação institucional em texto não é aplicada
 - **AND** o comportamento anterior é preservado
 
@@ -175,6 +175,14 @@ No 1:1 novo e no 9:16 isolado, quando o estado é `logo`, o nome da loja está r
 - **THEN** a base 1:1 SHALL receber a mesma redação aprovada do 1:1 isolado, uma única vez
 - **AND** a `typography_direction`, quando aplicável ao modo `text_only`, SHALL ser transportada verbatim
 - **AND** a expansão vertical e as etapas posteriores SHALL permanecer inalteradas
+
+#### Scenario: Montagem inicial conjunta recebe as instruções institucionais
+
+- **WHEN** a montagem inicial conjunta 1:1+9:16 está em `visual_signature`, `text_only` ou `logo`, com nome resolvido, opt-in do caminho conjunto e, em `logo`/`visual_signature`, ativo disponível após validação/conversão
+- **THEN** a base 1:1 SHALL receber a mesma redação aprovada do 1:1 isolado, uma única vez
+- **AND** a `typography_direction`, quando aplicável ao modo `text_only`, SHALL ser transportada verbatim, e SHALL NOT ser acrescentada aos modos `logo` e `visual_signature`
+- **AND** `logo` ou `visual_signature` sem ativo disponível SHALL preservar o fallback reconciliado anterior, sem se converterem em `text_only`
+- **AND** o congelamento, a expansão vertical e as etapas posteriores SHALL permanecer inalterados
 
 ### Requirement: Separação entre referências de produto e imagem de identidade
 
