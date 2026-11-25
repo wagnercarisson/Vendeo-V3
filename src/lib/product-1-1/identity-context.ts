@@ -209,7 +209,7 @@ export function buildTextOnlyInstruction(
   const lines = [
     `Inclua obrigatoriamente o nome da loja "${name}" como identificação institucional, em texto legível.`,
     "Títulos promocionais, mesmo contendo o nome da loja, não substituem essa identificação.",
-    "Não invente nem acrescente logotipo, símbolo ou assinatura gráfica.",
+    "Não invente nem acrescente logotipo, símbolo de marca ou assinatura gráfica para identificar a loja.",
   ];
   const typography = typographyDirection?.trim() ?? "";
   if (typography.length > 0) {

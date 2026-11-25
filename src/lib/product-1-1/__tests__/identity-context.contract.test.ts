@@ -486,7 +486,7 @@ describe("Quick 261125-i06 — identificação institucional em texto no 1:1", (
     const lines = [
       `Inclua obrigatoriamente o nome da loja "${STORE_NAME}" como identificação institucional, em texto legível.`,
       "Títulos promocionais, mesmo contendo o nome da loja, não substituem essa identificação.",
-      "Não invente nem acrescente logotipo, símbolo ou assinatura gráfica.",
+      "Não invente nem acrescente logotipo, símbolo de marca ou assinatura gráfica para identificar a loja.",
     ];
     if (typography) lines.push(`Direção tipográfica da loja: ${typography}`);
     return lines.join("\n");
