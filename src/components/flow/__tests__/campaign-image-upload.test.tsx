@@ -116,6 +116,51 @@ describe("CampaignImageUpload — preview sem recorte (Q1Y)", () => {
   });
 });
 
+describe("CampaignImageUpload — teto de arquivos da campanha (261125-eo7)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("URL.createObjectURL", vi.fn(() => "blob:mock"));
+    vi.stubGlobal("URL.revokeObjectURL", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("no teto (2 imagens): Galeria e Câmera desabilitados + mensagem 'Máximo de 2 imagens'", () => {
+    const img1 = createItem({ id: "img-1", role: "primary", source: "upload" });
+    const img2 = createItem({ id: "img-2", role: "reference", source: "camera" });
+    render(
+      <CampaignImageUpload
+        productImages={[img1, img2]}
+        error={null}
+        onAdd={vi.fn()}
+        onRemove={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Galeria" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Câmera" })).toBeDisabled();
+    expect(screen.getByText("Máximo de 2 imagens")).toBeInTheDocument();
+  });
+
+  it("abaixo do teto (1 imagem): Galeria e Câmera habilitados + sem mensagem de teto", () => {
+    const img1 = createItem({ id: "img-1", role: "primary", source: "upload" });
+    render(
+      <CampaignImageUpload
+        productImages={[img1]}
+        error={null}
+        onAdd={vi.fn()}
+        onRemove={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Galeria" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Câmera" })).toBeEnabled();
+    expect(screen.queryByText(/Máximo de \d+ imagens/)).not.toBeInTheDocument();
+  });
+});
+
 describe("CampaignImageUpload — contrato preservado (Q1Y)", () => {
   it("smoke: estado vazio + erro renderizam com contrato de props inalterado", () => {
     render(

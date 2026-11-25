@@ -156,6 +156,17 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
     expect(screen.getByText("Informe uma data válida (dd/mm/aaaa)")).toBeInTheDocument();
   });
 
+  it("261125-eo7: exibe o texto de orientação estático de 1 imagem de apoio sob 'Imagens adicionais'", () => {
+    render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
+
+    expect(screen.getByText("Imagens adicionais")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Opcional — Uma imagem de apoio (ângulos, variações, combos), como fonte auxiliar para a imagem principal.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("F59/D-03: flag OFF mantém o seletor visível com 9:16 desabilitado", () => {
     render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
     expect(

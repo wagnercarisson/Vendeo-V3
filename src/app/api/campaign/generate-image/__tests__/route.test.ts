@@ -78,7 +78,7 @@ vi.mock('@/lib/image-generation/config', () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
   MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE: 2 * 1024 * 1024,
-  MAX_CAMPAIGN_IMAGES: 4,
+  MAX_CAMPAIGN_IMAGES: 2,
 }));
 
 const { mockGetCost, MockOperationCostUnavailableError } = vi.hoisted(() => {
@@ -360,7 +360,6 @@ const VALID_PRODUCT_IMAGES_REQUEST = {
   productImages: [
     { role: 'primary', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
     { role: 'reference', source: 'upload', mimeType: 'image/png', dataUrl: 'data:image/png;base64,aux1' },
-    { role: 'reference', source: 'upload', mimeType: 'image/webp', dataUrl: 'data:image/webp;base64,aux2' },
   ],
 };
 
@@ -548,19 +547,19 @@ describe('POST /api/campaign/generate-image', () => {
 
   it('24b (F41): soma dos dataUrls > teto agregado → 413 PT-BR indicando o total (D10)', async () => {
     const { POST } = await import('../route');
-    // 3 itens de ~1MB cada → soma ~3MB > teto agregado mockado (2MB)
+    // 2 itens de ~1MB+1KB cada → soma ~2MB > teto agregado mockado (2MB),
+    // ambos ainda abaixo do limite por item (5MB)
     const item = (role: string, base: string) => ({
       role,
       source: 'upload' as const,
       mimeType: 'image/jpeg',
-      dataUrl: 'data:image/jpeg;base64,' + base.repeat(1024 * 1024),
+      dataUrl: 'data:image/jpeg;base64,' + base.repeat(1024 * 1024 + 1024),
     });
     const req = makeRequest({
       ...VALID_PRODUCT_IMAGES_REQUEST,
       productImages: [
         item('primary', 'a'),
         item('reference', 'b'),
-        item('reference', 'c'),
       ],
     });
     const res = await POST(req);
@@ -571,17 +570,46 @@ describe('POST /api/campaign/generate-image', () => {
 
   it('24c (F41): mais de MAX_CAMPAIGN_IMAGES itens → 400 do schema (cap do transporte D10)', async () => {
     const { POST } = await import('../route');
-    const images = [
-      { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,p' },
-    ];
-    for (let i = 0; i < 4; i++) {
-      images.push({ role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: `data:image/jpeg;base64,r${i}` });
-    }
-    const req = makeRequest({ ...VALID_PRODUCT_IMAGES_REQUEST, productImages: images });
+    // 3 itens (1 primary + 2 reference) excedem o teto de 2 arquivos
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,p' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,r0' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,r1' },
+      ],
+    });
     const res = await POST(req);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error.message).toContain('Dados de entrada inválidos');
+  });
+
+  it('24d (261125-eo7): exatamente 1 arquivo primary → 200 e 1 upload de input', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        { role: 'primary', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+      ],
+    });
+    const res = await POST(req);
+    await res.text();
+
+    expect(res.status).toBe(200);
+    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('24e (261125-eo7): 2 arquivos (1 primary + 1 reference) → 200 e 2 uploads de input', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest(VALID_PRODUCT_IMAGES_REQUEST);
+    const res = await POST(req);
+    await res.text();
+
+    expect(res.status).toBe(200);
+    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(2);
   });
 
   it('25 (F41): upload de inputs pré-snapshot com campaignId/imageId gerados pela rota + storagePath no snapshot (D5)', async () => {
@@ -591,8 +619,8 @@ describe('POST /api/campaign/generate-image', () => {
     const res = await POST(req);
     await res.text();
 
-    // 3 uploads de input (primary + 2 auxiliares) com ids da ROTA (uuid)
-    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(3);
+    // 2 uploads de input (primary + 1 auxiliar) com ids da ROTA (uuid)
+    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(2);
     const uploadCalls = (uploadCampaignInputImage as any).mock.calls;
     for (const call of uploadCalls) {
       expect(call[0]).toBe(STORE_ID);

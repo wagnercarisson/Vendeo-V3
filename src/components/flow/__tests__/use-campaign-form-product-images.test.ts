@@ -60,6 +60,8 @@ afterEach(() => {
 
 describe("useCampaignForm productImages (F41)", () => {
   it("9: primary obrigatória; auxiliares opcionais até MAX_CAMPAIGN_IMAGES - 1", async () => {
+    // 261125-eo7: teto de arquivos da campanha = 2 (1 principal + 1 auxiliar)
+    expect(MAX_CAMPAIGN_IMAGES).toBe(2);
     const { result } = renderHook(() => useCampaignForm("store-1"));
 
     // completa campos obrigatórios (isValid depende deles também)
@@ -98,6 +100,26 @@ describe("useCampaignForm productImages (F41)", () => {
     const roles = result.current.fields.productImages.map((i) => i.role);
     expect(roles[0]).toBe("primary");
     expect(roles.slice(1).every((r) => r === "reference")).toBe(true);
+  });
+
+  it("9b (261125-eo7): seleção múltipla de 3 arquivos em um único act → só 2 entram (cap por lote)", async () => {
+    const { result } = renderHook(() => useCampaignForm("store-1"));
+
+    await act(async () => {
+      result.current.setField("productName", "Produto Teste");
+      result.current.setField("discountedPriceCents", 1990);
+      result.current.setField("badge", "Oferta");
+      // simula o lote da galeria: 3 arquivos disparados juntos
+      result.current.addImage(pngFile(10), "upload");
+      result.current.addImage(pngFile(10), "upload");
+      result.current.addImage(pngFile(10), "upload");
+    });
+
+    expect(result.current.fields.productImages).toHaveLength(2);
+    expect(result.current.fields.productImages.map((i) => i.role)).toEqual([
+      "primary",
+      "reference",
+    ]);
   });
 
   it("10: remover a única primary → validação de obrigatoriedade volta a falhar", async () => {
@@ -220,12 +242,11 @@ describe("useCampaignForm productImages (F41)", () => {
       result.current.setField("badge", "Oferta");
     });
 
-    // Caso 1: primary + 2 auxiliares (com dataUrl) → body.productImages (sem id)
+    // Caso 1: primary + 1 auxiliar (com dataUrl) → body.productImages (sem id)
     await act(async () => {
       result.current.setField("productImages", [
         { id: "a", role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
-        { id: "b", role: "reference", source: "upload", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
-        { id: "c", role: "reference", source: "camera", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
+        { id: "b", role: "reference", source: "camera", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
       ]);
     });
 
@@ -240,12 +261,11 @@ describe("useCampaignForm productImages (F41)", () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalled());
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.productImages).toHaveLength(3);
+    expect(body.productImages).toHaveLength(2);
     expect(body.productImages[0].role).toBe("primary");
     expect(body.productImages[1].role).toBe("reference");
-    expect(body.productImages[2].role).toBe("reference");
     expect(body.productImages[0].source).toBe("upload");
-    expect(body.productImages[2].source).toBe("camera");
+    expect(body.productImages[1].source).toBe("camera");
     for (const item of body.productImages) {
       expect(item).not.toHaveProperty("id");
     }
