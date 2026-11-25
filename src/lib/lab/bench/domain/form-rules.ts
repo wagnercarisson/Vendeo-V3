@@ -1,6 +1,5 @@
 import { BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
-import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { formatCurrencyBRL, parseCurrencyBRL } from "@/lib/formatters";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { availableIntents as resolveAvailableIntents, inferIntent as resolveIntent } from "./intent-options";
@@ -17,9 +16,15 @@ import { availableIntents as resolveAvailableIntents, inferIntent as resolveInte
  *   (normalização monetária por dígitos→centavos e formatação BRL).
  * - `BADGE_OPTIONS_BY_INTENT` de `@/lib/constants` (selo por intenção).
  * - `ILLUSTRATIVE_NOTICE_TEXT` de `@/lib/campaign/constants` (aviso ilustrativo).
- * - `MAX_CAMPAIGN_IMAGES` de `@/lib/image-generation/config`
- *   (1 imagem principal + até 3 adicionais).
  * - tipo `CampaignIntent` de `@/lib/campaign/types`.
+ *
+ * ## Limite de imagens — exceção explícita de paridade
+ * O formulário produtivo passou a aceitar **2 arquivos** (1 principal + 1
+ * auxiliar) na quick `261125-eo7`. A bancada **mantém 4 arquivos no total**
+ * (1 principal + 3 adicionais), configurados localmente neste módulo e
+ * independentes da constante de limite do formulário produtivo. A paridade de
+ * campos continua; a de limite de imagens é uma exceção deliberada para não
+ * alterar telas, APIs ou a execução experimental da bancada.
  *
  * ## Replicação (cópia fiel com teste explícito de paridade)
  * Os helpers puros do formulário vivem dentro do hook cliente
@@ -48,11 +53,16 @@ export const MANDATORY_ARTWORK_MAX = 200;
 /** Teto de tamanho por imagem (produtivo: 5MB). */
 export const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
-/** Máximo de imagens do produto (1 principal + 3 adicionais). */
-export const MAX_PRODUCT_IMAGES = MAX_CAMPAIGN_IMAGES;
+/**
+ * Máximo de imagens do produto na bancada (1 principal + 3 adicionais).
+ *
+ * Exceção explícita de independência: a bancada mantém 4 arquivos mesmo com o
+ * formulário produtivo limitado a 2 desde a quick `261125-eo7`.
+ */
+export const MAX_PRODUCT_IMAGES = 4;
 
-/** Máximo de imagens adicionais (referências). */
-export const MAX_ADDITIONAL_IMAGES = MAX_CAMPAIGN_IMAGES - 1;
+/** Máximo de imagens adicionais (referências) na bancada. */
+export const MAX_ADDITIONAL_IMAGES = MAX_PRODUCT_IMAGES - 1;
 
 /** Tipos MIME aceitos pelo produtivo (mesma ordem/valores). */
 export const PRODUCT_IMAGE_TYPES = [

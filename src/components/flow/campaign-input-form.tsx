@@ -12,7 +12,6 @@ import { CampaignFormatSelector, CampaignFormatSummary } from "./campaign-format
 import { GenerationStatusPanel } from "./generation-status-panel";
 import styles from "./campaign-header.module.css";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
-import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
 import { IllustrativeNoticeField } from "@/components/campaign/illustrative-notice-field";
 import { ValidityField } from "@/components/campaign/validity-field";
@@ -791,7 +790,7 @@ function FormContent({
         </h3>
       </div>
       <p className="text-text-muted text-xs font-body mb-3">
-        Opcional — até {MAX_CAMPAIGN_IMAGES - 1} imagens de apoio (ângulos, variações, combos). A primeira imagem é a principal.
+        Opcional — Uma imagem de apoio (ângulos, variações, combos), como fonte auxiliar para a imagem principal.
       </p>
 
       <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
