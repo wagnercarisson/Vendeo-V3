@@ -24,7 +24,7 @@ const LEGACY_TEXT_ONLY =
 describe("Product 1:1 identity context (quick 261017-cdi)", () => {
   it("expõe a versão fixada do contexto de identidade", () => {
     expect(PRODUCT_1_1_IDENTITY_CONTEXT_VERSION).toBe(
-      "48.2.6-identity-context-v1",
+      "48.2.6-identity-context-v2",
     );
   });
 
@@ -285,7 +285,7 @@ describe("Product 1:1 fingerprint determinism (identidade)", () => {
     referenceSelections: [] as const,
     baseVersion: "48.2.6-produto-1-1-v1",
     composerVersion: "48.2.4-prompt-composer-v7",
-    policyVersions: { identidade: "48.2.6-identity-context-v1" },
+    policyVersions: { identidade: "48.2.6-identity-context-v2" },
   };
 
   const briefingWith = (primary: string) =>

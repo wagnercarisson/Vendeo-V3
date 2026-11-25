@@ -162,7 +162,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       tema: "48.2.4-tema-nenhum-v1",
       geral: "48.2.5-general-integrity-v1",
       fundo: "48.2.6-background-direction-v2",
-      identidade: "48.2.6-identity-context-v1",
+      identidade: "48.2.6-identity-context-v2",
       safeArea: SAFE_AREA_9_16_TOP_BOTTOM_VERSION,
     });
     expect(Object.keys(versions)).toHaveLength(9);

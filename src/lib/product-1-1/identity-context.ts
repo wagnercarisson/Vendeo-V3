@@ -18,9 +18,19 @@ import { isRecreatedBackgroundDirection } from "./background-direction";
  * A orientação **neutra** (sem paleta resolvida) é emitida SOMENTE para fundos
  * RECRIADOS (estúdio/ambientado): em `original`, ela poderia contrariar a
  * preservação do cenário.
+ *
+ * Quick 261125-i05 — quando o estado é `visual_signature` E o ativo de
+ * identidade está efetivamente disponível (validação + conversão para data URL
+ * concluídas) E há nome de loja, a instrução de presença é SUBSTITUÍDA pela
+ * redação oficial aprovada (`buildVisualSignatureInstruction`), com o nome
+ * resolvido no servidor interpolado. A instrução antiga (e "Não adicionar
+ * logotipo.") não é mantida nesse caso. `text_only`, `logo`, assinatura sem
+ * arquivo e nome vazio preservam o texto reconciliado anterior. Por isso as
+ * regras de identidade avançam para `v2`; compositor, prompt-base e o texto das
+ * 9 combinações permanecem idênticos.
  */
 export const PRODUCT_1_1_IDENTITY_CONTEXT_VERSION =
-  "48.2.6-identity-context-v1";
+  "48.2.6-identity-context-v2";
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
@@ -119,6 +129,16 @@ export interface BuildNewFlowIdentityInput {
   readonly storeName: string;
   readonly storeBrandColor: string | null | undefined;
   readonly brandProfile: ProductOneToOneBrandProfileLike | null | undefined;
+  /**
+   * Quick 261125-i05 — estado de identidade EFETIVO do novo fluxo. Omitido ⇒
+   * comportamento anterior (texto reconciliado do `legacyDirective`).
+   */
+  readonly identityState?: "text_only" | "logo" | "visual_signature" | null;
+  /**
+   * Quick 261125-i05 — `true` SOMENTE quando o ativo de identidade foi
+   * efetivamente validado e convertido para `data URL` (prova de disponibilidade).
+   */
+  readonly hasIdentityAsset?: boolean;
 }
 
 export interface NewFlowIdentityBlock {
@@ -126,6 +146,24 @@ export interface NewFlowIdentityBlock {
   readonly directive: string;
   /** Dados estruturados da identidade (congelados na evidência/fingerprint). */
   readonly context: ProductOneToOneIdentityContext;
+}
+
+/**
+ * Quick 261125-i05 — redação oficial aprovada da instrução de assinatura visual
+ * (modo `visual_signature` com arquivo efetivamente disponível). As QUATRO
+ * linhas formam um único bloco (`join("\n")`); somente o nome resolvido no
+ * servidor é interpolado, já entre aspas. Nome vazio ⇒ `""` (o chamador cai no
+ * fallback; nunca emitir nome vazio nem placeholder).
+ */
+export function buildVisualSignatureInstruction(storeName: string): string {
+  const name = storeName.trim();
+  if (name.length === 0) return "";
+  return [
+    `Use obrigatoriamente a assinatura visual oficial da loja "${name}", fornecida como imagem de referência de identidade.`,
+    "Inclua a assinatura de forma legível, preservando seus elementos gráficos, cores, proporções e textos. Ajuste sua posição e escala para integrá-la à composição, sem redesenhá-la ou substituir seus elementos.",
+    "Títulos promocionais, mesmo contendo o nome da loja, não substituem essa assinatura.",
+    "Não invente nem acrescente outro logotipo ou assinatura.",
+  ].join("\n");
 }
 
 /**
@@ -141,7 +179,16 @@ export function buildNewFlowIdentityBlock(
   input: BuildNewFlowIdentityInput,
 ): NewFlowIdentityBlock {
   const context = resolveProductOneToOneIdentityContext(input);
-  const signature = reconcileLegacyIdentityDirective(input.legacyDirective);
+  // Quick 261125-i05 — substituição CONDICIONAL: só em `visual_signature` com
+  // ativo efetivamente disponível e nome não vazio. Os demais estados mantêm o
+  // texto reconciliado; a instrução antiga nunca é concatenada à nova.
+  const useVisualSignatureInstruction =
+    input.identityState === "visual_signature" &&
+    input.hasIdentityAsset === true &&
+    context.storeName.length > 0;
+  const signature = useVisualSignatureInstruction
+    ? buildVisualSignatureInstruction(context.storeName)
+    : reconcileLegacyIdentityDirective(input.legacyDirective);
   const name = context.storeName ? ` "${context.storeName}"` : "";
 
   const parts: string[] = [];
