@@ -692,7 +692,7 @@ The `store_brand_profiles` database table SHALL NOT change — `logoVariantUrl` 
 
 ### Requirement: Brand profile synced always delivered as creative direction
 
-The brand profile `synced` SHALL always be included in `StoreIdentitySnapshot.brandProfile`, regardless of `identity_state`. The brand profile provides creative direction (`visual_style`, `visual_tone`, `brand_personality`, `campaign_guidelines`, `campaign_brief`, `safe_color_tokens`).
+The brand profile `synced` SHALL always be included in `StoreIdentitySnapshot.brandProfile`, regardless of `identity_state`. The brand profile provides creative direction (`visual_style`, `visual_tone`, `brand_personality`, `campaign_guidelines`, `campaign_brief`, `safe_color_tokens`, `typography_direction`).
 
 The profile SHALL NOT be filtered by source compatibility with `identity_state`. If `profile.source` is incompatible (e.g., `source = logo_analysis` with `identity_state = text_only` after logo removal), a diagnostic SHALL be logged but the profile SHALL be included normally.
 
