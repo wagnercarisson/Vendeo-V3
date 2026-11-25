@@ -28,9 +28,18 @@ import { isRecreatedBackgroundDirection } from "./background-direction";
  * arquivo e nome vazio preservam o texto reconciliado anterior. Por isso as
  * regras de identidade avançam para `v2`; compositor, prompt-base e o texto das
  * 9 combinações permanecem idênticos.
+ *
+ * Quick 261125-i06 — SOMENTE no 1:1 novo com opt-in explícito
+ * (`textOnlyInstitutionalIdentity === true`), estado declarado `text_only` e
+ * nome não vazio, a instrução é SUBSTITUÍDA pela redação oficial de identificação
+ * institucional em texto (`buildTextOnlyInstruction`), interpolando o nome e a
+ * `typography_direction` persistida (verbatim, sem inferir fonte). Sem orientação,
+ * a linha tipográfica é omitida. Joint 1:1+9:16, 9:16 isolado, legado, `logo`,
+ * `visual_signature` e fallbacks preservam o comportamento anterior. Por isso as
+ * regras de identidade avançam para `v3`.
  */
 export const PRODUCT_1_1_IDENTITY_CONTEXT_VERSION =
-  "48.2.6-identity-context-v2";
+  "48.2.6-identity-context-v3";
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
@@ -41,6 +50,11 @@ export interface ProductOneToOneBrandProfileLike {
     readonly primary?: string | null;
     readonly accent?: string | null;
   } | null;
+  /**
+   * Quick 261125-i06 — orientação tipográfica persistida (transporte verbatim;
+   * nunca inferida nem normalizada).
+   */
+  readonly typography_direction?: string | null;
 }
 
 /** Paleta canônica resolvida da loja (dados congeláveis na evidência). */
@@ -139,6 +153,17 @@ export interface BuildNewFlowIdentityInput {
    * efetivamente validado e convertido para `data URL` (prova de disponibilidade).
    */
   readonly hasIdentityAsset?: boolean;
+  /**
+   * Quick 261125-i06 — direção tipográfica persistida no perfil sincronizado
+   * (transporte verbatim; `trim` + pontuação final idempotente apenas).
+   */
+  readonly typographyDirection?: string | null;
+  /**
+   * Quick 261125-i06 — opt-in EXPLÍCITO do 1:1 novo para a redação de
+   * identificação institucional em texto. Omitido/`false` preserva o
+   * comportamento anterior (joint, 9:16 isolado, legado e Laboratório).
+   */
+  readonly textOnlyInstitutionalIdentity?: boolean;
 }
 
 export interface NewFlowIdentityBlock {
@@ -167,6 +192,34 @@ export function buildVisualSignatureInstruction(storeName: string): string {
 }
 
 /**
+ * Quick 261125-i06 — redação oficial aprovada da identificação institucional em
+ * texto (1:1 `text_only` com opt-in). As TRÊS primeiras linhas formam a
+ * exigência obrigatória (`join("\n")`); a quarta linha tipográfica só entra
+ * quando há orientação persistida não vazia. Somente o nome resolvido no
+ * servidor e a orientação (verbatim, com pontuação final idempotente) são
+ * interpolados. Nome vazio ⇒ `""` (o chamador cai no fallback; nunca emitir nome
+ * vazio nem placeholder).
+ */
+export function buildTextOnlyInstruction(
+  storeName: string,
+  typographyDirection?: string | null,
+): string {
+  const name = storeName.trim();
+  if (name.length === 0) return "";
+  const lines = [
+    `Inclua obrigatoriamente o nome da loja "${name}" como identificação institucional, em texto legível.`,
+    "Títulos promocionais, mesmo contendo o nome da loja, não substituem essa identificação.",
+    "Não invente nem acrescente logotipo, símbolo ou assinatura gráfica.",
+  ];
+  const typography = typographyDirection?.trim() ?? "";
+  if (typography.length > 0) {
+    const terminated = /[.!?]$/.test(typography) ? typography : `${typography}.`;
+    lines.push(`Direção tipográfica da loja: ${terminated}`);
+  }
+  return lines.join("\n");
+}
+
+/**
  * Monta o bloco `[IDENTIDADE E DIREÇÃO VISUAL]` do novo fluxo, na ordem:
  *
  *   1. regra de presença/ausência da identidade (logo/assinatura), reconciliada;
@@ -186,9 +239,18 @@ export function buildNewFlowIdentityBlock(
     input.identityState === "visual_signature" &&
     input.hasIdentityAsset === true &&
     context.storeName.length > 0;
+  // Quick 261125-i06 — substituição CONDICIONAL da identificação institucional em
+  // texto: exige opt-in explícito, estado DECLARADO `text_only` e nome não vazio.
+  // `logo`/`visual_signature` com arquivo indisponível NÃO entram aqui.
+  const useTextOnlyInstruction =
+    input.textOnlyInstitutionalIdentity === true &&
+    input.identityState === "text_only" &&
+    context.storeName.length > 0;
   const signature = useVisualSignatureInstruction
     ? buildVisualSignatureInstruction(context.storeName)
-    : reconcileLegacyIdentityDirective(input.legacyDirective);
+    : useTextOnlyInstruction
+      ? buildTextOnlyInstruction(context.storeName, input.typographyDirection)
+      : reconcileLegacyIdentityDirective(input.legacyDirective);
   const name = context.storeName ? ` "${context.storeName}"` : "";
 
   const parts: string[] = [];
