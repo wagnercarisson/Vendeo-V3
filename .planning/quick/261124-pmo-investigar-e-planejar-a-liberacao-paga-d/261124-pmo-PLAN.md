@@ -14,6 +14,44 @@ approval:
 
 # Plano revisado 261124-pmo — liberação 1:1 pelo ledger
 
+## Correção pós-revisão — 500 na seleção do quadrado já pago (2026-11-24)
+
+**Objetivo:** corrigir o 500 ao abrir `?format=1:1` numa liberação já paga e
+ajustar os textos. Sem redesenhar o fluxo financeiro, sem nova cobrança.
+
+Campanha de reprodução: `b953eb33-8714-4c04-a489-f56ab437b38e`.
+
+Hipótese registrada antes do código:
+
+- a página resolve/exibe o vertical com `nineSixteenVerticalAccess` **antes** de
+  resolver o formato solicitado e sem injetar o transporte Node HTTP;
+- esse probe ainda usa storage-js/`Blob.arrayBuffer()` e pode reproduzir o stack
+  overflow anterior no Server Component;
+- `?format=1:1` já pago não precisa baixar/assinar o vertical.
+
+Correções planejadas:
+
+1. Resolver primeiro o formato solicitado (`?format=`), depois a autorização e
+   o probe do formato efetivamente exibido.
+2. Em `?format=1:1` já pago, validar/exibir `square_original` com o transporte
+   Node HTTP existente, sem probe/download/assinatura do vertical.
+3. Injetar o transporte Node HTTP nas leituras binárias do Server Component
+   (`nineSixteenVerticalAccess`/probes), sem troca global e sem enfraquecer
+   checksum/dimensões/MIME/identidade/bucket/path/procedência.
+4. Falha de preview do quadrado não pode rotular/servir o vertical como
+   quadrado; falha transitória não revoga a compra nem autoriza nova cobrança.
+5. Textos pt-BR/es-419: “Gerar formato quadrado”, descrição/ajuda/confirmação/
+   processamento conforme revisão; remover “já armazenado” e “liberar”.
+6. Regressões: sem probe vertical no quadrado pago; transporte correto nos
+   caminhos binários; falha de preview sem fallback incorreto; recuperação sem
+   `reserveCredit`; textos/estados da modal nos dois idiomas.
+7. Validar página/download reais na campanha e conferir dimensões/checksum e
+   ausência de nova dedução/estorno.
+
+**Limites:** sem migration, tabela, RPC, flag, segredo, POST de compra, nova
+cobrança, estorno, geração, provider ou alteração financeira.
+
+
 ## Correções pós-revisão (2026-11-24) — antes do código
 
 1. **Pré-condição da cobrança incompleta (alta).** A API checava formato 9:16 e

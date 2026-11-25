@@ -4,7 +4,7 @@ status: implementation-complete-pending-manual-review
 date: 2026-11-24
 branch: feat/entrega-campanha-quadrada
 base: 4c795c17
-commit: 2f205590
+commit: d1a1d2ab
 scope: square-release-ledger
 ---
 
@@ -26,6 +26,38 @@ scope: square-release-ledger
   `unknown`; somente ausência comprovada (`none`) vira insuficiência.
 - **Validador F62:** corrigido separadamente, removendo o shebang do módulo
   importado pelo Vitest (commit `af00a814`), sem excluir ou enfraquecer testes.
+
+## Correção do 500 na seleção e textos (2026-11-24)
+
+- **Causa tratada:** a página executava `nineSixteenVerticalAccess` antes de
+  resolver o formato solicitado e sem o transporte Node HTTP. Para
+  `?format=1:1` já pago, o vertical era baixado/validado sem necessidade.
+- **Correção:** o formato solicitado é resolvido primeiro; quadrado pago usa
+  `readSquareReleasePreview` (transporte Node HTTP) e **não chama** o vertical.
+  O caminho vertical/default injeta o mesmo transporte no probe existente.
+  Falha de preview do quadrado não cai para o vertical como se fosse quadrado;
+  a compra permanece e o download fica recuperável.
+- **Textos:** UI passou a usar “Gerar formato quadrado”, “Você pode gerar o
+  formato quadrado 1:1 para esta campanha.”, “Clique para gerar o formato
+  quadrado. Custo: 1 crédito.”, “Gerar formato quadrado” e “Estamos preparando
+  sua campanha no formato quadrado.” (pt-BR), com equivalente es-419. Removidas
+  as referências a “já armazenado” e “liberar” na comunicação.
+- **Evidência real:** campanha `b953eb33-...`, instância `http://localhost:3000`
+  (porta 3000, processo 15880), sessão autenticada local. Página `?format=1:1`,
+  `?format=9:16` e sem formato: 200; imagem quadrada 1024×1024 visível e vertical
+  1080×1920 preservado; alternância por clique e carga direta; download 1:1
+  221.094 B/SHA-256 `eeeb0a5c...`; vertical 392.707 B/SHA-256 `fd1f6afc...`;
+  chips “Quadrado 1:1: Disponível” no detalhe/lista/dashboard; sem 5xx,
+  exceções ou loads falhos no console/rede.
+- **Financeiro:** antes e depois, 2 deduções (vertical + liberação), 0 refunds,
+  soma -2; nenhuma nova cobrança/estorno.
+- **Limitação:** o 500 relatado **não foi reproduzido** no build local antes da
+  correção — a página respondeu 200. O caminho vertical desnecessário foi
+  confirmado por código/teste (a regressão exige zero chamadas ao vertical no
+  quadrado pago) e removido. Não foi feito POST de compra.
+
+Evidências: `evidence/real-validation.json`, `evidence/01-real-9x16.png`,
+`evidence/02-real-1x1.png`, `evidence/03-real-direct-1x1.png`.
 
 ## Resultado
 
@@ -77,13 +109,13 @@ comprovante durável.
 
 | Gate | Resultado |
 |---|---|
-| Testes afetados amplos (44 arquivos) | 491/491 PASS |
-| Testes novos/focados (7 arquivos) | 109/109 PASS |
+| Testes afetados amplos (45 arquivos) | 494/494 PASS |
+| Testes novos/focados (9 arquivos) | 123/123 PASS |
 | `npm run typecheck` | exit 0 |
 | `npm run lint` | exit 0 |
-| `npm run build` | exit 0 (porta 3100 parada antes; reiniciada depois) |
+| `npm run build` | exit 0 (porta 3000 parada antes; reiniciada depois) |
 | `git diff --check` | exit 0 |
-| Suíte global | 874 arquivos PASS + 2 skipped; 10.857 testes PASS + 10 skipped; **exit 0** |
+| Suíte global | 875 arquivos PASS + 2 skipped; 10.860 testes PASS + 10 skipped; **exit 0** |
 
 ### Validador F62
 
@@ -100,11 +132,12 @@ e está em `evidence/ledger-proof-results.json` (46/46).
 
 ## Teste manual local
 
-1. Servidor local em `http://127.0.0.1:3100` (reiniciado após o build).
-2. Abrir uma campanha **9:16 já entregue** com `square_original` armazenado.
-3. Clicar no chip **Quadrado 1:1** → “Liberar quadrado 1:1”.
-4. Confirmar o custo de 1 crédito e observar “Estamos disponibilizando o formato
-   quadrado.” com spinner; Cancelar/Escape/clique fora bloqueados.
+1. Servidor local em `http://localhost:3000` (porta 3000, processo 15880;
+   build de produção atual).
+2. Abrir a campanha real **9:16 já entregue** com `square_original` armazenado.
+3. Clicar no chip **Quadrado 1:1** → “Gerar formato quadrado”.
+4. Confirmar o custo de 1 crédito e observar “Estamos preparando sua campanha no
+   formato quadrado.” com spinner; Cancelar/Escape/clique fora bloqueados.
 5. Conferir **um único débito de 1 crédito** no extrato, com o rótulo
    “Liberação do formato 1:1”.
 6. Alternar `?format=1:1` / `?format=9:16`, baixar ambos e reabrir a campanha:
@@ -114,6 +147,10 @@ e está em `evidence/ledger-proof-results.json` (46/46).
 ## Limitações
 
 - Teste manual completo ainda pendente.
+- O 500 relatado não foi reproduzido no build local anterior; a remoção do
+  caminho vertical desnecessário está coberta por teste e validada na página
+  real após a correção.
 - Nenhuma geração paga, provider, banco compartilhado, Storage compartilhado,
   migration, merge, push ou deploy.
-- A falha da suíte global é preexistente e documentada acima.
+- Os gates de integração PostgreSQL/homolog não foram executados pelo runner
+  global; a prova de ledger em descartável permanece 46/46.

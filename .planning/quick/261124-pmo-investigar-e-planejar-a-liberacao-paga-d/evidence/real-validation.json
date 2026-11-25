@@ -1,0 +1,98 @@
+{
+  "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+  "productName": "Mouse Sem Fio Recarregável",
+  "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+  "verticalOperationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+  "squareArtifactId": "3620864d-28d3-4086-8731-47f12e5f6a8d",
+  "releaseDeductionId": "d40609f0-7dd4-497d-8768-31a79cb88cf6",
+  "releaseIdempotencyKey": "square_release:v1:9571087d83e47750d7a9d68260466ee455be7a2d79ffcff8ff81b64b9787e595",
+  "localInstance": {
+    "url": "http://localhost:3000",
+    "port": 3000,
+    "processId": 15880,
+    "build": "production"
+  },
+  "pageResponses": {
+    "format=1:1": 200,
+    "format=9:16": 200,
+    "format absent": 200
+  },
+  "images": {
+    "9:16": {
+      "artifactRole": "vertical",
+      "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/eff8ebec-d5ea-4ff2-b313-27aece35fd68/vertical.jpg",
+      "naturalWidth": 1080,
+      "naturalHeight": 1920,
+      "complete": true
+    },
+    "1:1": {
+      "artifactRole": "square_original",
+      "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/eff8ebec-d5ea-4ff2-b313-27aece35fd68/square_original.jpg",
+      "naturalWidth": 1024,
+      "naturalHeight": 1024,
+      "complete": true
+    }
+  },
+  "formatSwitch": {
+    "from": "9:16",
+    "clickedSquareLink": true,
+    "to": "1:1",
+    "squareImageRendered": true,
+    "directFormat11Load": true
+  },
+  "downloads": {
+    "format=1:1": {
+      "status": 200,
+      "contentType": "image/jpeg",
+      "bytes": 221094,
+      "width": 1024,
+      "height": 1024,
+      "sha256": "eeeb0a5c178723fd0f496e3fcd21060ec3f0783908999ab0f2a28030ce9ffbd5"
+    },
+    "format=9:16": {
+      "status": 200,
+      "contentType": "image/jpeg",
+      "bytes": 392707,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "fd1f6afc4d54e2af6c31abf6e42e7a152801bcbab6dd4b1a45623beef108d2dc"
+    }
+  },
+  "chips": {
+    "detail": "Quadrado 1:1: Disponível",
+    "list": "Quadrado 1:1: Disponível",
+    "dashboard": "Quadrado 1:1: Disponível"
+  },
+  "consoleAndNetwork": {
+    "httpStatus5xx": 0,
+    "runtimeExceptions": 0,
+    "failedLoads": 0
+  },
+  "financialBeforeAfter": {
+    "before": {
+      "deductions": 2,
+      "refunds": 0,
+      "sum": -2,
+      "releaseDeduction": "d40609f0-7dd4-497d-8768-31a79cb88cf6"
+    },
+    "after": {
+      "deductions": 2,
+      "refunds": 0,
+      "sum": -2,
+      "releaseDeduction": "d40609f0-7dd4-497d-8768-31a79cb88cf6"
+    },
+    "newCharge": false,
+    "newRefund": false
+  },
+  "reproduction": {
+    "hypothesis": "A página chamava nineSixteenVerticalAccess antes de resolver o formato solicitado e sem o transporte Node HTTP.",
+    "beforeLocalObservations": "No build anterior, a página real respondeu 200 e renderizou o quadrado; o 500 não foi reproduzido localmente. O caminho vertical desnecessário foi confirmado por código e pela regressão de página que agora exige zero chamadas ao vertical no quadrado pago.",
+    "afterFixObservations": "Com ?format=1:1 pago, a página não chama nineSixteenVerticalAccess; valida/exibe square_original por readSquareReleasePreview com transporte Node HTTP.",
+    "limitation": "A causa do 500 relatado não foi reproduzida neste ambiente local; a correção elimina o caminho apontado e está coberta por testes. Não foi feito POST de compra, nova cobrança, estorno ou geração."
+  },
+  "evidenceImages": [
+    "01-real-9x16.png",
+    "02-real-1x1.png",
+    "03-real-direct-1x1.png"
+  ]
+}
