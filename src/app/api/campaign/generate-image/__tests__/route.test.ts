@@ -3078,19 +3078,24 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     const resume = snapshot.resumeContext as {
       identityDirective: string | null;
     };
-    expect(resume.identityDirective).toContain(INSTITUTIONAL_HEAD_916);
-    expect(resume.identityDirective.split(INSTITUTIONAL_HEAD_916)).toHaveLength(2);
-    expect(resume.identityDirective).toContain(TYPOGRAPHY_LINE_916);
-    expect(resume.identityDirective.split(TYPOGRAPHY_LINE_916)).toHaveLength(2);
-    expect(resume.identityDirective).not.toContain(
+    const directive = resume.identityDirective;
+    expect(typeof directive).toBe('string');
+    if (typeof directive !== 'string') {
+      throw new Error('identityDirective ausente');
+    }
+    expect(directive).toContain(INSTITUTIONAL_HEAD_916);
+    expect(directive.split(INSTITUTIONAL_HEAD_916)).toHaveLength(2);
+    expect(directive).toContain(TYPOGRAPHY_LINE_916);
+    expect(directive.split(TYPOGRAPHY_LINE_916)).toHaveLength(2);
+    expect(directive).not.toContain(
       'Não colocar logotipo. Não gerar assinatura visual.',
     );
-    expect(resume.identityDirective).toContain('Paleta da loja');
+    expect(directive).toContain('Paleta da loja');
     // O nome do produto contendo o nome da loja coexiste com a identificação
     // institucional. Este teste NÃO é evidência sobre título promocional.
     expect((snapshot as any).product.name).toBe('Loja Teste Combo Especial');
     // Congelamento existente: snapshot e resumeContext carregam a MESMA diretiva.
-    expect(snapshot.identityDirective).toBe(resume.identityDirective);
+    expect(snapshot.identityDirective).toBe(directive);
   });
 
   it('Quick 261125-i08: 9:16 isolado logo com arquivo recebe a instrução oficial do logotipo uma vez', async () => {
@@ -3138,13 +3143,18 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     const resume = snapshot.resumeContext as {
       identityDirective: string | null;
     };
-    expect(resume.identityDirective).toContain(APPROVED_LOGO_HEAD_916);
-    expect(resume.identityDirective.split(APPROVED_LOGO_HEAD_916)).toHaveLength(2);
-    expect(resume.identityDirective).not.toContain(
+    const directive = resume.identityDirective;
+    expect(typeof directive).toBe('string');
+    if (typeof directive !== 'string') {
+      throw new Error('identityDirective ausente');
+    }
+    expect(directive).toContain(APPROVED_LOGO_HEAD_916);
+    expect(directive.split(APPROVED_LOGO_HEAD_916)).toHaveLength(2);
+    expect(directive).not.toContain(
       'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.',
     );
-    expect(resume.identityDirective).not.toContain('Direção tipográfica');
-    expect(snapshot.identityDirective).toBe(resume.identityDirective);
+    expect(directive).not.toContain('Direção tipográfica');
+    expect(snapshot.identityDirective).toBe(directive);
   });
 
   it('Quick 261125-i08: 9:16 isolado logo SEM arquivo mantém o fallback anterior', async () => {
@@ -3235,13 +3245,18 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     const resume = persistedSnapshot().resumeContext as {
       identityDirective: string | null;
     };
-    expect(resume.identityDirective).toContain(APPROVED_SIGNATURE_HEAD_916);
-    expect(resume.identityDirective.split(APPROVED_SIGNATURE_HEAD_916)).toHaveLength(2);
-    expect(resume.identityDirective).not.toContain(
+    const directive = resume.identityDirective;
+    expect(typeof directive).toBe('string');
+    if (typeof directive !== 'string') {
+      throw new Error('identityDirective ausente');
+    }
+    expect(directive).toContain(APPROVED_SIGNATURE_HEAD_916);
+    expect(directive.split(APPROVED_SIGNATURE_HEAD_916)).toHaveLength(2);
+    expect(directive).not.toContain(
       'Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido.',
     );
-    expect(resume.identityDirective).not.toContain('Direção tipográfica');
-    expect(resume.identityDirective).not.toContain(APPROVED_LOGO_HEAD_916);
+    expect(directive).not.toContain('Direção tipográfica');
+    expect(directive).not.toContain(APPROVED_LOGO_HEAD_916);
   });
 
   it('flag OFF + 9:16 nova geração ⇒ 503 antes de campanha/reserva/provider', async () => {
