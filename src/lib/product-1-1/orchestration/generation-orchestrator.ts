@@ -67,6 +67,7 @@ import type {
   ProductPromptAttachment,
   ProductPromptComposition,
   ProductPromptCompositionInput,
+  ComposeProductPromptOptions,
 } from "../prompt-composition";
 import { PRODUCT_1_1_PROMPT_BASE } from "../prompt-base";
 import type { ProductOneToOneBackgroundDirection } from "../background-direction";
@@ -177,6 +178,14 @@ export interface ProductOneToOneGenerationInput {
    * conecta a corrida produtiva EXISTENTE (`CopyDirectorService`) como default.
    */
   readonly copyContext?: ProductOneToOneCopyContext;
+  /**
+   * Quick 261125-i06 — `true` SOMENTE no 1:1 novo com `identity_state =
+   * 'text_only'`. Troca a linha comum de contraste do compositor (que cita
+   * logo/assinatura) por "Garanta contraste para destacar o produto.", coerente
+   * com a ausência de identidade gráfica. Omitido/`false` ⇒ comportamento atual
+   * (vertical 9:16, Laboratório e demais modos).
+   */
+  readonly textOnlyIdentity?: boolean;
   /**
    * F46-04 (D3) — snapshot econômico resolvido UMA vez pela rota e propagado às
    * chamadas filhas (copy + telemetria por tentativa). Nunca fallback silencioso.
@@ -441,7 +450,10 @@ export interface ProductOneToOneGenerationDeps {
    * - `beforeReservation`: default `undefined` (nenhuma etapa nova).
    * Sem esses campos a sequência 1:1 é idêntica.
    */
-  readonly composePrompt?: (input: ProductPromptCompositionInput) => ProductPromptComposition;
+  readonly composePrompt?: (
+    input: ProductPromptCompositionInput,
+    options?: ComposeProductPromptOptions,
+  ) => ProductPromptComposition;
   readonly imageSize?: string;
   readonly beforeReservation?: (
     config: ImageModelPairConfig,
@@ -632,7 +644,11 @@ export async function runProductOneToOneGeneration(
   const projectClosed =
     deps.projectClosedCampaign ?? projectClosedCampaign;
   const composePrompt =
-    deps.composePrompt ?? ((compositionInput: ProductPromptCompositionInput) => composeProductPrompt(compositionInput));
+    deps.composePrompt ??
+    ((
+      compositionInput: ProductPromptCompositionInput,
+      options?: ComposeProductPromptOptions,
+    ) => composeProductPrompt(compositionInput, options));
   const imageSize = deps.imageSize ?? "1024x1024";
   const beforeReservation = deps.beforeReservation;
   const newSupportReference = deps.generateSupportReference ?? generateSupportReference;
@@ -1234,13 +1250,21 @@ export async function runProductOneToOneGeneration(
         }
 
         // ── (3) compor/congelar prompt + snapshot (par COMPLETO) ──────────
-        const composition = composePrompt({
-          briefing: input.briefing,
-          promptBase: input.promptBase ?? PRODUCT_1_1_PROMPT_BASE.content,
-          references: productReferenceIds(input),
-          contributions: identityContributions(input),
-          attachments: productPromptAttachments(input),
-        });
+        const composition = composePrompt(
+          {
+            briefing: input.briefing,
+            promptBase: input.promptBase ?? PRODUCT_1_1_PROMPT_BASE.content,
+            references: productReferenceIds(input),
+            contributions: identityContributions(input),
+            attachments: productPromptAttachments(input),
+          },
+          // Quick 261125-i06 — opção JÁ EXISTENTE do compositor, restrita ao 1:1
+          // `text_only`: sem logo/assinatura, a linha comum não pode pedir a
+          // legibilidade de um ativo inexistente.
+          input.textOnlyIdentity === true
+            ? { commercialIdentityLine: null }
+            : undefined,
+        );
         const snapshot = buildSnapshot(preflight.config, {
           campaignId,
           runId: input.runId,

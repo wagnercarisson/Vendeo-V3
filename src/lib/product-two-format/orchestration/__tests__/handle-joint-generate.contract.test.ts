@@ -459,6 +459,12 @@ describe("F60.7 C1 — helper → composition root → componentes reais", () =>
         index: 1,
       });
       expect(resume.identityDirective.length).toBeGreaterThan(0);
+      // Quick 261125-i06 — o joint NÃO recebe a instrução institucional em texto
+      // do 1:1 `text_only` (a loja semeada é `text_only`).
+      expect(resume.identityDirective).not.toContain(
+        "Inclua obrigatoriamente o nome da loja",
+      );
+      expect(resume.identityDirective).not.toContain("Direção tipográfica");
       expect(campaignRow()?.identity_snapshot).toBeTruthy();
       expect(snapshot.frozenContentReferences).toEqual(
         expect.arrayContaining([

@@ -2579,6 +2579,237 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
       'Use obrigatoriamente a assinatura visual oficial da loja',
     );
   });
+
+  // ── Quick 261125-i06 — identificação institucional em texto (1:1) ──────────
+
+  const LEGACY_TEXT_ONLY_DIRECTIVE =
+    'Não colocar logotipo. Não gerar assinatura visual. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.';
+  const TEXT_ONLY_TYPOGRAPHY = 'Serifada editorial elegante';
+  // Montado por partes para que o placeholder não apareça literalmente no
+  // código-fonte (gate: `rg "\[nome da loja\]" src` sem ocorrências).
+  const PLACEHOLDER_TOKEN = `[${'nome da loja'}]`;
+  const INSTITUTIONAL_HEAD =
+    'Inclua obrigatoriamente o nome da loja "Loja Teste" como identificação institucional, em texto legível.';
+  const TYPOGRAPHY_LINE = `Direção tipográfica da loja: ${TEXT_ONLY_TYPOGRAPHY}.`;
+  const TEXT_ONLY_IDENTITY = {
+    storeName: 'Loja Teste',
+    storeSegment: 'outros',
+    brandColor: '#111111',
+    identityState: 'text_only',
+    signature: { url: null, type: null },
+    brandProfile: {
+      brand_colors_chosen: ['#242422', '#AABBCC'],
+      safe_color_tokens: { primary: '#242422', accent: '#445566' },
+      typography_direction: TEXT_ONLY_TYPOGRAPHY,
+      visual_style: null,
+      visual_tone: null,
+      brand_personality: null,
+      campaign_guidelines: null,
+      campaign_brief: null,
+    },
+  };
+
+  it('Quick 261125-i06: 1:1 text_only + tipografia ⇒ nome/orientação uma vez, sem texto antigo, textOnlyIdentity=true', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: TEXT_ONLY_IDENTITY,
+      directive: LEGACY_TEXT_ONLY_DIRECTIVE,
+      image: null,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+
+    const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(sent.identityDirective).toContain(INSTITUTIONAL_HEAD);
+    expect(sent.identityDirective.split(INSTITUTIONAL_HEAD)).toHaveLength(2);
+    expect(sent.identityDirective).toContain(TYPOGRAPHY_LINE);
+    expect(sent.identityDirective.split(TYPOGRAPHY_LINE)).toHaveLength(2);
+    expect(sent.identityDirective).not.toContain(
+      'Não colocar logotipo. Não gerar assinatura visual.',
+    );
+    expect(sent.identityDirective).not.toContain(PLACEHOLDER_TOKEN);
+    expect(sent.identityDirective).toContain('Paleta da loja');
+    expect(sent.textOnlyIdentity).toBe(true);
+  });
+
+  it('Quick 261125-i06: congelamento ⇒ diretiva persistida idêntica; reenvio com tipografia diferente ⇒ 409 sem 2ª campanha', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: TEXT_ONLY_IDENTITY,
+      directive: LEGACY_TEXT_ONLY_DIRECTIVE,
+      image: null,
+    });
+
+    const { POST } = await import('../route');
+    await (await POST(makeRequest(VALID_NEW_FLOW_BODY))).text();
+
+    const sentDirective = (mockRunProductOneToOneGeneration.mock.calls[0][0] as any)
+      .identityDirective as string;
+    const stored = (createCampaign as any).mock.calls[0][1]
+      .inputSnapshot as Record<string, unknown>;
+    expect(stored.identityDirective).toBe(sentDirective);
+    expect(stored.identityDirective).toContain(TYPOGRAPHY_LINE);
+
+    (createCampaign as any).mockClear();
+    setupNewFlowMocks({
+      existingCampaign: {
+        id: NEW_FLOW_CAMPAIGN_ID,
+        store_id: STORE_ID,
+        input_snapshot: stored,
+      },
+    });
+    mockIdentityResolution({
+      identity: {
+        ...TEXT_ONLY_IDENTITY,
+        brandProfile: {
+          ...TEXT_ONLY_IDENTITY.brandProfile,
+          typography_direction: 'Manuscrita com traço fino',
+        },
+      },
+      directive: LEGACY_TEXT_ONLY_DIRECTIVE,
+      image: null,
+    });
+
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe('operation_identity_conflict');
+    expect(createCampaign).not.toHaveBeenCalled();
+  });
+
+  it('Quick 261125-i06: sem paleta ⇒ nome/tipografia permanecem; estúdio emite neutra, original não', async () => {
+    const noPaletteIdentity = {
+      ...TEXT_ONLY_IDENTITY,
+      brandProfile: {
+        ...TEXT_ONLY_IDENTITY.brandProfile,
+        brand_colors_chosen: [],
+        safe_color_tokens: {},
+      },
+    };
+
+    for (const direction of ['studio', 'original'] as const) {
+      setupNewFlowMocks();
+      mockIdentityResolution({
+        identity: noPaletteIdentity,
+        directive: LEGACY_TEXT_ONLY_DIRECTIVE,
+        image: null,
+      });
+      (createCampaign as any).mockClear();
+      mockRunProductOneToOneGeneration.mockClear();
+
+      const { POST } = await import('../route');
+      const res = await POST(
+        makeRequest({ ...VALID_NEW_FLOW_BODY, backgroundDirection: direction }),
+      );
+      expect(res.status).toBe(200);
+
+      const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+      expect(sent.identityDirective).toContain(INSTITUTIONAL_HEAD);
+      expect(sent.identityDirective).toContain(TYPOGRAPHY_LINE);
+      expect(sent.identityDirective).not.toContain('Paleta da loja');
+
+      if (direction === 'studio') {
+        expect(sent.identityDirective).toContain(
+          'Sem paleta da loja definida, use cores neutras e discretas.',
+        );
+      } else {
+        expect(sent.identityDirective).not.toContain('cores neutras');
+      }
+    }
+  });
+
+  it('Quick 261125-i06: orientação vazia ⇒ nenhuma linha tipográfica, nome permanece', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: {
+        ...TEXT_ONLY_IDENTITY,
+        brandProfile: {
+          ...TEXT_ONLY_IDENTITY.brandProfile,
+          typography_direction: '   ',
+        },
+      },
+      directive: LEGACY_TEXT_ONLY_DIRECTIVE,
+      image: null,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+
+    const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(sent.identityDirective).toContain(INSTITUTIONAL_HEAD);
+    expect(sent.identityDirective).not.toContain('Direção tipográfica');
+  });
+
+  it('Quick 261125-i06: título promocional com o nome da loja não remove a identificação institucional', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: TEXT_ONLY_IDENTITY,
+      directive: LEGACY_TEXT_ONLY_DIRECTIVE,
+      image: null,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(
+      makeRequest({
+        ...VALID_NEW_FLOW_BODY,
+        productName: 'Loja Teste Combo Especial',
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(sent.briefing.product.name).toBe('Loja Teste Combo Especial');
+    expect(sent.identityDirective).toContain(INSTITUTIONAL_HEAD);
+    expect(sent.identityDirective).toContain(
+      'Títulos promocionais, mesmo contendo o nome da loja, não substituem essa identificação.',
+    );
+  });
+
+  it('Quick 261125-i06: logo e assinatura sem arquivo mantêm o texto anterior e textOnlyIdentity=false', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: IDENTITY_SERVER,
+      directive:
+        'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      image: IMAGE_A,
+    });
+
+    const { POST } = await import('../route');
+    await (await POST(makeRequest(VALID_NEW_FLOW_BODY))).text();
+
+    const logoInput = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(logoInput.identityDirective).toContain(
+      'Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.',
+    );
+    expect(logoInput.identityDirective).not.toContain('Inclua obrigatoriamente');
+    expect(logoInput.textOnlyIdentity).toBe(false);
+
+    (createCampaign as any).mockClear();
+    mockRunProductOneToOneGeneration.mockClear();
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: VISUAL_SIGNATURE_IDENTITY,
+      directive:
+        'Não inventar assinatura visual nem logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      image: null,
+    });
+
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+
+    const signatureInput = mockRunProductOneToOneGeneration.mock
+      .calls[0][0] as any;
+    expect(signatureInput.identityDirective).toContain(
+      'Não inventar assinatura visual nem logotipo.',
+    );
+    expect(signatureInput.identityDirective).not.toContain(
+      'Inclua obrigatoriamente',
+    );
+    expect(signatureInput.textOnlyIdentity).toBe(false);
+  });
 });
 
 // ── F59 (59-07): formato do fluxo novo, congelamento, flag e despacho ────────
@@ -2667,6 +2898,55 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     });
     expect(uploadCampaignInputFile).toHaveBeenCalled();
     expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('Quick 261125-i06: 9:16 isolado text_only com tipografia NÃO recebe a nova instrução institucional', async () => {
+    setup();
+    mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
+
+    const textOnlyIdentity = {
+      storeName: 'Loja Teste',
+      storeSegment: 'outros',
+      brandColor: '#111111',
+      identityState: 'text_only',
+      signature: { url: null, type: null },
+      brandProfile: {
+        brand_colors_chosen: ['#242422'],
+        safe_color_tokens: { primary: '#242422' },
+        typography_direction: 'Serifada editorial elegante',
+        visual_style: null,
+        visual_tone: null,
+        brand_personality: null,
+        campaign_guidelines: null,
+        campaign_brief: null,
+      },
+    };
+    (resolveStoreIdentity as any).mockResolvedValue(textOnlyIdentity);
+    (validateIdentityReference as any).mockResolvedValue(textOnlyIdentity);
+    (buildCampaignBrief as any).mockResolvedValue({
+      store: { name: 'Loja Teste', segment: 'outros' },
+      identity: {
+        directive:
+          'Não colocar logotipo. Não gerar assinatura visual. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      },
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16', productImages: NINE_SIXTEEN_IMAGES }));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    const resume = persistedSnapshot().resumeContext as {
+      identityDirective: string | null;
+    };
+    expect(resume.identityDirective).not.toContain(
+      'Inclua obrigatoriamente o nome da loja',
+    );
+    expect(resume.identityDirective).not.toContain('Direção tipográfica');
+    expect(resume.identityDirective).toContain(
+      'Não colocar logotipo. Não gerar assinatura visual.',
+    );
+    expect(resume.identityDirective).toContain('Paleta da loja');
   });
 
   it('flag OFF + 9:16 nova geração ⇒ 503 antes de campanha/reserva/provider', async () => {

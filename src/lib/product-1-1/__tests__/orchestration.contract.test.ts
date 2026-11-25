@@ -599,6 +599,55 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     );
   });
 
+  it("Quick 261125-i06: textOnlyIdentity true ⇒ composePrompt recebe { commercialIdentityLine: null }", async () => {
+    const harness = await buildHarness();
+    const composition = {
+      text: "PROMPT 1:1 TEXT_ONLY",
+      blocks: {},
+      composerVersion: "custom",
+      promptBaseVersion: "base",
+      policyVersions: {},
+    };
+    const composePrompt = vi.fn(
+      (_input: unknown, _options?: unknown) => composition,
+    );
+
+    await runOrchestrator(
+      harness,
+      { textOnlyIdentity: true },
+      { composePrompt },
+    );
+
+    expect(composePrompt).toHaveBeenCalledTimes(1);
+    expect(composePrompt.mock.calls[0][1]).toEqual({
+      commercialIdentityLine: null,
+    });
+    expect(harness.calls.gatewayRequests[0].prompt).toBe(
+      "PROMPT 1:1 TEXT_ONLY",
+    );
+  });
+
+  it("Quick 261125-i06: textOnlyIdentity false/ausente ⇒ composePrompt sem opção (comportamento anterior)", async () => {
+    for (const overrides of [{ textOnlyIdentity: false }, {}]) {
+      const harness = await buildHarness();
+      const composition = {
+        text: "PROMPT ATUAL",
+        blocks: {},
+        composerVersion: "custom",
+        promptBaseVersion: "base",
+        policyVersions: {},
+      };
+      const composePrompt = vi.fn(
+        (_input: unknown, _options?: unknown) => composition,
+      );
+
+      await runOrchestrator(harness, overrides, { composePrompt });
+
+      expect(composePrompt).toHaveBeenCalledTimes(1);
+      expect(composePrompt.mock.calls[0][1]).toBeUndefined();
+    }
+  });
+
   it("F59/D-01: beforeReservation roda depois do preflight e antes de persist/reserve", async () => {
     const harness = await buildHarness();
     const guard = vi.fn(async () => {

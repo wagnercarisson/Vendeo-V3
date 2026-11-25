@@ -1044,6 +1044,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
           // para `data URL` concluíram (`newFlowIdentityImage !== null`).
           identityState: newFlowEffectiveIdentitySnapshot.identityState,
           hasIdentityAsset: newFlowIdentityImage !== null,
+          // Quick 261125-i06 — transporte da direção tipográfica persistida e
+          // opt-in EXPLÍCITO apenas do 1:1 novo. Joint e 9:16 isolado não recebem
+          // a flag e mantêm o texto reconciliado anterior.
+          typographyDirection:
+            newFlowEffectiveIdentitySnapshot.brandProfile?.typography_direction ??
+            null,
+          textOnlyInstitutionalIdentity: requestedFormat === "1:1",
         });
         newFlowIdentityDirective = newFlowIdentityBlock.directive;
         newFlowIdentityContextFrozen = newFlowIdentityBlock.context;
@@ -1415,6 +1422,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
         referenceSelections: newFlowEvidenceReferenceSelections,
         identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
         identityDirective: newFlowIdentityDirective ?? undefined,
+        // Quick 261125-i06 — somente o 1:1 novo com estado declarado `text_only`
+        // troca a linha comum de contraste (sem citar logo/assinatura).
+        textOnlyIdentity:
+          requestedFormat === "1:1" &&
+          newFlowEffectiveIdentitySnapshot.identityState === "text_only",
         copyContext: newFlowCopyContext,
         // F46-04 (D3) — snapshot econômico do run propagado (copy + tentativas).
         usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
