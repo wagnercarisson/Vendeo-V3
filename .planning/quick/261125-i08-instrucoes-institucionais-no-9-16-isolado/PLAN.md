@@ -102,3 +102,25 @@ pelo contrato determinístico existente; snapshots não são reescritos.
 Testes focados, `typecheck`, `lint`, `build`, `openspec validate` strict da spec
 afetada e `git diff --check`. Falhas preexistentes são separadas. `.f62-check/`
 preservada. Sem push, merge, deploy, migrations, banco/Storage ou chamadas pagas.
+
+## Encerramento local e aceite visual (2026-11-25)
+
+- **Implementação e testes locais concluídos.** Implementação em `60bfa6b4`;
+  tracking documental em commit local de fechamento.
+- **Aceite visual registrado (caso observado):**
+  `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25.jpg` — resultado
+  9:16 com logotipo institucional "LOJA MEGA VALE" presente e legível;
+  identificação institucional distinta do título promocional "Natal Mega Vale";
+  textos apresentados legíveis. O usuário confirmou a preservação do texto de
+  detalhe e do logotipo.
+- **Escopo do aceite:** cobre **somente** essa geração com logotipo. Não valida
+  manualmente `text_only`, `visual_signature`, outras lojas ou todas as gerações.
+  Não houve comparação independente de fidelidade ao ativo nem inspeção separada
+  da base quadrada.
+- **Cobertura manual não realizada:** `text_only`, `visual_signature`, outras
+  lojas e todas as gerações permanecem sem validação visual nesta quick.
+- **Fora desta quick:** o pouco destaque visual do tema natalino em estúdio
+  permanece reservado ao escopo futuro de temas/cenários.
+- **Publicação não executada:** sem push, merge, deploy, ativação, migrations,
+  banco/Storage ou chamadas pagas de IA. `.f62-check/` preservada.
+- **Próxima quick separada:** fluxo conjunto 1:1+9:16, ainda **não implementado**.

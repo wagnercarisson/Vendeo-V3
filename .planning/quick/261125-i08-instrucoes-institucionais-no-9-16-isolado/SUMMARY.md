@@ -120,25 +120,44 @@ escopo.
 ## Evidências apenas revisadas
 
 - Caminho de reconstrução e composição da base (revisão de código e testes
-  existentes), sem geração real;
-- aderência visual da IA: **não comprovada** por testes.
+  existentes);
+- aderência visual geral da IA: **não comprovada** por testes.
 
-## Validação visual
+## Aceite visual do caso observado
 
-**PENDENTE.** O usuário fará a geração manual 9:16 para avaliar a identificação
-institucional na base e no resultado vertical. Testes de montagem e transporte
-não comprovam aderência visual.
+- **Geração aprovada:** `C:/Users/wagne/Downloads/caixa_multiuso_fishbox-2026-11-25.jpg`.
+- **Resultado observado:** resultado 9:16 com logotipo institucional "LOJA MEGA
+  VALE" presente e legível; identificação institucional distinta do título
+  promocional "Natal Mega Vale"; textos apresentados legíveis. O usuário
+  confirmou a preservação do texto de detalhe e do logotipo.
+- **Escopo do aceite:** cobre **somente** essa geração com logotipo. Não valida
+  manualmente `text_only`, `visual_signature`, outras lojas ou todas as gerações.
+- **Limite da evidência:** não houve comparação independente de fidelidade ao
+  ativo nem inspeção separada da base quadrada. Os testes automatizados provam
+  montagem, isolamento e transporte do prompt, **não** a aderência visual geral
+  da IA.
+- **Fora desta quick:** o pouco destaque visual do tema natalino em estúdio
+  permanece reservado ao escopo futuro de temas/cenários.
+
+**Cobertura manual não realizada:** `text_only`, `visual_signature`, outras lojas
+e todas as gerações permanecem sem validação visual nesta quick.
 
 ## Publicação
 
-Implementação **local**. Sem push, merge, deploy, migrations, banco/Storage ou
-chamadas pagas de IA. `.f62-check/` preservada integralmente.
+Implementação **local**. Publicação **não executada**: sem push, merge, deploy,
+ativação, migrations, banco/Storage ou chamadas pagas de IA. `.f62-check/`
+preservada integralmente.
 
 ## Ressalva de reenvio
 
 Campanha 9:16 persistida **sem operação existente**, reenviada com a mesma
 `campaignId` e diretiva divergente, pode retornar `409 operation_identity_conflict`
 pelo contrato determinístico existente. Snapshots não são reescritos.
+
+## Próxima quick separada
+
+O fluxo conjunto **1:1+9:16** permanece reservado para uma quick separada,
+**ainda não implementada**. Esta quick não alterou o joint nem suas instruções.
 
 ## Commit
 
