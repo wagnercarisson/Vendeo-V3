@@ -1039,6 +1039,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
           storeName: newFlowStore.name,
           storeBrandColor: newFlowStore.brand_color,
           brandProfile: newFlowEffectiveIdentitySnapshot.brandProfile,
+          // Quick 261125-i05 — estado/ disponibilidade EFETIVOS: a instrução de
+          // assinatura visual só é substituída quando a validação e a conversão
+          // para `data URL` concluíram (`newFlowIdentityImage !== null`).
+          identityState: newFlowEffectiveIdentitySnapshot.identityState,
+          hasIdentityAsset: newFlowIdentityImage !== null,
         });
         newFlowIdentityDirective = newFlowIdentityBlock.directive;
         newFlowIdentityContextFrozen = newFlowIdentityBlock.context;

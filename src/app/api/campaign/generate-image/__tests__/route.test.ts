@@ -2521,6 +2521,64 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     const inputWithImage = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
     expect(inputWithImage.identityImageUrl).toBe('data:image/png;base64,AAA');
   });
+
+  // ── Quick 261125-i05 — instrução explícita de assinatura visual ────────────
+
+  const VISUAL_SIGNATURE_IDENTITY = {
+    ...IDENTITY_SERVER,
+    identityState: 'visual_signature',
+    signature: { url: 'https://signed.example/sig.png', type: 'visual_signature' },
+  };
+  const LEGACY_SIGNATURE_ASSET_DIRECTIVE =
+    'Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido. Não adicionar logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.';
+  const APPROVED_INSTRUCTION_HEAD =
+    'Use obrigatoriamente a assinatura visual oficial da loja "Loja Teste", fornecida como imagem de referência de identidade.';
+
+  it('Quick 261125-i05: visual_signature + arquivo ⇒ instrução aprovada uma única vez, congelada no snapshot', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: VISUAL_SIGNATURE_IDENTITY,
+      directive: LEGACY_SIGNATURE_ASSET_DIRECTIVE,
+      image: IMAGE_A,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+
+    const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(sent.identityDirective).toContain(APPROVED_INSTRUCTION_HEAD);
+    expect(sent.identityDirective.split(APPROVED_INSTRUCTION_HEAD)).toHaveLength(2);
+    expect(sent.identityDirective).not.toContain(
+      'Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência',
+    );
+    expect(sent.identityDirective).not.toContain('Não adicionar logotipo.');
+
+    // Congelamento: o snapshot persistido recebe EXATAMENTE a diretiva enviada.
+    const persistedDirective = (createCampaign as any).mock.calls[0][1].inputSnapshot
+      .identityDirective;
+    expect(persistedDirective).toBe(sent.identityDirective);
+  });
+
+  it('Quick 261125-i05: visual_signature SEM arquivo ⇒ texto reconciliado anterior preservado', async () => {
+    setupNewFlowMocks();
+    mockIdentityResolution({
+      identity: VISUAL_SIGNATURE_IDENTITY,
+      directive:
+        'Não inventar assinatura visual nem logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.',
+      image: null,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+
+    const sent = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(sent.identityDirective).toContain('Não inventar assinatura visual nem logotipo.');
+    expect(sent.identityDirective).not.toContain(
+      'Use obrigatoriamente a assinatura visual oficial da loja',
+    );
+  });
 });
 
 // ── F59 (59-07): formato do fluxo novo, congelamento, flag e despacho ────────

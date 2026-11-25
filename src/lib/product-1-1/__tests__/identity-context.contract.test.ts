@@ -4,6 +4,7 @@ import { PRODUCT_1_1_BACKGROUND_PROMPT_INSTRUCTIONS } from "../background-direct
 import {
   PRODUCT_1_1_IDENTITY_CONTEXT_VERSION,
   buildNewFlowIdentityBlock,
+  buildVisualSignatureInstruction,
   reconcileLegacyIdentityDirective,
   resolveProductOneToOneIdentityContext,
 } from "../identity-context";
@@ -301,5 +302,164 @@ describe("Product 1:1 fingerprint determinism (identidade)", () => {
     const a = computeContentFingerprint({ ...base, briefing: briefingWith("#242422") });
     const b = computeContentFingerprint({ ...base, briefing: briefingWith("#AABBCC") });
     expect(a).not.toBe(b);
+  });
+});
+
+// ── Quick 261125-i05 — instrução explícita de assinatura visual ─────────────
+describe("Quick 261125-i05 — assinatura visual com arquivo disponível", () => {
+  const PALETTE_PROFILE = {
+    brand_colors_chosen: ["#242422", "#AABBCC"],
+    safe_color_tokens: { primary: "#242422", accent: "#445566" },
+  };
+  const LEGACY_SIGNATURE_NO_ASSET =
+    "Não inventar assinatura visual nem logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.";
+
+  function expectedInstruction(name: string): string {
+    return [
+      `Use obrigatoriamente a assinatura visual oficial da loja "${name}", fornecida como imagem de referência de identidade.`,
+      "Inclua a assinatura de forma legível, preservando seus elementos gráficos, cores, proporções e textos. Ajuste sua posição e escala para integrá-la à composição, sem redesenhá-la ou substituir seus elementos.",
+      "Títulos promocionais, mesmo contendo o nome da loja, não substituem essa assinatura.",
+      "Não invente nem acrescente outro logotipo ou assinatura.",
+    ].join("\n");
+  }
+
+  it("redação exata: quatro linhas com o nome interpolado, sem placeholder; nome vazio ⇒ vazio", () => {
+    const instruction = buildVisualSignatureInstruction("Mega Vale");
+
+    expect(instruction).toBe(expectedInstruction("Mega Vale"));
+    expect(instruction).toContain('loja "Mega Vale",');
+    expect(instruction.split("\n")).toHaveLength(4);
+    expect(instruction).not.toContain("[nome da loja]");
+    expect(buildVisualSignatureInstruction("   ")).toBe("");
+  });
+
+  it("visual_signature + arquivo + paleta: instrução uma única vez, paleta preservada, instrução antiga ausente", () => {
+    const instruction = expectedInstruction("Adega Mestre das Geladas");
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_SIGNATURE_ASSET,
+      backgroundDirection: "studio",
+      storeName: "Adega Mestre das Geladas",
+      storeBrandColor: "#242422",
+      brandProfile: PALETTE_PROFILE,
+      identityState: "visual_signature",
+      hasIdentityAsset: true,
+    });
+
+    expect(block.directive.split(instruction)).toHaveLength(2);
+    expect(block.directive).toContain(
+      'Paleta da loja "Adega Mestre das Geladas": cor principal #242422; cor de apoio #AABBCC.',
+    );
+    expect(block.directive).not.toContain(
+      "Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência",
+    );
+    expect(block.directive).not.toContain("Não adicionar logotipo.");
+  });
+
+  it("instrução independe da paleta (original sem paleta ⇒ exatamente as 4 linhas; estúdio ⇒ + neutra)", () => {
+    const instruction = expectedInstruction("Adega Mestre das Geladas");
+    const base = {
+      legacyDirective: LEGACY_SIGNATURE_ASSET,
+      storeName: "Adega Mestre das Geladas",
+      storeBrandColor: null,
+      brandProfile: null,
+      identityState: "visual_signature" as const,
+      hasIdentityAsset: true,
+    };
+
+    const original = buildNewFlowIdentityBlock({
+      ...base,
+      backgroundDirection: "original",
+    });
+    expect(original.directive).toBe(instruction);
+
+    const studio = buildNewFlowIdentityBlock({
+      ...base,
+      backgroundDirection: "studio",
+    });
+    expect(studio.directive).toBe(
+      `${instruction}\nSem paleta da loja definida, use cores neutras e discretas.`,
+    );
+    expect(studio.directive).not.toContain("Paleta da loja");
+  });
+
+  it("preserva exatamente o texto anterior em text_only, logo e assinatura sem arquivo", () => {
+    const base = {
+      backgroundDirection: "original" as const,
+      storeName: "Adega Mestre das Geladas",
+      storeBrandColor: null,
+      brandProfile: null,
+    };
+
+    expect(
+      buildNewFlowIdentityBlock({
+        ...base,
+        legacyDirective: LEGACY_TEXT_ONLY,
+        identityState: "text_only",
+        hasIdentityAsset: false,
+      }).directive,
+    ).toBe("Não colocar logotipo. Não gerar assinatura visual.");
+
+    expect(
+      buildNewFlowIdentityBlock({
+        ...base,
+        legacyDirective: LEGACY_LOGO_ASSET,
+        identityState: "logo",
+        hasIdentityAsset: true,
+      }).directive,
+    ).toBe(
+      "Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.",
+    );
+
+    expect(
+      buildNewFlowIdentityBlock({
+        ...base,
+        legacyDirective: LEGACY_SIGNATURE_NO_ASSET,
+        identityState: "visual_signature",
+        hasIdentityAsset: false,
+      }).directive,
+    ).toBe("Não inventar assinatura visual nem logotipo.");
+  });
+
+  it("prompt final composto: redação presente uma única vez, nome interpolado, sem instrução antiga", () => {
+    const instruction = expectedInstruction("Adega Mestre das Geladas");
+    const block = buildNewFlowIdentityBlock({
+      legacyDirective: LEGACY_SIGNATURE_ASSET,
+      backgroundDirection: "studio",
+      storeName: "Adega Mestre das Geladas",
+      storeBrandColor: "#242422",
+      brandProfile: PALETTE_PROFILE,
+      identityState: "visual_signature",
+      hasIdentityAsset: true,
+    });
+    const composed = composeProductPrompt({
+      briefing: {
+        backgroundDirection: "studio",
+        product: { name: "Produto X 250ml", description: null },
+        commercial: {
+          intent: "offer",
+          originalPriceText: "R$ 9,99",
+          discountedPriceText: "R$ 7,49",
+          badge: "Oferta",
+          validity: "somente hoje",
+        },
+        constraints: { mandatoryArtworkText: null },
+      },
+      promptBase: PROMPT_BASE_CONTENT,
+      references: ["product.png"],
+      contributions: [
+        { block: PROMPT_BLOCK_LABELS.identity, lines: [block.directive] },
+      ],
+    });
+
+    expect(
+      composed.text.split(
+        "Use obrigatoriamente a assinatura visual oficial da loja",
+      ),
+    ).toHaveLength(2);
+    expect(composed.text).toContain(instruction);
+    expect(composed.text).toContain('loja "Adega Mestre das Geladas"');
+    expect(composed.text).not.toContain("Assinar a campanha com a assinatura visual");
+    expect(composed.text).not.toContain("Não adicionar logotipo.");
+    expect(composed.text).not.toContain("[nome da loja]");
   });
 });
