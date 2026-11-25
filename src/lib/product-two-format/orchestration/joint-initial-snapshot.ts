@@ -213,12 +213,23 @@ export async function buildJointInitialSnapshot(
     effectiveIdentitySnapshot,
     newFlow as unknown as CampaignInput,
   );
+  // Quick 261125-i09 — a montagem inicial conjunta reutiliza as instruções
+  // institucionais aprovadas com o estado/ativo EFETIVOS: `identityImage` é a
+  // prova de validação + conversão para `data URL`; a direção tipográfica vem
+  // do perfil já resolvido. Os opt-ins são explícitos porque este módulo só
+  // atende o fluxo conjunto. Helpers, redações e fallbacks não mudam.
   const identityBlock = buildNewFlowIdentityBlock({
     legacyDirective: identityContext?.identity?.directive ?? "",
     backgroundDirection: newFlow.backgroundDirection,
     storeName: store.name,
     storeBrandColor: store.brand_color,
     brandProfile: effectiveIdentitySnapshot.brandProfile,
+    identityState: effectiveIdentitySnapshot.identityState,
+    hasIdentityAsset: identityImage !== null,
+    typographyDirection:
+      effectiveIdentitySnapshot.brandProfile?.typography_direction ?? null,
+    textOnlyInstitutionalIdentity: true,
+    logoInstitutionalIdentity: true,
   });
 
   const copyContext = {

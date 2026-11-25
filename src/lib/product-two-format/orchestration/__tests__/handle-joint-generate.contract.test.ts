@@ -120,6 +120,52 @@ function removeSeededCampaign() {
   if (index >= 0) h.world.rows.splice(index, 1);
 }
 
+function setStoreIdentityState(
+  state: "text_only" | "logo" | "visual_signature",
+) {
+  const store = h.world.rows.find(
+    (row) => row.__table === "stores" && row.id === STORE_ID,
+  );
+  if (!store) throw new Error("missing store");
+  store.identity_state = state;
+}
+
+function seedBrandProfile(typographyDirection: string | null) {
+  h.world.rows.push({
+    __table: "store_brand_profiles",
+    store_id: STORE_ID,
+    status: "synced",
+    source: "text_only",
+    brand_colors_chosen: ["#242422"],
+    safe_color_tokens: { primary: "#242422" },
+    inferred_primary_color: null,
+    typography_direction: typographyDirection,
+    visual_style: null,
+    visual_tone: null,
+    brand_personality: null,
+    campaign_guidelines: null,
+    campaign_brief: null,
+  });
+}
+
+function wrapSignedUrl(bucket: string, signedUrl: string) {
+  const storage = h.world.client.storage as unknown as {
+    from: (bucket: string) => Record<string, unknown>;
+  };
+  const originalFrom = storage.from.bind(storage);
+  storage.from = (requested: string) => {
+    const handle = originalFrom(requested);
+    if (requested !== bucket) return handle;
+    return {
+      ...handle,
+      createSignedUrl: async () => ({
+        data: { signedUrl },
+        error: null,
+      }),
+    };
+  };
+}
+
 function campaignRow() {
   return h.world.rows.find(
     (row) => row.__table === "campaigns" && row.id === CAMPAIGN_ID,
@@ -403,6 +449,9 @@ describe("F60.7 C1 — helper → composition root → componentes reais", () =>
     );
     if (!store) throw new Error("missing store");
     store.identity_state = "logo";
+    // Perfil com tipografia disponível: o modo `logo` não deve receber a linha
+    // tipográfica (ela é exclusiva do `text_only`).
+    seedBrandProfile("Serifada editorial elegante");
     h.world.rows.push({
       __table: "store_brand_assets",
       store_id: STORE_ID,
@@ -459,21 +508,166 @@ describe("F60.7 C1 — helper → composition root → componentes reais", () =>
         index: 1,
       });
       expect(resume.identityDirective.length).toBeGreaterThan(0);
-      // Quick 261125-i07 — o joint NÃO recebe a instrução do logotipo oficial
-      // restrita ao 1:1 novo com opt-in.
-      expect(resume.identityDirective).not.toContain(
-        "Use obrigatoriamente o logotipo oficial da loja",
-      );
-      // Quick 261125-i06 — o joint NÃO recebe a instrução institucional em texto
-      // do 1:1 `text_only` (a loja semeada é `text_only`).
+      // Quick 261125-i09 — `logo` com arquivo recebe a redação oficial uma única
+      // vez na montagem inicial conjunta.
+      const logoHead =
+        'Use obrigatoriamente o logotipo oficial da loja "Loja Integrada", fornecido como imagem de referência de identidade.';
+      expect(resume.identityDirective).toContain(logoHead);
+      expect(resume.identityDirective.split(logoHead)).toHaveLength(2);
+      // Não recebe as redações dos outros modos, nem direção tipográfica.
       expect(resume.identityDirective).not.toContain(
         "Inclua obrigatoriamente o nome da loja",
       );
+      expect(resume.identityDirective).not.toContain(
+        "Use obrigatoriamente a assinatura visual oficial da loja",
+      );
       expect(resume.identityDirective).not.toContain("Direção tipográfica");
+      expect(resume.identityDirective).toContain("Paleta da loja");
       expect(campaignRow()?.identity_snapshot).toBeTruthy();
       expect(snapshot.frozenContentReferences).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ kind: "identity", index: 1 }),
+        ]),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("montagem inicial conjunta: text_only + tipografia ⇒ instruções aprovadas uma única vez", async () => {
+    seedBrandProfile("Serifada editorial elegante");
+
+    const built = await buildJointInitialSnapshot({
+      newFlow,
+      client: h.world.client,
+      economicSnapshot,
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+
+    const directive = built.resumeContext.identityDirective ?? "";
+    const head =
+      'Inclua obrigatoriamente o nome da loja "Loja Integrada" como identificação institucional, em texto legível.';
+    const typography =
+      "Direção tipográfica da loja: Serifada editorial elegante.";
+
+    expect(directive).toContain(head);
+    expect(directive.split(head)).toHaveLength(2);
+    expect(directive).toContain(typography);
+    expect(directive.split(typography)).toHaveLength(2);
+    expect(directive).not.toContain(
+      "Não colocar logotipo. Não gerar assinatura visual.",
+    );
+    expect(directive).toContain('Paleta da loja "Loja Integrada"');
+    expect(directive).toContain("#242422");
+    // Congelamento existente: snapshot e resumeContext carregam a MESMA diretiva.
+    expect(built.inputSnapshot.identityDirective).toBe(directive);
+  });
+
+  it("montagem inicial conjunta: text_only sem tipografia ⇒ sem linha tipográfica", async () => {
+    seedBrandProfile(null);
+
+    const built = await buildJointInitialSnapshot({
+      newFlow,
+      client: h.world.client,
+      economicSnapshot,
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+
+    const directive = built.resumeContext.identityDirective ?? "";
+    expect(directive).toContain(
+      'Inclua obrigatoriamente o nome da loja "Loja Integrada"',
+    );
+    expect(directive).not.toContain("Direção tipográfica");
+    expect(directive).not.toContain("Não colocar logotipo.");
+  });
+
+  it("montagem inicial conjunta: logo sem arquivo mantém o fallback anterior", async () => {
+    setStoreIdentityState("logo");
+
+    const built = await buildJointInitialSnapshot({
+      newFlow,
+      client: h.world.client,
+      economicSnapshot,
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+
+    const directive = built.resumeContext.identityDirective ?? "";
+    expect(directive).toContain("Não inventar logotipo.");
+    expect(directive).not.toContain(
+      "Use obrigatoriamente o logotipo oficial da loja",
+    );
+    expect(directive).not.toContain("Inclua obrigatoriamente o nome da loja");
+    expect(directive).not.toContain("Direção tipográfica");
+  });
+
+  it("montagem inicial conjunta: visual_signature sem arquivo mantém o fallback anterior", async () => {
+    setStoreIdentityState("visual_signature");
+
+    const built = await buildJointInitialSnapshot({
+      newFlow,
+      client: h.world.client,
+      economicSnapshot,
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+
+    const directive = built.resumeContext.identityDirective ?? "";
+    expect(directive).toContain("Não inventar assinatura visual nem logotipo.");
+    expect(directive).not.toContain(
+      "Use obrigatoriamente a assinatura visual oficial da loja",
+    );
+    expect(directive).not.toContain("Inclua obrigatoriamente o nome da loja");
+    expect(directive).not.toContain("Direção tipográfica");
+  });
+
+  it("montagem inicial conjunta: visual_signature com arquivo recebe a instrução oficial uma única vez", async () => {
+    const signatureBytes = Buffer.from("durable-visual-signature-bytes");
+    const signaturePath = `${STORE_ID}/signature.png`;
+    h.world.base.putObject(signaturePath, signatureBytes, {}, "visual-signatures");
+    setStoreIdentityState("visual_signature");
+    // Perfil com tipografia disponível: `visual_signature` não recebe a linha.
+    seedBrandProfile("Serifada editorial elegante");
+    h.world.rows.push({
+      __table: "store_visual_signatures",
+      id: "9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a",
+      store_id: STORE_ID,
+      status: "active",
+      storage_path: signaturePath,
+    });
+    wrapSignedUrl("visual-signatures", "https://offline.test/signature.png");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(signatureBytes, {
+        status: 200,
+        headers: { "content-type": "image/png" },
+      }),
+    );
+
+    try {
+      const built = await buildJointInitialSnapshot({
+        newFlow,
+        client: h.world.client,
+        economicSnapshot,
+      });
+      expect(built.ok).toBe(true);
+      if (!built.ok) return;
+
+      const directive = built.resumeContext.identityDirective ?? "";
+      const head =
+        'Use obrigatoriamente a assinatura visual oficial da loja "Loja Integrada", fornecida como imagem de referência de identidade.';
+      expect(directive).toContain(head);
+      expect(directive.split(head)).toHaveLength(2);
+      expect(directive).not.toContain(
+        "Use obrigatoriamente o logotipo oficial da loja",
+      );
+      expect(directive).not.toContain("Inclua obrigatoriamente o nome da loja");
+      expect(directive).not.toContain("Direção tipográfica");
+      expect(built.inputSnapshot.identityDirective).toBe(directive);
+      expect(built.references).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "identity", role: "identity", index: 1 }),
         ]),
       );
     } finally {

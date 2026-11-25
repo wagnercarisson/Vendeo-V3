@@ -35,9 +35,10 @@ import { isRecreatedBackgroundDirection } from "./background-direction";
  * nome não vazio, a instrução é SUBSTITUÍDA pela redação oficial de identificação
  * institucional em texto (`buildTextOnlyInstruction`), interpolando o nome e a
  * `typography_direction` persistida (verbatim, sem inferir fonte). Sem orientação,
- * a linha tipográfica é omitida. Joint 1:1+9:16, legado, `logo`,
- * `visual_signature` e fallbacks preservam o comportamento anterior. Por isso as
- * regras de identidade avançam para `v3`.
+ * a linha tipográfica é omitida. Legado, `logo`, `visual_signature` e fallbacks
+ * preservam o comportamento anterior. O joint 1:1+9:16 passou a optar na própria
+ * montagem inicial (quick 261125-i09). Por isso as regras de identidade avançam
+ * para `v3`.
  *
  * Quick 261125-i07 (estendida ao 9:16 isolado pela quick 261125-i08) — no 1:1
  * novo e no 9:16 isolado com opt-in explícito
@@ -46,8 +47,9 @@ import { isRecreatedBackgroundDirection } from "./background-direction";
  * a instrução é SUBSTITUÍDA pela redação oficial do logotipo
  * (`buildLogoInstruction`), com o nome interpolado e sem exigir o nome em texto
  * separado nem direção tipográfica. `text_only`, `visual_signature`, logo sem
- * arquivo, joint 1:1+9:16, legado e Laboratório preservam o comportamento
- * anterior. Por isso as regras de identidade avançam para `v4`.
+ * arquivo, legado e Laboratório preservam o comportamento anterior. O joint
+ * 1:1+9:16 passou a optar na própria montagem inicial (quick 261125-i09). Por
+ * isso as regras de identidade avançam para `v4`.
  */
 export const PRODUCT_1_1_IDENTITY_CONTEXT_VERSION =
   "48.2.6-identity-context-v4";
@@ -172,16 +174,18 @@ export interface BuildNewFlowIdentityInput {
   /**
    * Quick 261125-i06 (estendida ao 9:16 isolado pela quick 261125-i08) — opt-in
    * EXPLÍCITO do 1:1 novo e do 9:16 isolado para a redação de identificação
-   * institucional em texto. Omitido/`false` preserva o comportamento anterior
-   * (joint, legado e Laboratório).
+   * institucional em texto. O joint 1:1+9:16 também opta, a partir da própria
+   * montagem inicial. Omitido/`false` preserva o comportamento anterior (legado,
+   * Laboratório e chamadores sem opt-in).
    */
   readonly textOnlyInstitutionalIdentity?: boolean;
   /**
    * Quick 261125-i07 (estendida ao 9:16 isolado pela quick 261125-i08) — opt-in
    * EXPLÍCITO do 1:1 novo e do 9:16 isolado para a redação oficial do logotipo.
-   * Exige também estado `logo`, ativo disponível e nome não vazio.
-   * Omitido/`false` preserva o comportamento anterior (joint, legado e
-   * Laboratório).
+   * O joint 1:1+9:16 também opta, a partir da própria montagem inicial. Exige
+   * também estado `logo`, ativo disponível e nome não vazio. Omitido/`false`
+   * preserva o comportamento anterior (legado, Laboratório e chamadores sem
+   * opt-in).
    */
   readonly logoInstitutionalIdentity?: boolean;
 }

@@ -1045,8 +1045,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
           identityState: newFlowEffectiveIdentitySnapshot.identityState,
           hasIdentityAsset: newFlowIdentityImage !== null,
           // Quick 261125-i06 — transporte da direção tipográfica persistida e
-          // opt-in EXPLÍCITO do 1:1 novo e do 9:16 isolado. O joint 1:1+9:16 tem
-          // ramo próprio e mantém o texto reconciliado anterior.
+          // opt-in EXPLÍCITO do 1:1 novo e do 9:16 isolado. O joint 1:1+9:16
+          // recebe as mesmas instruções na própria montagem inicial
+          // (`joint-initial-snapshot.ts`).
           typographyDirection:
             newFlowEffectiveIdentitySnapshot.brandProfile?.typography_direction ??
             null,
@@ -1055,7 +1056,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
           textOnlyInstitutionalIdentity:
             requestedFormat === "1:1" || requestedFormat === "9:16",
           // Quick 261125-i07 — opt-in EXPLÍCITO da redação do logotipo oficial
-          // no 1:1 novo e no 9:16 isolado; o joint permanece com o texto anterior.
+          // no 1:1 novo e no 9:16 isolado; o joint recebe a mesma redação na
+          // própria montagem inicial.
           logoInstitutionalIdentity:
             requestedFormat === "1:1" || requestedFormat === "9:16",
         });
