@@ -1,0 +1,26 @@
+{
+  "phase": "63",
+  "stage": "post-c",
+  "executed_at_utc": "2026-11-26T23:11:05.199Z",
+  "target": {
+    "container": "supabase_db_vendeo-homolog",
+    "published": "0.0.0.0:57782,[::]:57782",
+    "database": "postgres",
+    "server_version": "17.6"
+  },
+  "file": "20261126231022_offer_catalog_published_by_fix.sql",
+  "file_sha256": "817cbd8a946ac3ee4f1d3e8080cdba175866d9be44bdde6b83f03eb1cd1d549c",
+  "version": "20261126231022",
+  "name": "offer_catalog_published_by_fix",
+  "wrapper_sha256": "92b02ae801dde1452e5fdae8710f0e68db051218f2218438a85f918055074bfc",
+  "ledger_before": {
+    "count": 160,
+    "sha256": "b7b441c792d570d2155576faf028e7c0db04db723c8d4ff5db246726cc6246fa"
+  },
+  "ledger_after": {
+    "count": 161,
+    "sha256": "d95abc29958780f9021c8c9e9f5b5b2db33a8d4924cbbb2700cfc468c8dd0b0e"
+  },
+  "exit_code": 0,
+  "duration_ms": 134
+}

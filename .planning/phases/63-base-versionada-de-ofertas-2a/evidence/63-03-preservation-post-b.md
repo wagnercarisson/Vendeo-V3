@@ -1,0 +1,65 @@
+# F63 — Relatório de preservação (post-b)
+
+**Fase:** 63
+**Estágio:** `post-b`
+**Capturado (UTC):** 2026-11-26T23:09:47.683Z
+**Modo:** somente leitura (`read_only: true`)
+
+## Alvo
+
+- Container: `supabase_db_vendeo-homolog`
+- Publicação: `0.0.0.0:57782,[::]:57782`
+- Banco: `postgres`
+- Versão do servidor: 17.6
+
+## Ledger
+
+| Campo | Valor |
+|---|---|
+| Contagem | 160 |
+| Maior versão | `20261126230735` |
+| SHA-256 | `b7b441c792d570d2155576faf028e7c0db04db723c8d4ff5db246726cc6246fa` |
+
+## Tabelas preservadas
+
+| Tabela | Contagem atual | Contagem baseline | Igual | MD5 atual |
+|---|---|---|---|---|
+| trial_offer_enrollments | 1 | 1 | sim | `3ffb438ba5d04e0252746c02d81d15d8` |
+| credit_balances | 41 | 41 | sim | `3469aa81fd61f6e3ac708466d1f40a07` |
+| credit_transactions | 265 | 265 | sim | `79910afd9ef6895d8f8bb6a23986cdbb` |
+| freemium_entitlements | 1 | 1 | sim | `3a7efe44c372747b2956205aee867ed2` |
+
+## Vigência
+
+- `current_version_id`: 426783dc-5918-447e-8cae-bb9ee917df25
+- Rótulo esperado: v1
+- Igual ao esperado: true
+
+## Guardas de schema
+
+- Hashes das cinco funções iguais: true
+- Colunas de `trial_offer_enrollments` iguais: true
+- Colunas de `trial_offer_settings` adicionadas: ["current_version_id"]
+- Colunas de `trial_offer_settings` removidas: []
+- Adição esperada: true
+
+## Fixtures de teste (`f63test-`)
+
+- Publicadas (inertes): []
+- Rascunhos: []
+- Referenciadas pela vigência: []
+
+## Checks
+
+| Check | Resultado |
+|---|---|
+| target_identity_ok | ok |
+| ledger_delta_ok | ok |
+| preserved_equal | ok |
+| settings_guard_equal | ok |
+| current_version_ok | ok |
+| schema_functions_equal | ok |
+| enrollments_columns_equal | ok |
+| settings_columns_expected | ok |
+| versions_ok | ok |
+| test_rows_inert | ok |

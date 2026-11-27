@@ -1,0 +1,20 @@
+# F63 — apply-migration log
+file: 20261126223854_offer_catalog_versions.sql
+version: 20261126223854
+name: offer_catalog_versions
+file_sha256: ed652a26fc9294cdc239a842c2aebb00ccc1a182ff39e9dae13def947f8329bc
+wrapper_sha256: a402de570fa49a55fddf47185a74e4296219bdbb70a9581d470bb949f9e4f3a8
+executed_at_utc: 2026-11-26T22:40:19.611Z
+stage: post-a
+exit_code: 0
+duration_ms: 584
+ledger_before_count: 158
+ledger_before_sha256: 5f9a2c6263982cb144af9d933e71a7a8445d5f1466c745d9f02d63fa71b46365
+ledger_after_count: 159
+ledger_after_sha256: 08760c54f307275a0dfeca30ad1ea0de25650f7b77272649eb9ff8ba4a23b123
+evidence: C:\Projetos\Vendeo V3\.planning\phases\63-base-versionada-de-ofertas-2a\evidence\63-02-migration-a.json
+
+--- stdout ---
+
+--- stderr ---
+

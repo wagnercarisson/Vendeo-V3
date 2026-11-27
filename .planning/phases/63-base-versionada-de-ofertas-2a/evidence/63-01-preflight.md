@@ -1,0 +1,161 @@
+# F63 / 63-01 — Preflight somente leitura do homolog
+
+**Fase:** 63 — base versionada de ofertas (subfatia 2A)
+**Plano:** 63-01
+**Capturado (UTC):** 2026-11-26T22:31:23.404Z
+**Modo:** somente leitura (`read_only: true`)
+
+## 1. Identidade do alvo
+
+| Campo | Valor |
+|---|---|
+| Workdir | `G:\Vendeo-Homolog` |
+| Container | `supabase_db_vendeo-homolog` |
+| Imagem | `public.ecr.aws/supabase/postgres:17.6.1.132` |
+| Publicação real | `0.0.0.0:57782,[::]:57782` |
+| Porta interna do container | 5432 |
+| Banco | `postgres` |
+| Versão do servidor | 17.6 |
+
+Invariante confirmada: host 57782 -> container 5432, banco `postgres`.
+O mapeamento publicado é aceito como `0.0.0.0:57782`, `127.0.0.1:57782` ou `[::]:57782`;
+o alvo lógico de conexão permanece `127.0.0.1:57782/postgres` e qualquer host não-loopback é recusado.
+
+A sessão `docker exec psql` conecta pelo socket local do container, onde `inet_server_port()` é nulo; por isso a porta interna é derivada de `current_setting('port')` e conferida contra o mapeamento `docker port` (ambas resultam em 5432).
+
+## 2. Ledger (fingerprint `all_rows`)
+
+| Campo | Valor |
+|---|---|
+| Contagem | 158 |
+| Maior versão | `20261123130252` |
+| SHA-256 | `5f9a2c6263982cb144af9d933e71a7a8445d5f1466c745d9f02d63fa71b46365` |
+
+Últimas linhas:
+
+| Versão | Nome |
+|---|---|
+| 20261109174110 | f60_9_16_two_stage_control |
+| 20261110202749 | f60_1_composition_artifacts |
+| 20261117170916 | f60_6_nine_sixteen_expansion_model_config |
+| 20261118002139 | f60_7_two_format_foundation |
+| 20261123130252 | f62_campaign_format_addition |
+
+## 3. Presença de tabelas
+
+| Tabela | Estado |
+|---|---|
+| trial_offer_settings | presente |
+| trial_offer_enrollments | presente |
+| credit_balances | presente |
+| credit_transactions | presente |
+| freemium_entitlements | presente |
+| trial_offer_versions | ausente |
+
+## 4. Estado pré-migração
+
+| Chave | Valor |
+|---|---|
+| `trial_offer_versions` ausente | true |
+| `current_version_id` ausente | true |
+| Linhas em `trial_offer_settings` | 1 |
+
+## 5. Baseline das tabelas preservadas
+
+| Tabela | Contagem | MD5 (ordem por chave) | SHA-256 |
+|---|---|---|---|
+| trial_offer_enrollments | 1 | `3ffb438ba5d04e0252746c02d81d15d8` | `d1b869aba30f8177afe9f44edd999c63ef8c8040dca793e5053fbbba3f8a5a48` |
+| credit_balances | 41 | `3469aa81fd61f6e3ac708466d1f40a07` | `3d425ae246413c86cbf1bdc34c81c74b442049675ad12efc87d4e3f3be0d3957` |
+| credit_transactions | 265 | `79910afd9ef6895d8f8bb6a23986cdbb` | `3bf1ce5bb2e8934107ab80ab4767ef78acdaec258607f801f429a6b01a960946` |
+| freemium_entitlements | 1 | `3a7efe44c372747b2956205aee867ed2` | `34fad9189c82c558fc9eea6a68594227050cd8b83e79808d556f7521e6356913` |
+
+O checksum é calculado sobre `t.<coluna>::text` de todas as linhas, ordenado pela chave da tabela,
+com sessão fixa em `TimeZone = UTC` e `DateStyle = ISO, YMD`.
+As chaves usadas são `id` para `trial_offer_enrollments`, `credit_transactions` e `freemium_entitlements`, e `store_id` para `credit_balances`.
+
+## 6. Guardas de schema
+
+| Função | MD5 da definição |
+|---|---|
+| `public.admin_set_trial_offer_enabled(boolean,uuid,text,uuid)` | `5faf9b90e4c0e7789578ce4750b27466` |
+| `public.grant_trial_offer_installment(uuid,integer,timestamptz)` | `a330c84a375ff423a99f731319f1f1b2` |
+| `public.process_trial_offer_installments(timestamptz)` | `9b08534ec857266d4b38618580dcd29c` |
+| `public.start_trial_offer_enrollment(uuid,timestamptz)` | `bbb0b8e9db28135d6654a7487d1b1cca` |
+| `public.trial_offer_eligibility(uuid,timestamptz)` | `3539e94cb914b9ca730a43fac728b101` |
+
+Colunas de `trial_offer_enrollments` (bare, ordem posicional):
+- id
+- store_id
+- user_id
+- root_hash
+- offer_key
+- started_at
+- expires_at
+- granted_total
+- last_granted_seq
+- created_at
+- beneficiary_cnpj_normalized
+- policy_cohort
+
+Colunas de `trial_offer_settings` (bare, ordem posicional):
+- id
+- offer_key
+- enabled
+- launch_at
+- updated_by
+- updated_at
+- created_at
+- individual_launch_at
+
+## 7. `settings_guard` (oito campos pré-existentes)
+
+| Campo | Valor |
+|---|---|
+| id | dcb1b4d5-98ea-4011-8212-e2603c2e4f60 |
+| offer_key | trial_28d_v1 |
+| enabled | true |
+| launch_at | 2026-10-28T21:22:16.361965+00:00 |
+| individual_launch_at | NULL |
+| updated_by | 1273d07b-c2d1-48c9-88ca-9acfe6c0ac14 |
+| updated_at | 2026-10-28T21:22:16.361965+00:00 |
+| created_at | 2026-10-26T20:48:15.88138+00:00 |
+
+## 8. Semântica de fingerprint: F57.2 versus F63
+
+- O F57.2 calcula o fingerprint do ledger sobre todas as linhas **exceto** nomes que contenham `f57_2_`.
+- O F63 usa `fingerprint_scope: "all_rows"`: todas as linhas, sem filtro.
+- As duas migrations do F63 (estrutura e seed) somam duas linhas ao ledger. Por isso o fingerprint armazenado do F57.2 muda **necessariamente** depois da fase.
+- O F57.2 **não** é executado nesta fase. O re-baseline do F57.2 está **explicitamente fora do escopo** desta subfatia e não haverá atualização silenciosa de expectativas.
+
+## 9. Declaração de somente leitura
+
+- Nenhuma escrita de schema ou de dado foi executada.
+- Nenhum banco foi criado; nenhum reset de banco ocorreu; nenhum backup foi exigido.
+- Nenhuma suíte de testes foi executada.
+- Acesso ao banco limitado a consultas de leitura via `docker exec psql` no container do homolog.
+- A variável de conexão de teste não estava presente no ambiente desta execução; o acesso SQL ocorreu exclusivamente dentro do container. Qualquer URL de teste futura deve apontar para `127.0.0.1:57782/postgres`; hosts não-loopback são recusados e valores nunca são impressos.
+- Produção e bancos remotos não foram acessados.
+
+## 10. Comandos utilizados (sem valores de ambiente)
+
+- `docker inspect -f '{{.Name}}|{{.State.Running}}|{{.Config.Image}}' supabase_db_vendeo-homolog`
+- `docker port supabase_db_vendeo-homolog 5432`
+- `docker exec supabase_db_vendeo-homolog psql -U postgres -d postgres -tAXq -c "<select only>"`
+- `node scripts/f63/homolog-identity.mjs --out <json> --md-out <md>`
+- `node scripts/f63/homolog-identity.mjs --verify <json>`
+
+## 11. Política de evidência para os próximos planos
+
+- Logs em UTF-8, sem credenciais e sem valores de variáveis de ambiente.
+- Comparação contra este baseline por `count` e `row_checksum_md5` exatos; `sha256` é informativo.
+- `settings_guard` comparado pelos oito campos pré-existentes; `current_version_id` é efeito de migration separado.
+- Diferenças classificadas como efeito esperado da migration ou dado criado pelos testes; nunca atribuir dados de teste à migration.
+- Ledger sempre registrado com `count`, `max_version` e `sha256` em todos os estágios.
+
+## 12. Nota de inventário (L3)
+
+Qualquer arquivo novo `*.postgres.test.ts` criado antes de entrar em `scripts/testing/test-categories.json` faz `test:gates` falhar transitoriamente. O plano 63-05 deve adicionar a categoria no mesmo passo em que criar o primeiro arquivo. Este plano não cria testes de integração.
+
+## 13. Correção posterior — terceira migration (2026-11-26)
+
+Após a revisão do 63-02, o F63 passou a prever **três migrations**: A (estrutural), B (seed) e C (correção forward-only do guard de `published_by`). Este preflight foi capturado quando o desenho previa duas; os valores de ledger, tabelas e checksums permanecem o baseline válido. O impacto no fingerprint do F57.2 passa de +2 para **+3 linhas** (158 → 161). Nenhuma migration foi criada ou aplicada neste plano.
