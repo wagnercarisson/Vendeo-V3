@@ -14,6 +14,11 @@ progress:
 
 # Project State
 
+## Consolidação F63.1 — 2026-11-27
+
+**HOMOLOG CONSOLIDADO; GATE 3/GIT PENDENTES; PRODUÇÃO NÃO AUTORIZADA.** A migration consolidada `20261127162602_offer_catalog_consolidated_install.sql` foi aplicada no homolog (ledger 158→159; SHA final `3a9b9825098a0c622f6be588a5b8b7853d14c13796d72eaad9189f8a7e45a474`). Suíte F63 3 arquivos/33 testes PASS; post-install e post-tests-consolidated com preservação igual ao baseline. A/B/C/D foram movidos byte a byte para `supabase/migration-archive/f63-2a/`; D permanece preparada e nunca aplicada. u83 preservada. Commit A/B e Gate 3 permanecem pendentes; produção, push, merge e deploy não autorizados. Nenhuma operação Git de mutação foi executada.
+
+
 ## Planejamento F63 — subfatia 2A base versionada de ofertas — 2026-11-26
 
 **CONCLUÍDA NO HOMOLOG, VERIFICADA, SINCRONIZADA E ARQUIVADA; NÃO APROVADA PARA PRODUÇÃO.** Fase GSD `63` registrada em `.planning/ROADMAP.md`/`.planning/REQUIREMENTS.md` (`REQ-63-01..07`). Fonte arquivada em `openspec/changes/archive/2026-11-26-fase-2a-base-versionada-de-ofertas/` (proposal, design, spec, tasks; `--strict` válido). Spec principal criada em `openspec/specs/trial-offer-catalog/spec.md` (12 requirements, 59 cenários, validada em strict). Três migrations aplicadas no homolog: A `20261126223854` (ledger 159), B `20261126230735` (`post-b`, 160, v1 vigente/`NOT NULL`) e C `20261126231022` (`post-c`, 161, publisher); A intacta. `63-04` contrato + `offer.ts` + 30 testes. `63-05` perfil F63, **33/33 testes reais PASS**, preservação post-tests 10/10, v1 restaurada, 15 fixtures inertes/0 rascunhos. **`/gsd-verify-work`:** `63-UAT.md` complete, 6/6 PASS (aceite técnico do responsável; sem reexecução PostgreSQL). **`/opsx-verify`:** `63-OPSX-VERIFY.md` — 74/74 tasks, 12/12 requirements, 59/59 cenários mapeados, 0 CRITICAL, 2 WARNING (lint TS não validado; 3 falhas globais aceitas) e 1 SUGGESTION (comentário SQL desatualizado), pronto para arquivar com ressalvas. Gates: OpenSpec 0, typecheck 0, build 0, F63 33/33, scripts 119/119, gates 0, preservation 0; lint TS **NÃO VALIDADO**; `npm test` exit 1 com 3 falhas alheias, não corrigidas. Sem commit/push/deploy/produção. Homolog ≠ produção; conferência remota, integração de `offer_version_id`, RPC/painel Admin e troca de fonte dos consumidores permanecem pendentes.

@@ -1,0 +1,141 @@
+{
+  "phase": "63.1",
+  "stage": "post-install",
+  "captured_at_utc": "2026-11-27T17:14:18.725Z",
+  "read_only": true,
+  "target": {
+    "container": "supabase_db_vendeo-homolog",
+    "running": true,
+    "image": "public.ecr.aws/supabase/postgres:17.6.1.132",
+    "published": "0.0.0.0:57782,[::]:57782",
+    "container_port": 5432,
+    "database": "postgres",
+    "server_version": "17.6",
+    "workdir": "G:\\Vendeo-Homolog"
+  },
+  "ledger": {
+    "count": 159,
+    "max_version": "20261127162602",
+    "sha256": "3a9b9825098a0c622f6be588a5b8b7853d14c13796d72eaad9189f8a7e45a474"
+  },
+  "preserved": {
+    "trial_offer_enrollments": {
+      "count": 1,
+      "row_checksum_md5": "3ffb438ba5d04e0252746c02d81d15d8",
+      "sha256": "d1b869aba30f8177afe9f44edd999c63ef8c8040dca793e5053fbbba3f8a5a48",
+      "equal": true,
+      "baseline_count": 1,
+      "baseline_row_checksum_md5": "3ffb438ba5d04e0252746c02d81d15d8"
+    },
+    "credit_balances": {
+      "count": 41,
+      "row_checksum_md5": "3469aa81fd61f6e3ac708466d1f40a07",
+      "sha256": "3d425ae246413c86cbf1bdc34c81c74b442049675ad12efc87d4e3f3be0d3957",
+      "equal": true,
+      "baseline_count": 41,
+      "baseline_row_checksum_md5": "3469aa81fd61f6e3ac708466d1f40a07"
+    },
+    "credit_transactions": {
+      "count": 265,
+      "row_checksum_md5": "79910afd9ef6895d8f8bb6a23986cdbb",
+      "sha256": "3bf1ce5bb2e8934107ab80ab4767ef78acdaec258607f801f429a6b01a960946",
+      "equal": true,
+      "baseline_count": 265,
+      "baseline_row_checksum_md5": "79910afd9ef6895d8f8bb6a23986cdbb"
+    },
+    "freemium_entitlements": {
+      "count": 1,
+      "row_checksum_md5": "3a7efe44c372747b2956205aee867ed2",
+      "sha256": "34fad9189c82c558fc9eea6a68594227050cd8b83e79808d556f7521e6356913",
+      "equal": true,
+      "baseline_count": 1,
+      "baseline_row_checksum_md5": "3a7efe44c372747b2956205aee867ed2"
+    }
+  },
+  "settings_guard": {
+    "id": "dcb1b4d5-98ea-4011-8212-e2603c2e4f60",
+    "offer_key": "trial_28d_v1",
+    "enabled": true,
+    "launch_at": "2026-10-28T21:22:16.361965+00:00",
+    "individual_launch_at": null,
+    "updated_by": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
+    "updated_at": "2026-10-28T21:22:16.361965+00:00",
+    "created_at": "2026-10-26T20:48:15.88138+00:00",
+    "equal": true,
+    "current_version_id": {
+      "value": "68f56dd7-125d-45b2-a4f1-0ca5d5e90796",
+      "expected_version_label": "v1",
+      "equal": true
+    }
+  },
+  "schema_guards": {
+    "functions_md5_match": true,
+    "trial_offer_enrollments_columns_equal": true,
+    "trial_offer_settings_columns": {
+      "added": [
+        "current_version_id"
+      ],
+      "removed": [],
+      "equal_expected": true
+    }
+  },
+  "consolidated": {
+    "file": "supabase/migrations/20261127162602_offer_catalog_consolidated_install.sql",
+    "version": "20261127162602",
+    "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc",
+    "pin_version": "20261127162602",
+    "pin_sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc",
+    "pin_ok": true
+  },
+  "migration_hashes": {
+    "A": {
+      "resolved_path": "supabase/migrations/20261126223854_offer_catalog_versions.sql",
+      "resolved_from": "legacy",
+      "present": true,
+      "sha256": "ed652a26fc9294cdc239a842c2aebb00ccc1a182ff39e9dae13def947f8329bc",
+      "expected_sha256": "ed652a26fc9294cdc239a842c2aebb00ccc1a182ff39e9dae13def947f8329bc",
+      "equal": true
+    },
+    "B": {
+      "resolved_path": "supabase/migrations/20261126230735_offer_catalog_seed_v1.sql",
+      "resolved_from": "legacy",
+      "present": true,
+      "sha256": "e511295e7b7419431f05b9a112258afd3c3651de23ecd85d384ee9d26115c4b7",
+      "expected_sha256": "e511295e7b7419431f05b9a112258afd3c3651de23ecd85d384ee9d26115c4b7",
+      "equal": true
+    },
+    "C": {
+      "resolved_path": "supabase/migrations/20261126231022_offer_catalog_published_by_fix.sql",
+      "resolved_from": "legacy",
+      "present": true,
+      "sha256": "817cbd8a946ac3ee4f1d3e8080cdba175866d9be44bdde6b83f03eb1cd1d549c",
+      "expected_sha256": "817cbd8a946ac3ee4f1d3e8080cdba175866d9be44bdde6b83f03eb1cd1d549c",
+      "equal": true
+    }
+  },
+  "expected_migration_effects": [
+    "settings: current_version_id assigned to v1 and NOT NULL",
+    "versions: exactly one published/current v1 from the consolidated install",
+    "ledger: delta +1 against the 63-01 baseline"
+  ],
+  "test_created_rows": {
+    "published": [],
+    "drafts": [],
+    "referenced_by_current": []
+  },
+  "checks": {
+    "target_identity_ok": true,
+    "ledger_delta_ok": true,
+    "preserved_equal": true,
+    "settings_guard_equal": true,
+    "current_version_ok": true,
+    "schema_functions_equal": true,
+    "enrollments_columns_equal": true,
+    "settings_columns_expected": true,
+    "versions_ok": true,
+    "test_rows_inert": true,
+    "migration_hashes_equal": true,
+    "consolidated_migration_present": true,
+    "consolidated_pin_ok": true
+  }
+}

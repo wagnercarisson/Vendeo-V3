@@ -1,0 +1,26 @@
+{
+  "consolidated_file": "supabase/migrations/20261127162602_offer_catalog_consolidated_install.sql",
+  "version": "20261127162602",
+  "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc",
+  "static_test_exit": 0,
+  "inventory_exit": 0,
+  "db_writes": 0,
+  "applied": false,
+  "timestamp_regenerated_at_utc": "2026-11-27T16:26:02.618Z",
+  "timestamp_reused": false,
+  "comment_correction": "published_by_column_comment_first_publication",
+  "updated_at_utc": "2026-11-27T16:56:48.912Z",
+  "original_sha256": "b35bd8f5025efce3d26b217fd167fa839aa04b448086d636c3256b2335c7d269",
+  "documental_corrections": [
+    {
+      "authorized_in": "63.1-03",
+      "change": "published_by comment: first publication accepts NULL or UUID",
+      "sha256": "32f74c726663c9e8f3c4739e655164c52ac4b58b1481e800525bd67c3b1063af"
+    },
+    {
+      "authorized_in": "63.1-03",
+      "change": "published_by comment: UUID -> NULL also allowed by direct UPDATE, not only referential action",
+      "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc"
+    }
+  ]
+}

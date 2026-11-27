@@ -1,0 +1,96 @@
+{
+  "notice": "Arquivos históricos das migrations A/B/C/D da F63/2A. Não devem ser aplicados em ambiente novo, produção ou reset local. D foi preparada e nunca aplicada; o comentário final está no arquivo consolidado.",
+  "superseded_by": {
+    "version": "20261127162602",
+    "name": "offer_catalog_consolidated_install",
+    "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc"
+  },
+  "files": [
+    {
+      "label": "A",
+      "version": "20261126223854",
+      "name": "offer_catalog_versions",
+      "file": "20261126223854_offer_catalog_versions.sql",
+      "applied_in_homolog": true,
+      "homolog_stage": "post-a",
+      "execution_evidence": [
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-02-migration-a.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-02-preservation-post-a.json"
+      ],
+      "status": "applied",
+      "sha256": "ed652a26fc9294cdc239a842c2aebb00ccc1a182ff39e9dae13def947f8329bc",
+      "original_path": "supabase/migrations/20261126223854_offer_catalog_versions.sql",
+      "archived_path": "supabase/migration-archive/f63-2a/20261126223854_offer_catalog_versions.sql",
+      "superseded_by": {
+        "version": "20261127162602",
+        "name": "offer_catalog_consolidated_install",
+        "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc"
+      },
+      "notes": "Aplicada no homolog exclusivo; preservada apenas como histórico."
+    },
+    {
+      "label": "B",
+      "version": "20261126230735",
+      "name": "offer_catalog_seed_v1",
+      "file": "20261126230735_offer_catalog_seed_v1.sql",
+      "applied_in_homolog": true,
+      "homolog_stage": "post-b",
+      "execution_evidence": [
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-migration-b.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-preservation-post-b.json"
+      ],
+      "status": "applied",
+      "sha256": "e511295e7b7419431f05b9a112258afd3c3651de23ecd85d384ee9d26115c4b7",
+      "original_path": "supabase/migrations/20261126230735_offer_catalog_seed_v1.sql",
+      "archived_path": "supabase/migration-archive/f63-2a/20261126230735_offer_catalog_seed_v1.sql",
+      "superseded_by": {
+        "version": "20261127162602",
+        "name": "offer_catalog_consolidated_install",
+        "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc"
+      },
+      "notes": "Aplicada no homolog exclusivo; preservada apenas como histórico."
+    },
+    {
+      "label": "C",
+      "version": "20261126231022",
+      "name": "offer_catalog_published_by_fix",
+      "file": "20261126231022_offer_catalog_published_by_fix.sql",
+      "applied_in_homolog": true,
+      "homolog_stage": "post-c",
+      "execution_evidence": [
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-migration-c.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-preservation-post-c.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-publisher-smoke.log"
+      ],
+      "status": "applied",
+      "sha256": "817cbd8a946ac3ee4f1d3e8080cdba175866d9be44bdde6b83f03eb1cd1d549c",
+      "original_path": "supabase/migrations/20261126231022_offer_catalog_published_by_fix.sql",
+      "archived_path": "supabase/migration-archive/f63-2a/20261126231022_offer_catalog_published_by_fix.sql",
+      "superseded_by": {
+        "version": "20261127162602",
+        "name": "offer_catalog_consolidated_install",
+        "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc"
+      },
+      "notes": "Aplicada no homolog exclusivo; preservada apenas como histórico."
+    },
+    {
+      "label": "D",
+      "version": "20261127004704",
+      "name": "f63_trial_offer_versions_guard_comment",
+      "file": "20261127004704_f63_trial_offer_versions_guard_comment.sql",
+      "applied_in_homolog": false,
+      "homolog_stage": null,
+      "execution_evidence": null,
+      "status": "prepared_never_applied",
+      "sha256": "ec12d10f7d4742d0f59608b5b408e5ba9bc0cfe47c0e81e74a48a311d6c5b833",
+      "original_path": "supabase/migrations/20261127004704_f63_trial_offer_versions_guard_comment.sql",
+      "archived_path": "supabase/migration-archive/f63-2a/20261127004704_f63_trial_offer_versions_guard_comment.sql",
+      "superseded_by": {
+        "version": "20261127162602",
+        "name": "offer_catalog_consolidated_install",
+        "sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc"
+      },
+      "notes": "Preparada e nunca aplicada; sem estágio de execução."
+    }
+  ]
+}

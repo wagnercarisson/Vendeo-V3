@@ -1,0 +1,15 @@
+[dry-run] nenhuma execução: sem docker cp e sem psql -f
+[dry-run] container: supabase_db_vendeo-homolog
+[dry-run] published: 0.0.0.0:57782,[::]:57782
+[dry-run] database: postgres
+[dry-run] server_version: 17.6
+[dry-run] file: supabase/migrations/20261127162602_offer_catalog_consolidated_install.sql
+[dry-run] file_sha256: 77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc
+[dry-run] version: 20261127162602
+[dry-run] name: offer_catalog_consolidated_install
+[dry-run] stage: post-install
+[dry-run] version_absent_from_ledger: true
+[dry-run] ledger_before: count=161 sha256=d95abc29958780f9021c8c9e9f5b5b2db33a8d4924cbbb2700cfc468c8dd0b0e
+[dry-run] wrapper_sha256: b08c68cec6d443566a2a47b133936f7a0e5df152b8894e28a491bfc96462fc74
+[dry-run] wrapper: BEGIN; SET LOCAL lock_timeout/statement_timeout; <migration>; INSERT ledger; COMMIT;
+[dry-run] nenhum comando remoto, nenhum reset/push/link, nenhuma credencial impressa

@@ -1,28 +1,22 @@
 #!/usr/bin/env node
 /**
- * F63 — relatório de preservação (somente leitura).
- *
- * Compara o estado atual do homolog contra o baseline do 63-01 e classifica
- * os efeitos esperados das migrations e os dados criados pelos testes.
+ * F63.1 — relatório de preservação (somente leitura).
  *
  * Estágios:
- *   post-a    — depois da migration de estrutura (versões/tabela/coluna).
- *   post-b    — depois do seed da versão v1 publicada e vigente.
- *   post-c    — depois da correção do guard de publicação (published_by).
- *   post-tests — depois da suíte F63; fixtures `f63test-` publicadas são inertes.
+ *   post-a, post-b, post-c, post-tests   — evidências históricas executadas.
+ *   pre-install                          — base anterior à F63, após R1.
+ *   post-install                         — instalação consolidada (ledger 159).
+ *   post-tests-consolidated              — suíte F63 após a instalação consolidada.
  *
- * Este módulo é somente leitura: usa `docker inspect`, `docker port` e
- * consultas de leitura via `docker exec psql`. Não há DDL nem DML.
- *
- * Uso:
- *   node scripts/f63/preservation-report.mjs --baseline <json> --stage post-a|post-b|post-c|post-tests [--out <json>] [--md-out <md>]
+ * Não carrega `post-d`: D nunca foi aplicada e não é stage do harness.
+ * Este módulo é somente leitura: docker inspect/port e SELECTs via psql.
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
   PRESERVED_TABLES,
-  SETTINGS_COLUMNS,
   SCHEMA_FUNCTION_SIGNATURES,
   assertHomologIdentity,
   readLedgerFingerprint,
@@ -32,31 +26,62 @@ import {
   readVersionState,
 } from './homolog-identity.mjs';
 
-const STAGES = ['post-a', 'post-b', 'post-c', 'post-tests'];
+export const STAGES = [
+  'post-a',
+  'post-b',
+  'post-c',
+  'post-tests',
+  'pre-install',
+  'post-install',
+  'post-tests-consolidated',
+];
+export const LEDGER_DELTA_BY_STAGE = {
+  'post-a': 1,
+  'post-b': 2,
+  'post-c': 3,
+  'post-tests': 3,
+  'pre-install': 0,
+  'post-install': 1,
+  'post-tests-consolidated': 1,
+};
 const TEST_FIXTURE_PREFIX = 'f63test-';
-const LEDGER_DELTA_BY_STAGE = { 'post-a': 1, 'post-b': 2, 'post-c': 3, 'post-tests': 3 };
+const CONSOLIDATED_RE = /^\d{14}_offer_catalog_consolidated_install\.sql$/;
+const MIGRATION_FILES = [
+  {
+    label: 'A',
+    legacyFile: 'supabase/migrations/20261126223854_offer_catalog_versions.sql',
+    archivedFile: 'supabase/migration-archive/f63-2a/20261126223854_offer_catalog_versions.sql',
+    expectedSha256: 'ed652a26fc9294cdc239a842c2aebb00ccc1a182ff39e9dae13def947f8329bc',
+  },
+  {
+    label: 'B',
+    legacyFile: 'supabase/migrations/20261126230735_offer_catalog_seed_v1.sql',
+    archivedFile: 'supabase/migration-archive/f63-2a/20261126230735_offer_catalog_seed_v1.sql',
+    expectedSha256: 'e511295e7b7419431f05b9a112258afd3c3651de23ecd85d384ee9d26115c4b7',
+  },
+  {
+    label: 'C',
+    legacyFile: 'supabase/migrations/20261126231022_offer_catalog_published_by_fix.sql',
+    archivedFile: 'supabase/migration-archive/f63-2a/20261126231022_offer_catalog_published_by_fix.sql',
+    expectedSha256: '817cbd8a946ac3ee4f1d3e8080cdba175866d9be44bdde6b83f03eb1cd1d549c',
+  },
+];
 
 function parseArgs(argv) {
-  const args = { baseline: null, stage: null, out: null, mdOut: null, help: false };
+  const args = {
+    baseline: null, stage: null, out: null, mdOut: null, help: false,
+    consolidatedVersion: null, consolidatedSha256: null,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const current = argv[i];
-    if (current === '--baseline') {
-      args.baseline = argv[i + 1];
-      i += 1;
-    } else if (current === '--stage') {
-      args.stage = argv[i + 1];
-      i += 1;
-    } else if (current === '--out') {
-      args.out = argv[i + 1];
-      i += 1;
-    } else if (current === '--md-out') {
-      args.mdOut = argv[i + 1];
-      i += 1;
-    } else if (current === '--help' || current === '-h') {
-      args.help = true;
-    } else {
-      throw new Error(`argumento desconhecido: ${current}`);
-    }
+    if (current === '--baseline') { args.baseline = argv[i + 1]; i += 1; }
+    else if (current === '--stage') { args.stage = argv[i + 1]; i += 1; }
+    else if (current === '--out') { args.out = argv[i + 1]; i += 1; }
+    else if (current === '--md-out') { args.mdOut = argv[i + 1]; i += 1; }
+    else if (current === '--consolidated-version') { args.consolidatedVersion = argv[i + 1]; i += 1; }
+    else if (current === '--consolidated-sha256') { args.consolidatedSha256 = argv[i + 1]; i += 1; }
+    else if (current === '--help' || current === '-h') { args.help = true; }
+    else throw new Error(`argumento desconhecido: ${current}`);
   }
   return args;
 }
@@ -65,8 +90,10 @@ function normalize(value) {
   return JSON.stringify(value === undefined ? null : value);
 }
 
-function sameArray(left, right) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
+export function sameArray(left, right) {
+  return Array.isArray(left) && Array.isArray(right)
+    && left.length === right.length
+    && left.every((value, index) => value === right[index]);
 }
 
 function readBaseline(file) {
@@ -82,7 +109,28 @@ function readBaseline(file) {
   return data;
 }
 
-function expectedEffects(stage) {
+export function expectedEffects(stage) {
+  if (stage === 'pre-install') {
+    return [
+      'objects: F63 objects absent after reconciliation',
+      'settings: current_version_id absent',
+      'ledger: 158 rows, delta 0 against the 63-01 baseline',
+    ];
+  }
+  if (stage === 'post-install') {
+    return [
+      'settings: current_version_id assigned to v1 and NOT NULL',
+      'versions: exactly one published/current v1 from the consolidated install',
+      'ledger: delta +1 against the 63-01 baseline',
+    ];
+  }
+  if (stage === 'post-tests-consolidated') {
+    return [
+      'settings: current_version_id assigned to v1 and NOT NULL',
+      'versions: v1 published/current plus inert f63test-% fixtures',
+      'ledger: delta +1 against the 63-01 baseline',
+    ];
+  }
   const effects = [
     'settings: current_version_id column added (nullable, no value assigned)',
     'ledger: +1 row from the structure migration',
@@ -109,9 +157,8 @@ function buildPreservedComparison(baseline, current) {
   for (const { table } of PRESERVED_TABLES) {
     const baseEntry = baseline.preserved[table] ?? {};
     const currentEntry = current[table] ?? {};
-    const equal =
-      baseEntry.count === currentEntry.count &&
-      baseEntry.row_checksum_md5 === currentEntry.row_checksum_md5;
+    const equal = baseEntry.count === currentEntry.count
+      && baseEntry.row_checksum_md5 === currentEntry.row_checksum_md5;
     if (!equal) allEqual = false;
     preserved[table] = {
       count: currentEntry.count,
@@ -125,22 +172,28 @@ function buildPreservedComparison(baseline, current) {
   return { preserved, allEqual };
 }
 
-function buildSettingsComparison(baseline, current, versions, stage) {
+export function buildSettingsComparison(baseline, current, versions, stage) {
   let equal = true;
   const settings = {};
-  for (const column of SETTINGS_COLUMNS) {
+  for (const column of Object.keys(baseline.settings_guard)) {
     settings[column] = current[column];
-    if (normalize(baseline.settings_guard?.[column]) !== normalize(current[column])) {
+    if (normalize(baseline.settings_guard[column]) !== normalize(current[column])) {
       equal = false;
     }
   }
 
-  const expectedLabel = stage === 'post-a' ? null : 'v1';  const currentVersionEqual =
-    stage === 'post-a'
+  const preInstall = stage === 'pre-install';
+  const postA = stage === 'post-a';
+  const expectedLabel = preInstall || postA ? null : 'v1';
+  const currentVersionEqual = preInstall
+    ? versions.table_present === false
+      && versions.current_version_id === null
+      && versions.current_version_id_nullable === true
+    : postA
       ? versions.current_version_id === null && versions.current_version_id_nullable === true
-      : versions.current_version_id !== null &&
-        versions.current_version_label === expectedLabel &&
-        versions.current_version_id_nullable === false;
+      : versions.current_version_id !== null
+        && versions.current_version_label === expectedLabel
+        && versions.current_version_id_nullable === false;
 
   return {
     settings: {
@@ -157,12 +210,11 @@ function buildSettingsComparison(baseline, current, versions, stage) {
   };
 }
 
-function buildSchemaComparison(baseline, current) {
+export function buildSchemaComparison(baseline, current, stage) {
   const baselineFunctions = baseline.schema_guards?.functions ?? {};
   const currentFunctions = current.functions ?? {};
-  const functionsMd5Match =
-    Object.keys(baselineFunctions).length === SCHEMA_FUNCTION_SIGNATURES.length &&
-    SCHEMA_FUNCTION_SIGNATURES.every((signature) => baselineFunctions[signature] === currentFunctions[signature]);
+  const functionsMd5Match = Object.keys(baselineFunctions).length === SCHEMA_FUNCTION_SIGNATURES.length
+    && SCHEMA_FUNCTION_SIGNATURES.every((signature) => baselineFunctions[signature] === currentFunctions[signature]);
 
   const baselineEnrollments = baseline.schema_guards?.trial_offer_enrollments_columns ?? [];
   const currentEnrollments = current.trial_offer_enrollments_columns ?? [];
@@ -172,7 +224,8 @@ function buildSchemaComparison(baseline, current) {
   const currentSettings = current.trial_offer_settings_columns ?? [];
   const added = currentSettings.filter((column) => !baselineSettings.includes(column));
   const removed = baselineSettings.filter((column) => !currentSettings.includes(column));
-  const addedExpected = sameArray(added, ['current_version_id']);
+  const expectedAdded = stage === 'pre-install' ? [] : ['current_version_id'];
+  const addedExpected = sameArray(added, expectedAdded);
   const removedExpected = removed.length === 0;
   const equalExpected = addedExpected && removedExpected;
 
@@ -180,11 +233,7 @@ function buildSchemaComparison(baseline, current) {
     schemaGuards: {
       functions_md5_match: functionsMd5Match,
       trial_offer_enrollments_columns_equal: enrollmentsEqual,
-      trial_offer_settings_columns: {
-        added,
-        removed,
-        equal_expected: equalExpected,
-      },
+      trial_offer_settings_columns: { added, removed, equal_expected: equalExpected },
     },
     functionsMd5Match,
     enrollmentsEqual,
@@ -195,38 +244,53 @@ function buildSchemaComparison(baseline, current) {
 function classifyTestRows(versions) {
   const fixtureRows = versions.rows.filter((row) => row.version_label.startsWith(TEST_FIXTURE_PREFIX));
   return {
-    published: fixtureRows
-      .filter((row) => row.published_at !== null)
-      .map((row) => row.version_label),
-    drafts: fixtureRows
-      .filter((row) => row.published_at === null)
-      .map((row) => row.version_label),
-    referenced_by_current: fixtureRows
-      .filter((row) => row.id === versions.current_version_id)
-      .map((row) => row.version_label),
+    published: fixtureRows.filter((row) => row.published_at !== null).map((row) => row.version_label),
+    drafts: fixtureRows.filter((row) => row.published_at === null).map((row) => row.version_label),
+    referenced_by_current: fixtureRows.filter((row) => row.id === versions.current_version_id).map((row) => row.version_label),
   };
 }
 
-function evaluateStage(stage, ledger, baseline, versions, testRows) {
+export function evaluateStage(stage, ledger, baseline, versions, testRows) {
   const delta = ledger.count - baseline.ledger.count;
   const expectedDelta = LEDGER_DELTA_BY_STAGE[stage];
+  const v1Published = versions.rows.filter((row) => row.version_label === 'v1' && row.published_at !== null).length === 1;
+  let versionsOk;
+  if (stage === 'pre-install') {
+    versionsOk = versions.table_present === false;
+  } else if (stage === 'post-a') {
+    versionsOk = versions.table_present === true && versions.total === 0;
+  } else if (stage === 'post-install') {
+    versionsOk = versions.table_present === true
+      && versions.total === 1
+      && v1Published
+      && versions.current_version_label === 'v1';
+  } else if (stage === 'post-tests-consolidated') {
+    versionsOk = versions.table_present === true
+      && v1Published
+      && versions.draft_count === 0
+      && testRows.drafts.length === 0
+      && testRows.referenced_by_current.length === 0;
+  } else {
+    versionsOk = versions.table_present === true && v1Published;
+  }
+  const testRowsInert = stage === 'post-tests' || stage === 'post-tests-consolidated'
+    ? testRows.drafts.length === 0 && testRows.referenced_by_current.length === 0
+    : true;
+  return { ledger_delta_ok: delta === expectedDelta, versions_ok: versionsOk, test_rows_inert: testRowsInert };
+}
 
-  const versionsOk =
-    versions.table_present &&
-    (stage === 'post-a'
-      ? versions.total === 0
-      : versions.rows.filter((row) => row.version_label === 'v1' && row.published_at !== null).length === 1);
-
-  const testRowsInert =
-    stage === 'post-tests'
-      ? testRows.drafts.length === 0 && testRows.referenced_by_current.length === 0
-      : true;
-
-  return {
-    ledger_delta_ok: delta === expectedDelta,
-    versions_ok: versionsOk,
-    test_rows_inert: testRowsInert,
-  };
+export function findConsolidatedMigration() {
+  const files = fs.readdirSync(path.join(process.cwd(), 'supabase/migrations'))
+    .filter((name) => CONSOLIDATED_RE.test(name));
+  if (files.length !== 1) {
+    throw new Error(`expected exactly one consolidated migration; found ${files.length}`);
+  }
+  const file = files[0];
+  const version = file.slice(0, 14);
+  const sha256 = crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(process.cwd(), 'supabase/migrations', file)))
+    .digest('hex');
+  return { file: `supabase/migrations/${file}`, version, sha256 };
 }
 
 function renderMarkdown(report) {
@@ -237,8 +301,11 @@ function renderMarkdown(report) {
   const checkRows = Object.entries(report.checks)
     .map(([name, value]) => `| ${name} | ${value ? 'ok' : 'falha'} |`)
     .join('\n');
+  const migrationRows = Object.entries(report.migration_hashes)
+    .map(([label, entry]) => `| ${label} | \`${entry.resolved_path}\` | \`${entry.resolved_from}\` | \`${entry.sha256 ?? 'ausente'}\` | ${entry.equal ? 'sim' : 'não'} |`)
+    .join('\n');
 
-  return `# F63 — Relatório de preservação (${report.stage})
+  return `# F63.1 — Relatório de preservação (${report.stage})
 
 **Fase:** ${report.phase}
 **Estágio:** \`${report.stage}\`
@@ -280,6 +347,20 @@ ${preservedRows}
 - Colunas de \`trial_offer_settings\` removidas: ${JSON.stringify(report.schema_guards.trial_offer_settings_columns.removed)}
 - Adição esperada: ${report.schema_guards.trial_offer_settings_columns.equal_expected}
 
+## Consolidado
+
+- Arquivo: \`${report.consolidated.file}\`
+- Versão: \`${report.consolidated.version}\`
+- SHA-256: \`${report.consolidated.sha256}\`
+- Pin fornecido: versão=\`${report.consolidated.pin_version ?? 'não fornecido'}\`, sha256=\`${report.consolidated.pin_sha256 ?? 'não fornecido'}\`
+- Pin confere: ${report.consolidated.pin_ok}
+
+## Hashes das migrations
+
+| Migration | Arquivo resolvido | Origem | SHA-256 | Igual ao esperado |
+|---|---|---|---|---|
+${migrationRows}
+
 ## Fixtures de teste (\`${TEST_FIXTURE_PREFIX}\`)
 
 - Publicadas (inertes): ${JSON.stringify(report.test_created_rows.published)}
@@ -301,11 +382,37 @@ function writeArtifact(file, content) {
   return abs;
 }
 
+function buildMigrationHashes() {
+  const hashes = {};
+  const manifestPresent = fs.existsSync(path.resolve(process.cwd(), 'supabase/migration-archive/f63-2a/manifest.json'));
+  for (const { label, legacyFile, archivedFile, expectedSha256 } of MIGRATION_FILES) {
+    const archivedExists = fs.existsSync(path.resolve(process.cwd(), archivedFile));
+    const legacyExists = fs.existsSync(path.resolve(process.cwd(), legacyFile));
+    const resolvedPath = manifestPresent ? archivedFile : (archivedExists ? archivedFile : legacyFile);
+    const resolvedFrom = manifestPresent || archivedExists ? 'archive' : 'legacy';
+    const present = manifestPresent
+      ? archivedExists && !legacyExists
+      : fs.existsSync(path.resolve(process.cwd(), resolvedPath));
+    const sha256 = present
+      ? crypto.createHash('sha256').update(fs.readFileSync(path.resolve(process.cwd(), resolvedPath))).digest('hex')
+      : null;
+    hashes[label] = {
+      resolved_path: resolvedPath,
+      resolved_from: resolvedFrom,
+      present,
+      legacy_present: legacyExists,
+      sha256,
+      expected_sha256: expectedSha256,
+      equal: present && sha256 === expectedSha256,
+    };
+  }
+  return hashes;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-
   if (args.help) {
-    console.log('Uso: node scripts/f63/preservation-report.mjs --baseline <json> --stage post-a|post-b|post-c|post-tests [--out <json>] [--md-out <md>]');
+    console.log('Uso: node scripts/f63/preservation-report.mjs --baseline <json> --stage <post-a|post-b|post-c|post-tests|pre-install|post-install|post-tests-consolidated> [--consolidated-version <v>] [--consolidated-sha256 <sha>] [--out <json>] [--md-out <md>]');
     return 0;
   }
   if (!args.baseline) throw new Error('--baseline is required');
@@ -320,12 +427,20 @@ async function main() {
   const currentSchema = await readSchemaGuards();
   const currentSettings = await readSettingsGuard();
   const versions = await readVersionState();
+  const consolidated = findConsolidatedMigration();
+  const migrationHashes = buildMigrationHashes();
+  const migrationHashesEqual = Object.values(migrationHashes).every((entry) => entry.equal);
 
   const preservedComparison = buildPreservedComparison(baseline, currentPreserved);
   const settingsComparison = buildSettingsComparison(baseline, currentSettings, versions, args.stage);
-  const schemaComparison = buildSchemaComparison(baseline, currentSchema);
+  const schemaComparison = buildSchemaComparison(baseline, currentSchema, args.stage);
   const testRows = classifyTestRows(versions);
   const stageChecks = evaluateStage(args.stage, ledger, baseline, versions, testRows);
+
+  const pinVersion = args.consolidatedVersion ?? null;
+  const pinSha = args.consolidatedSha256 ?? null;
+  const pinOk = (!pinVersion || pinVersion === consolidated.version)
+    && (!pinSha || pinSha === consolidated.sha256);
 
   const checks = {
     target_identity_ok: true,
@@ -338,10 +453,13 @@ async function main() {
     settings_columns_expected: schemaComparison.settingsColumnsExpected,
     versions_ok: stageChecks.versions_ok,
     test_rows_inert: stageChecks.test_rows_inert,
+    migration_hashes_equal: migrationHashesEqual,
+    consolidated_migration_present: fs.existsSync(path.resolve(process.cwd(), consolidated.file)),
+    consolidated_pin_ok: pinOk,
   };
 
   const report = {
-    phase: '63',
+    phase: '63.1',
     stage: args.stage,
     captured_at_utc: new Date().toISOString(),
     read_only: true,
@@ -355,14 +473,17 @@ async function main() {
       server_version: identity.serverVersion,
       workdir: identity.workdir,
     },
-    ledger: {
-      count: ledger.count,
-      max_version: ledger.maxVersion,
-      sha256: ledger.sha256,
-    },
+    ledger: { count: ledger.count, max_version: ledger.maxVersion, sha256: ledger.sha256 },
     preserved: preservedComparison.preserved,
     settings_guard: settingsComparison.settings,
     schema_guards: schemaComparison.schemaGuards,
+    consolidated: {
+      ...consolidated,
+      pin_version: pinVersion,
+      pin_sha256: pinSha,
+      pin_ok: pinOk,
+    },
+    migration_hashes: migrationHashes,
     expected_migration_effects: expectedEffects(args.stage),
     test_created_rows: testRows,
     checks,
@@ -377,9 +498,7 @@ async function main() {
     console.log(`preservation markdown: ${written}`);
   }
 
-  console.log(
-    `stage=${report.stage} ledger=${report.ledger.count} (baseline ${baseline.ledger.count}) preserved_equal=${preservedComparison.allEqual} settings_equal=${settingsComparison.settingsEqual}`,
-  );
+  console.log(`stage=${report.stage} ledger=${report.ledger.count} (baseline ${baseline.ledger.count}) preserved_equal=${preservedComparison.allEqual} settings_equal=${settingsComparison.settingsEqual}`);
   const failures = Object.entries(checks).filter(([, value]) => value !== true);
   if (failures.length > 0) {
     console.error(`preservation checks failed: ${failures.map(([name]) => name).join(', ')}`);
@@ -390,12 +509,9 @@ async function main() {
 }
 
 const ENTRYPOINT = fileURLToPath(import.meta.url);
-
 if (process.argv[1] && path.resolve(process.argv[1]) === ENTRYPOINT) {
   main()
-    .then((code) => {
-      process.exitCode = code;
-    })
+    .then((code) => { process.exitCode = code; })
     .catch((error) => {
       console.error(`f63 preservation report: ${error.message}`);
       process.exitCode = 1;

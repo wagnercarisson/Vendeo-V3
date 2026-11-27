@@ -133,7 +133,7 @@ Plans:
 
 **Status:** **ConcluÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­da, verificada, sincronizada e arquivada** (2026-09-28) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â 8/8 planos concluÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­dos (`48-2-2-01` a `48-2-2-08`), com **CHECKPOINT 1**, **CHECKPOINT 2** e **CHECKPOINT 3 aprovados**. UAT local aprovado com **uma** geraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o real controlada (run `f6148ea6-...`, `gpt-image-2.5-flare`, `images`, `low`, `1024x1024`, `succeeded`; custo **calculado** US$ 0,014592 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â provider reportado `null`; UI US$ 0,01). ProduÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o intocada (`base..HEAD` vazio). OpenSpec **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`. A antiga F48.2.2 (**Auditoria e OtimizaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do Prompt do Revisor**) foi **descartada/substituÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­da** (implementaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o iniciada; sem artefatos mantidos; recuperÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡vel pelo histÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³rico do Git).
 
-**Plans:** 8 plans
+**Plans:** 7 planos; 01–06 concluídos em 2026-11-27 e 07 em execução (arquivamento/gates). Todos `autonomous: false` com Review Stop.
 
 Plans:
 
@@ -1057,3 +1057,37 @@ Plans:
 **Depends on:** proposta OpenSpec revisada/aprovada; plan-check `PASS`; aprovacao explicita dos planos; autorizacao de execucao no homolog existente. Aplicacao em producao exige autorizacao posterior e conferencia remota.
 
 **Directory:** `.planning/phases/63-base-versionada-de-ofertas-2a/`.
+
+---
+
+### Phase 63.1: F63.1 - Consolidar a base versionada de ofertas antes da publicacao
+
+**Status (2026-11-27):** **HOMOLOG CONSOLIDADO; GATE 3/GIT PENDENTES; PRODUÇÃO NÃO AUTORIZADA.** R2 aplicou a migration consolidada, ledger 158→159; suíte F63 33/33. A/B/C/D foram arquivados fora de `supabase/migrations`; u83 preservada. Produção, push, merge e deploy não autorizados.
+
+**Goal:** Consolidar a implementacao funcional da F63/2A em uma unica migration de instalacao do estado final corrigido, reconciliar somente o homolog exclusivo e provar preservacao/contratos, para que o mesmo arquivo seja o candidato futuro a producao. Nao altera consumidores, concessoes, creditos, entitlements, Admin ou regras comerciais.
+
+**Fonte tecnica vinculante:** `openspec/changes/consolidar-base-versionada-de-ofertas-antes-da-publicacao/` (proposal, design, delta `trial-offer-catalog`, tasks). Spec funcional permanece `openspec/specs/trial-offer-catalog/spec.md`.
+
+**Requirements:** N/A — sem novos `REQ-*` funcionais; os requisitos tecnicos estao na change OpenSpec e os contratos funcionais sao os da F63/2A.
+
+**Autorizacoes separadas:**
+- Gate 1: aprovado; autoriza apenas planejamento.
+- Gate 2: deve revisar SQL consolidado, reconciliacao/recuperacao, harness/testes e procedimento completo antes de qualquer escrita no homolog.
+- Git: `git add`/commit exigem aprovacao especifica da lista exata de arquivos; nao implicitos.
+- Gate 3: revisao das evidencias finais antes de qualquer publicacao.
+
+**Plans:** 7 planos em 6 ondas, criados em 2026-11-27 e aguardando revisão; todos `autonomous: false` com Review Stop.
+
+- [x] `63.1-01-PLAN.md` — Preflight read-only, inventário, baseline, timestamp UTC único e scaffold de evidências. **Concluído em 2026-11-27.**
+- [x] `63.1-02-PLAN.md` — Migration consolidada, precondições fail-closed, comentários finais, seed/RLS/REVERT e teste estático. **Concluído em 2026-11-27.**
+- [x] `63.1-03-PLAN.md` — Reconciler R0/R1, recuperação, harness/stages, testes por fixture e preservação da u83. **Concluído em 2026-11-27.**
+- [x] `63.1-04-PLAN.md` — Pacote completo do Gate 2, procedimento e dry-runs não escrituráveis. **Concluído em 2026-11-27.**
+- [x] `63.1-05-PLAN.md` — R0 read-only, R1 transacional, ledger 158/SHA e evidência `pre-install`. **Concluído em 2026-11-27.**
+- [x] `63.1-06-PLAN.md` — R2 consolidado, `post-install`, suíte F63 completa e `post-tests-consolidated`. **Concluído em 2026-11-27.**
+- [ ] `63.1-07-PLAN.md` — Arquivamento A/B/C/D + manifesto, destinação da u83, gates oficiais, aprovações Git específicas (Commit A e Commit B), árvore limpa final e Gate 3.
+
+**Fora de escopo:** alterar `trial_offer_enrollments`, creditos, RPCs existentes, constantes/status/completion, copy publica, landing, Admin, flags, backfill, producao ou qualquer banco remoto. Nao reescrever a change arquivada da 2A.
+
+**Depends on:** Gate 1 aprovado; plan-check `PASS`; revisao/aprovacao explicita dos planos; Gate 2 aprovado para escrita no homolog; aprovacao especifica para operacoes Git.
+
+**Directory:** `.planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/`.

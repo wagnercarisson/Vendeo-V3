@@ -1,0 +1,128 @@
+{
+  "phase": "63",
+  "captured_at_utc": "2026-11-27T16:22:12.592Z",
+  "read_only": true,
+  "environment": {
+    "workdir": "G:\\Vendeo-Homolog",
+    "container": "supabase_db_vendeo-homolog",
+    "published": "0.0.0.0:57782,[::]:57782",
+    "container_port": 5432,
+    "database": "postgres",
+    "server_version": "17.6",
+    "image": "public.ecr.aws/supabase/postgres:17.6.1.132"
+  },
+  "ledger": {
+    "count": 161,
+    "max_version": "20261126231022",
+    "sha256": "d95abc29958780f9021c8c9e9f5b5b2db33a8d4924cbbb2700cfc468c8dd0b0e",
+    "last_rows": [
+      {
+        "version": "20261118002139",
+        "name": "f60_7_two_format_foundation"
+      },
+      {
+        "version": "20261123130252",
+        "name": "f62_campaign_format_addition"
+      },
+      {
+        "version": "20261126223854",
+        "name": "offer_catalog_versions"
+      },
+      {
+        "version": "20261126230735",
+        "name": "offer_catalog_seed_v1"
+      },
+      {
+        "version": "20261126231022",
+        "name": "offer_catalog_published_by_fix"
+      }
+    ]
+  },
+  "tables_present": {
+    "trial_offer_settings": true,
+    "trial_offer_enrollments": true,
+    "credit_balances": true,
+    "credit_transactions": true,
+    "freemium_entitlements": true,
+    "trial_offer_versions": true
+  },
+  "pre_state": {
+    "trial_offer_versions_absent": false,
+    "current_version_id_absent": false,
+    "settings_singleton_count": 1
+  },
+  "settings_guard": {
+    "id": "dcb1b4d5-98ea-4011-8212-e2603c2e4f60",
+    "offer_key": "trial_28d_v1",
+    "enabled": true,
+    "launch_at": "2026-10-28T21:22:16.361965+00:00",
+    "individual_launch_at": null,
+    "updated_by": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
+    "updated_at": "2026-10-28T21:22:16.361965+00:00",
+    "created_at": "2026-10-26T20:48:15.88138+00:00"
+  },
+  "schema_guards": {
+    "functions": {
+      "public.admin_set_trial_offer_enabled(boolean,uuid,text,uuid)": "5faf9b90e4c0e7789578ce4750b27466",
+      "public.grant_trial_offer_installment(uuid,integer,timestamptz)": "a330c84a375ff423a99f731319f1f1b2",
+      "public.process_trial_offer_installments(timestamptz)": "9b08534ec857266d4b38618580dcd29c",
+      "public.start_trial_offer_enrollment(uuid,timestamptz)": "bbb0b8e9db28135d6654a7487d1b1cca",
+      "public.trial_offer_eligibility(uuid,timestamptz)": "3539e94cb914b9ca730a43fac728b101"
+    },
+    "trial_offer_enrollments_columns": [
+      "id",
+      "store_id",
+      "user_id",
+      "root_hash",
+      "offer_key",
+      "started_at",
+      "expires_at",
+      "granted_total",
+      "last_granted_seq",
+      "created_at",
+      "beneficiary_cnpj_normalized",
+      "policy_cohort"
+    ],
+    "trial_offer_settings_columns": [
+      "id",
+      "offer_key",
+      "enabled",
+      "launch_at",
+      "updated_by",
+      "updated_at",
+      "created_at",
+      "individual_launch_at",
+      "current_version_id"
+    ]
+  },
+  "preserved": {
+    "trial_offer_enrollments": {
+      "count": 1,
+      "row_checksum_md5": "3ffb438ba5d04e0252746c02d81d15d8",
+      "sha256": "d1b869aba30f8177afe9f44edd999c63ef8c8040dca793e5053fbbba3f8a5a48"
+    },
+    "credit_balances": {
+      "count": 41,
+      "row_checksum_md5": "3469aa81fd61f6e3ac708466d1f40a07",
+      "sha256": "3d425ae246413c86cbf1bdc34c81c74b442049675ad12efc87d4e3f3be0d3957"
+    },
+    "credit_transactions": {
+      "count": 265,
+      "row_checksum_md5": "79910afd9ef6895d8f8bb6a23986cdbb",
+      "sha256": "3bf1ce5bb2e8934107ab80ab4767ef78acdaec258607f801f429a6b01a960946"
+    },
+    "freemium_entitlements": {
+      "count": 1,
+      "row_checksum_md5": "3a7efe44c372747b2956205aee867ed2",
+      "sha256": "34fad9189c82c558fc9eea6a68594227050cd8b83e79808d556f7521e6356913"
+    }
+  },
+  "fingerprint_scope": "all_rows",
+  "commands": [
+    "docker inspect -f '{{.Name}}|{{.State.Running}}|{{.Config.Image}}' supabase_db_vendeo-homolog",
+    "docker port supabase_db_vendeo-homolog 5432",
+    "docker exec supabase_db_vendeo-homolog psql -U postgres -d postgres -tAXq -c \"<select only>\"",
+    "node scripts/f63/homolog-identity.mjs --out <json> --md-out <md>",
+    "node scripts/f63/homolog-identity.mjs --verify <json>"
+  ]
+}

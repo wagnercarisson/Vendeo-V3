@@ -1,0 +1,48 @@
+{
+  "read_only_db": false,
+  "captured_at_utc": "2026-11-27T17:11:59.578Z",
+  "exit_code": 0,
+  "failure_class": null,
+  "commit_confirmed": true,
+  "rollback_confirmed": false,
+  "removed_ledger_rows": [
+    {
+      "version": "20261126223854",
+      "name": "offer_catalog_versions"
+    },
+    {
+      "version": "20261126230735",
+      "name": "offer_catalog_seed_v1"
+    },
+    {
+      "version": "20261126231022",
+      "name": "offer_catalog_published_by_fix"
+    }
+  ],
+  "ledger_after": {
+    "count": 158,
+    "sha256": "5f9a2c6263982cb144af9d933e71a7a8445d5f1466c745d9f02d63fa71b46365",
+    "max_version": "20261123130252"
+  },
+  "labels_ok": true,
+  "preserved_equal": true,
+  "settings_equal": true,
+  "schema_functions_equal": true,
+  "objects_absent": true,
+  "state_observed": {
+    "ledger_count": 158,
+    "ledger_sha256": "5f9a2c6263982cb144af9d933e71a7a8445d5f1466c745d9f02d63fa71b46365",
+    "versions_table_present": false,
+    "preserved_equal": true,
+    "settings_equal": true,
+    "enrollments_columns_equal": true,
+    "settings_columns_equal": true
+  },
+  "stdout_tail": [
+    ""
+  ],
+  "stderr_tail": [
+    ""
+  ],
+  "blocked": false
+}

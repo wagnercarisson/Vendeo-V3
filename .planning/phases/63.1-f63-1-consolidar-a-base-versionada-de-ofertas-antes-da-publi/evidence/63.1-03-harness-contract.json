@@ -1,0 +1,64 @@
+{
+  "read_only_db": true,
+  "db_writes": 0,
+  "stages": [
+    "post-a",
+    "post-b",
+    "post-c",
+    "post-tests",
+    "pre-install",
+    "post-install",
+    "post-tests-consolidated"
+  ],
+  "ledger_delta_by_stage": {
+    "post-a": 1,
+    "post-b": 2,
+    "post-c": 3,
+    "post-tests": 3,
+    "pre-install": 0,
+    "post-install": 1,
+    "post-tests-consolidated": 1
+  },
+  "post_d_absent": true,
+  "reconciler_target_fixed": true,
+  "files_changed": {
+    "reconciler": "8cee75f9bb630e1840e5ec6e607d9ffd4ab637ba42e02c427c5a76a0327a47e0",
+    "apply_migration": "0708978f28c6b04e5025451508d134948b163d4a263749e6cb647e4875e4e063",
+    "preservation_report": "5ddcf405ec8ac8af9ef2a220793e361dc98436aee943677254b9f2641ef3067a",
+    "preservation_stages_test": "85f5d789380a1cb75539368a92f62a47e5c8a19194db6eb753403b1e8d548ed2",
+    "consolidated_static_test": "b40daf95f804727f15cb03b92c8b3e9d37fdf7ce36b0015b0bd34644377b4851",
+    "test_categories": "4f8a08bd58bd0e96d96c7a4af03e7b8d7905e7aaf92618a8e88ca0bcdcd14f23",
+    "test_status": "ba62592cb699cc9e83b33dba27cac96937647920cd8c301125302bf36aacdd6d",
+    "schema_test": "88701aaf84f7f4edfd973c08bf250e2fd2f219813db582bca52d7b77c23ef900",
+    "consolidated_sql": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc"
+  },
+  "u83_preserved_sha256": {
+    "scripts/f63/validate-ts-lint.mjs": "628203ee7991d612fc0ab03186868b85453600ccd5e9558d0dcaa716f245e833",
+    "package.json": "5978c4dea2f8dcd1aeb85e87f5cb943aa06880e0a1a0fb1e364a2ba9650e5d79",
+    "src/lib/campaign/square-base/__tests__/regression.contract.test.ts": "71fe2769bfe4dc9efaee7f9a4ad4126cc0b2b0fe6612d96b91f732c8c0b6aca1",
+    ".planning/quick/261126-u83-fechar-pendencias-de-validacao-e-documen/261126-u83-PLAN.md": "c875e1283af70832053656c2e4acef9ada6d5ea78d44f02afbab027adcf9d530",
+    ".planning/quick/261126-u83-fechar-pendencias-de-validacao-e-documen/evidence/ts-lint.json": "22fcceed8ecfba5c3f3e4da84cae84cc86230706f314f18c53b2d1fec0032215"
+  },
+  "checks": {
+    "node_check_exit": 0,
+    "reconciler_help_exit": 0,
+    "inventory_exit": 0,
+    "preservation_test_exit": 0,
+    "static_test_exit": 0,
+    "dry_run_exit": 0,
+    "dry_run_verdict": "GO"
+  },
+  "consolidated_version": "20261127162602",
+  "consolidated_sql_sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc",
+  "u83_supersession": "A remoção de post-d do harness supersede apenas a parte abandonada da quick; o guard estrito da regressão e o lint TypeScript delimitado permanecem preservados.",
+  "updated_at_utc": "2026-11-27T16:56:48.912Z",
+  "r0_command_requires_baseline": true,
+  "inspection_failure_tested": true,
+  "exact_signature_match": true,
+  "pre_drop_revalidation": true,
+  "summaries": {
+    "63.1-01": "63.1-01-SUMMARY.md",
+    "63.1-02": "63.1-02-SUMMARY.md",
+    "63.1-03": "pendente de aceite"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "phase": "63",
+  "stage": "post-install",
+  "executed_at_utc": "2026-11-27T17:14:01.899Z",
+  "target": {
+    "container": "supabase_db_vendeo-homolog",
+    "published": "0.0.0.0:57782,[::]:57782",
+    "database": "postgres",
+    "server_version": "17.6"
+  },
+  "file": "20261127162602_offer_catalog_consolidated_install.sql",
+  "file_sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc",
+  "version": "20261127162602",
+  "name": "offer_catalog_consolidated_install",
+  "wrapper_sha256": "b08c68cec6d443566a2a47b133936f7a0e5df152b8894e28a491bfc96462fc74",
+  "ledger_before": {
+    "count": 158,
+    "sha256": "5f9a2c6263982cb144af9d933e71a7a8445d5f1466c745d9f02d63fa71b46365"
+  },
+  "ledger_after": {
+    "count": 159,
+    "sha256": "3a9b9825098a0c622f6be588a5b8b7853d14c13796d72eaad9189f8a7e45a474"
+  },
+  "exit_code": 0,
+  "duration_ms": 464
+}

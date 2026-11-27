@@ -58,6 +58,49 @@ const PROTECTED_PATHS = [
   "src/lib/ai/adapters/registry.ts",
 ];
 
+/**
+ * Quick 261125-i06 — exceção ÚNICA e imutável do guard de regressão.
+ *
+ * O orquestrador recebeu o wiring `textOnlyIdentity` no commit imutável
+ * `346d16d5…`. A exceção só é válida quando o conteúdo do arquivo no worktree
+ * continua idêntico a esse commit; o nome do caminho, sozinho, nunca autoriza.
+ * Qualquer alteração adicional no arquivo ou em outro caminho protegido falha.
+ */
+const IMMUTABLE_ORCHESTRATOR = {
+  path: "src/lib/product-1-1/orchestration/generation-orchestrator.ts",
+  commit: "346d16d5536f9fbae7abba2bf1d99bda9539c5a5",
+} as const;
+
+const IMMUTABLE_ORCHESTRATOR_BY_PATH = new Map<string, string>([
+  [IMMUTABLE_ORCHESTRATOR.path, IMMUTABLE_ORCHESTRATOR.commit],
+]);
+
+interface ProtectedDiffDecision {
+  readonly unauthorized: string[];
+  readonly contentMismatches: string[];
+}
+
+function evaluateProtectedDiff(
+  changedPaths: string[],
+  contentEqualsApproved: (path: string, commit: string) => boolean,
+): ProtectedDiffDecision {
+  const unauthorized: string[] = [];
+  const contentMismatches: string[] = [];
+
+  for (const file of changedPaths) {
+    const approvedCommit = IMMUTABLE_ORCHESTRATOR_BY_PATH.get(file);
+    if (!approvedCommit) {
+      unauthorized.push(file);
+      continue;
+    }
+    if (!contentEqualsApproved(file, approvedCommit)) {
+      contentMismatches.push(file);
+    }
+  }
+
+  return { unauthorized, contentMismatches };
+}
+
 /** Contratos F60/F60.1/F60.3 reutilizados sem alteração. */
 const CONTRACT_PATHS = [
   "src/lib/campaign/composition-artifacts",
@@ -228,10 +271,25 @@ describe("F60.4 regressão — caminhos protegidos sem diff contra PHASE_BASE_SH
     }
   });
 
-  it("1:1/prompts/compositor/políticas/runtime 1:1 sem diff contra a base", () => {
+  it("1:1/prompts/compositor/políticas/runtime 1:1 sem diff contra a base, exceto o orquestrador congelado da i06", () => {
     const sha = resolveBaseSha();
-    const diff = git(["diff", "--quiet", `${sha}..HEAD`, "--", ...PROTECTED_PATHS]);
-    expect(diff.status, diff.stderr).toBe(0);
+    expect(PROTECTED_PATHS).toContain(IMMUTABLE_ORCHESTRATOR.path);
+    expect(
+      git(["cat-file", "-e", `${IMMUTABLE_ORCHESTRATOR.commit}^{commit}`]).status,
+    ).toBe(0);
+
+    const changed = git(["diff", "--name-only", `${sha}..HEAD`, "--", ...PROTECTED_PATHS]);
+    expect(changed.status, changed.stderr).toBe(0);
+    const changedPaths = changed.stdout.trim().split("\n").filter(Boolean);
+
+    const decision = evaluateProtectedDiff(changedPaths, (file, commit) => {
+      // Compara o WORKTREE com o commit imutável — não usa HEAD como aprovação.
+      const diff = git(["diff", "--quiet", commit, "--", file]);
+      return diff.status === 0;
+    });
+
+    expect(decision.unauthorized).toEqual([]);
+    expect(decision.contentMismatches).toEqual([]);
   });
 
   it("contratos F60.1/F60.3/F60.2 sem diff não autorizado contra a base", () => {
@@ -263,5 +321,64 @@ describe("F60.4 regressão — caminhos protegidos sem diff contra PHASE_BASE_SH
     ]);
     expect(changed.status).toBe(0);
     expect(changed.stdout.trim().split("\n").filter(Boolean).length).toBeGreaterThan(0);
+  });
+});
+
+describe("F60.4 regressão — exceção do orquestrador limitada ao commit imutável da i06", () => {
+  it("o orquestrador no worktree é idêntico ao commit imutável (não usa HEAD como aprovação)", () => {
+    expect(IMMUTABLE_ORCHESTRATOR.commit).toMatch(/^[0-9a-f]{40}$/);
+    expect(IMMUTABLE_ORCHESTRATOR.path).toContain("generation-orchestrator.ts");
+
+    const approved = git([
+      "cat-file",
+      "-e",
+      `${IMMUTABLE_ORCHESTRATOR.commit}^{commit}`,
+    ]);
+    expect(approved.status).toBe(0);
+
+    const current = git([
+      "diff",
+      "--quiet",
+      IMMUTABLE_ORCHESTRATOR.commit,
+      "--",
+      IMMUTABLE_ORCHESTRATOR.path,
+    ]);
+    expect(current.status, current.stderr).toBe(0);
+  });
+
+  it("aceita o caminho exato somente depois de consultar o conteúdo aprovado", () => {
+    const calls: Array<{ path: string; commit: string }> = [];
+    const decision = evaluateProtectedDiff([IMMUTABLE_ORCHESTRATOR.path], (path, commit) => {
+      calls.push({ path, commit });
+      return true;
+    });
+
+    expect(calls).toEqual([
+      { path: IMMUTABLE_ORCHESTRATOR.path, commit: IMMUTABLE_ORCHESTRATOR.commit },
+    ]);
+    expect(decision).toEqual({ unauthorized: [], contentMismatches: [] });
+  });
+
+  it("rejeita mudança adicional no arquivo autorizado", () => {
+    const decision = evaluateProtectedDiff([IMMUTABLE_ORCHESTRATOR.path], () => false);
+
+    expect(decision.unauthorized).toEqual([]);
+    expect(decision.contentMismatches).toEqual([IMMUTABLE_ORCHESTRATOR.path]);
+  });
+
+  it("rejeita mudança em qualquer outro caminho protegido", () => {
+    const otherPath = "src/lib/product-1-1/prompt-base.ts";
+    const decision = evaluateProtectedDiff([otherPath], () => true);
+
+    expect(decision.unauthorized).toEqual([otherPath]);
+    expect(decision.contentMismatches).toEqual([]);
+  });
+
+  it("não aceita caminho apenas parecido com o autorizado", () => {
+    const lookalike = `${IMMUTABLE_ORCHESTRATOR.path}.bak`;
+    const decision = evaluateProtectedDiff([lookalike], () => true);
+
+    expect(decision.unauthorized).toEqual([lookalike]);
+    expect(decision.contentMismatches).toEqual([]);
   });
 });

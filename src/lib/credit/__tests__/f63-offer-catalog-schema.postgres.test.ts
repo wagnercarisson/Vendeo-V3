@@ -220,7 +220,7 @@ async function readV1(): Promise<Row> {
 
 beforeAll(async () => {
   if (!Number.isInteger(expectedLedgerCount) || expectedLedgerCount < 1) {
-    throw new Error('F63_EXPECTED_LEDGER_COUNT ausente/inválido; derive do 63-03 post-c');
+    throw new Error('F63_EXPECTED_LEDGER_COUNT ausente/inválido; derive da evidência 63.1-06 post-install');
   }
   if (!/^[0-9a-f]{64}$/.test(expectedLedgerHash)) {
     throw new Error('F63_EXPECTED_LEDGER_SHA256 ausente/inválido');
@@ -759,7 +759,7 @@ describe('F63 schema — autoria SET NULL', () => {
   });
 });
 
-describe('F63 schema — publisher guard (Migration C)', () => {
+describe('F63 schema — publisher guard (correção C absorvida pelo consolidado)', () => {
   it('16. rascunho sem published_by, primeira publicação aceita UUID e publicado só→NULL', async () => {
     await inTransaction(async (client) => {
       const first = await createUser(client, 'publisher-first');

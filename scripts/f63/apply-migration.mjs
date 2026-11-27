@@ -17,8 +17,8 @@
  *   - impressão de connection string, senha, JWT ou variável de ambiente.
  *
  * Uso:
- *   node scripts/f63/apply-migration.mjs --file <sql> --expected-version <14 dígitos> --stage <post-a|post-b|post-c> --dry-run
- *   node scripts/f63/apply-migration.mjs --file <sql> --expected-version <14 dígitos> --stage <post-a|post-b|post-c> \
+ *   node scripts/f63/apply-migration.mjs --file <sql> --expected-version <14 dígitos> --stage <post-a|post-b|post-c|post-install> --dry-run
+ *   node scripts/f63/apply-migration.mjs --file <sql> --expected-version <14 dígitos> --stage <post-a|post-b|post-c|post-install> \
  *     --evidence <json> --log <log>
  */
 import fs from 'node:fs';
@@ -33,7 +33,7 @@ const LEDGER_TABLE = 'supabase_migrations.schema_migrations';
 const DOCKER_TIMEOUT_MS = 300_000;
 const VERSION_RE = /^\d{14}$/;
 const NAME_RE = /^[a-z0-9_]+$/;
-const STAGES = ['post-a', 'post-b', 'post-c'];
+const STAGES = ['post-a', 'post-b', 'post-c', 'post-install'];
 
 function sha256(text) {
   return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
@@ -79,7 +79,7 @@ function parseArgs(argv) {
 
 function printUsage() {
   console.log(
-    'Uso: node scripts/f63/apply-migration.mjs --file <sql> --expected-version <14 dígitos> --stage <post-a|post-b|post-c> [--dry-run] [--evidence <json>] [--log <log>]',
+    'Uso: node scripts/f63/apply-migration.mjs --file <sql> --expected-version <14 dígitos> --stage <post-a|post-b|post-c|post-install> [--dry-run] [--evidence <json>] [--log <log>]',
   );
 }
 
@@ -214,7 +214,7 @@ async function main() {
     throw new Error(`--stage must be one of: ${STAGES.join(', ')}`);
   }
   if (!args.dryRun && args.stage === null) {
-    throw new Error('--stage is required for real apply (post-a|post-b|post-c)');
+    throw new Error('--stage is required for real apply (post-a|post-b|post-c|post-install)');
   }
 
   const absFile = path.resolve(process.cwd(), args.file);

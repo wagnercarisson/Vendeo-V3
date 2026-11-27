@@ -1,0 +1,86 @@
+{
+  "read_only": true,
+  "captured_at_utc": "2026-11-27T00:51:42.508Z",
+  "target": {
+    "container": "supabase_db_vendeo-homolog",
+    "published": "0.0.0.0:57782,[::]:57782",
+    "database": "postgres",
+    "server_version": "17.6"
+  },
+  "ledger": {
+    "count": 161,
+    "max_version": "20261126231022",
+    "sha256": "d95abc29958780f9021c8c9e9f5b5b2db33a8d4924cbbb2700cfc468c8dd0b0e",
+    "last_rows": [
+      {
+        "version": "20261118002139",
+        "name": "f60_7_two_format_foundation"
+      },
+      {
+        "version": "20261123130252",
+        "name": "f62_campaign_format_addition"
+      },
+      {
+        "version": "20261126223854",
+        "name": "offer_catalog_versions"
+      },
+      {
+        "version": "20261126230735",
+        "name": "offer_catalog_seed_v1"
+      },
+      {
+        "version": "20261126231022",
+        "name": "offer_catalog_published_by_fix"
+      }
+    ]
+  },
+  "guard_comment": "F63: valida publicação (motivo + calendário) e congela versões publicadas. Autoria só pode ir para NULL por ação referencial.",
+  "guard_definition_md5": "b34efa4421273ae70338ebdd4c2c6544",
+  "preserved": {
+    "trial_offer_enrollments": {
+      "count": 1,
+      "row_checksum_md5": "3ffb438ba5d04e0252746c02d81d15d8",
+      "sha256": "d1b869aba30f8177afe9f44edd999c63ef8c8040dca793e5053fbbba3f8a5a48"
+    },
+    "credit_balances": {
+      "count": 41,
+      "row_checksum_md5": "3469aa81fd61f6e3ac708466d1f40a07",
+      "sha256": "3d425ae246413c86cbf1bdc34c81c74b442049675ad12efc87d4e3f3be0d3957"
+    },
+    "credit_transactions": {
+      "count": 265,
+      "row_checksum_md5": "79910afd9ef6895d8f8bb6a23986cdbb",
+      "sha256": "3bf1ce5bb2e8934107ab80ab4767ef78acdaec258607f801f429a6b01a960946"
+    },
+    "freemium_entitlements": {
+      "count": 1,
+      "row_checksum_md5": "3a7efe44c372747b2956205aee867ed2",
+      "sha256": "34fad9189c82c558fc9eea6a68594227050cd8b83e79808d556f7521e6356913"
+    }
+  },
+  "settings": {
+    "id": "dcb1b4d5-98ea-4011-8212-e2603c2e4f60",
+    "offer_key": "trial_28d_v1",
+    "enabled": true,
+    "launch_at": "2026-10-28T21:22:16.361965+00:00",
+    "individual_launch_at": null,
+    "updated_by": "1273d07b-c2d1-48c9-88ca-9acfe6c0ac14",
+    "updated_at": "2026-10-28T21:22:16.361965+00:00",
+    "created_at": "2026-10-26T20:48:15.88138+00:00"
+  },
+  "versions": {
+    "current_version_id": "426783dc-5918-447e-8cae-bb9ee917df25",
+    "current_version_label": "v1",
+    "current_version_id_nullable": false,
+    "total": 16,
+    "published_count": 16,
+    "draft_count": 0
+  },
+  "function_hashes": {
+    "public.admin_set_trial_offer_enabled(boolean,uuid,text,uuid)": "5faf9b90e4c0e7789578ce4750b27466",
+    "public.grant_trial_offer_installment(uuid,integer,timestamptz)": "a330c84a375ff423a99f731319f1f1b2",
+    "public.process_trial_offer_installments(timestamptz)": "9b08534ec857266d4b38618580dcd29c",
+    "public.start_trial_offer_enrollment(uuid,timestamptz)": "bbb0b8e9db28135d6654a7487d1b1cca",
+    "public.trial_offer_eligibility(uuid,timestamptz)": "3539e94cb914b9ca730a43fac728b101"
+  }
+}

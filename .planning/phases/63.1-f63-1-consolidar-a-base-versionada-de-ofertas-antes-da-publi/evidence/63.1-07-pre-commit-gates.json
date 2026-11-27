@@ -1,0 +1,50 @@
+{
+  "lint_f63": 0,
+  "lint": 0,
+  "typecheck": 0,
+  "build": 0,
+  "test_scripts": 0,
+  "test_lint_config": 0,
+  "test_gates": 0,
+  "global_test": 1,
+  "regression_contract_exit": 0,
+  "diff_check": 0,
+  "openspec_strict": 0,
+  "transient_failures": [
+    {
+      "test": "src/lib/campaign/square-base/__tests__/boundaries.contract.test.ts",
+      "assertion": "nenhuma migration/rota/UI nova no working tree",
+      "referenced_path": "supabase/migrations/20261127162602_offer_catalog_consolidated_install.sql",
+      "additional_paths": [
+        "supabase/migrations/20261126223854_offer_catalog_versions.sql",
+        "supabase/migrations/20261126230735_offer_catalog_seed_v1.sql",
+        "supabase/migrations/20261126231022_offer_catalog_published_by_fix.sql"
+      ],
+      "cause": "uncommitted_migration_path"
+    },
+    {
+      "test": "src/lib/product-two-format/orchestration/__tests__/joint-boundaries.contract.test.ts",
+      "assertion": "Teste 4: exatamente uma migration F60.7, sem alteração/aplicação",
+      "referenced_path": "supabase/migrations/20261127162602_offer_catalog_consolidated_install.sql",
+      "additional_paths": [
+        "supabase/migrations/20261126223854_offer_catalog_versions.sql",
+        "supabase/migrations/20261126230735_offer_catalog_seed_v1.sql",
+        "supabase/migrations/20261126231022_offer_catalog_published_by_fix.sql"
+      ],
+      "cause": "uncommitted_migration_path"
+    }
+  ],
+  "scope_audit_ok": true,
+  "forbidden_paths": [],
+  "u83_paths_present": true,
+  "u83_paths": [
+    "package.json",
+    "scripts/f63/apply-migration.mjs",
+    "scripts/f63/homolog-identity.mjs",
+    "scripts/f63/preservation-report.mjs",
+    "scripts/f63/validate-ts-lint.mjs",
+    "src/lib/campaign/square-base/__tests__/regression.contract.test.ts",
+    ".planning/quick/261126-u83-fechar-pendencias-de-validacao-e-documen/"
+  ],
+  "captured_at_utc": "2026-11-27T17:24:38.810Z"
+}

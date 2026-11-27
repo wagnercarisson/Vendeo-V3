@@ -1,0 +1,55 @@
+{
+  "archive_dir": "supabase/migration-archive/f63-2a/",
+  "files": [
+    {
+      "label": "A",
+      "sha256": "ed652a26fc9294cdc239a842c2aebb00ccc1a182ff39e9dae13def947f8329bc",
+      "status": "applied",
+      "applied_in_homolog": true,
+      "homolog_stage": "post-a",
+      "execution_evidence": [
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-02-migration-a.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-02-preservation-post-a.json"
+      ]
+    },
+    {
+      "label": "B",
+      "sha256": "e511295e7b7419431f05b9a112258afd3c3651de23ecd85d384ee9d26115c4b7",
+      "status": "applied",
+      "applied_in_homolog": true,
+      "homolog_stage": "post-b",
+      "execution_evidence": [
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-migration-b.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-preservation-post-b.json"
+      ]
+    },
+    {
+      "label": "C",
+      "sha256": "817cbd8a946ac3ee4f1d3e8080cdba175866d9be44bdde6b83f03eb1cd1d549c",
+      "status": "applied",
+      "applied_in_homolog": true,
+      "homolog_stage": "post-c",
+      "execution_evidence": [
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-migration-c.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-preservation-post-c.json",
+        ".planning/phases/63-base-versionada-de-ofertas-2a/evidence/63-03-publisher-smoke.log"
+      ]
+    },
+    {
+      "label": "D",
+      "sha256": "ec12d10f7d4742d0f59608b5b408e5ba9bc0cfe47c0e81e74a48a311d6c5b833",
+      "status": "prepared_never_applied",
+      "applied_in_homolog": false,
+      "homolog_stage": null,
+      "execution_evidence": null
+    }
+  ],
+  "migrations_f63": [
+    "20261127162602_offer_catalog_consolidated_install.sql"
+  ],
+  "legacy_absent": true,
+  "bytes_identical": true,
+  "manifest_present": true,
+  "d_status": "prepared_never_applied",
+  "read_only_db": true
+}

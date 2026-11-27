@@ -415,6 +415,24 @@ export async function readSchemaGuards() {
   };
 }
 
+/** Comentário registrado na função de guard (via obj_description). */
+export async function readFunctionComment() {
+  return lastLine(
+    runSql(
+      "select coalesce(obj_description(to_regprocedure('public.trial_offer_versions_guard()'), 'pg_proc'), '');",
+    ),
+  );
+}
+
+/** Hash da definição da função de guard — o comentário não altera este hash. */
+export async function readGuardDefinitionHash() {
+  return lastLine(
+    runSql(
+      "select coalesce(md5(pg_get_functiondef(to_regprocedure('public.trial_offer_versions_guard()'))), '');",
+    ),
+  );
+}
+
 /** Linha singleton de trial_offer_settings com os oito campos do guard. */
 export async function readSettingsGuard() {
   const selector = SETTINGS_COLUMNS.map((column) => `'${column}', ${column}`).join(', ');

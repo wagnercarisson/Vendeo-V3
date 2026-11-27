@@ -1,0 +1,26 @@
+{
+  "exit_code": 0,
+  "files": 3,
+  "tests": 33,
+  "tests_failed": 0,
+  "ledger_count": 159,
+  "ledger_sha256": "3a9b9825098a0c622f6be588a5b8b7853d14c13796d72eaad9189f8a7e45a474",
+  "database": "postgres",
+  "target": "127.0.0.1:57782",
+  "post_d_absent": true,
+  "d_in_ledger": 0,
+  "offer_version_id": false,
+  "areas": [
+    "schema",
+    "constraints",
+    "triggers",
+    "RLS/grants",
+    "imutabilidade",
+    "publisher",
+    "vigência",
+    "calendário/timezone",
+    "concorrência",
+    "contratos SQL↔TS"
+  ],
+  "captured_at_utc": "2026-11-27T17:15:09.507Z"
+}

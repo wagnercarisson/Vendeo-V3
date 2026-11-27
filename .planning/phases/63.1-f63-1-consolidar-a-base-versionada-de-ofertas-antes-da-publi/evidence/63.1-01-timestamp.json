@@ -1,0 +1,17 @@
+{
+  "version": "20261127162602",
+  "generated_at_utc": "2026-11-27T16:26:02.618Z",
+  "filename": "20261127162602_offer_catalog_consolidated_install.sql",
+  "uniqueness": {
+    "worktree": 0,
+    "tracked": 0,
+    "refs": 0,
+    "history": 0
+  },
+  "reuse_policy": "creation_timestamp_63.1-02",
+  "supersedes": {
+    "version": "20261127162306",
+    "reason": "timestamp regenerated at the effective creation of the consolidated migration, as required by the operator"
+  },
+  "note": "Timestamp gerado no momento efetivo da criação da migration consolidada, com unicidade reconferida. O valor de 63.1-01 era apenas candidato de preflight."
+}

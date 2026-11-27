@@ -328,6 +328,8 @@ export function product11GateStatus(env = process.env) {
   return { ready, reasons: ready ? [] : ['F562A_ISOLATED_* (API 127.0.0.1:56321 / DB 56322)'] };
 }
 
+// F63_EXPECTED_LEDGER_COUNT/SHA256 devem ser derivados da evidência 63.1-06 post-install.
+// Nunca ecoar os valores em log, markdown ou summary.
 export function f63GateStatus(env = process.env) {
   const reasons = [];
   const target = parsePostgresUrl(env.TEST_DATABASE_URL);

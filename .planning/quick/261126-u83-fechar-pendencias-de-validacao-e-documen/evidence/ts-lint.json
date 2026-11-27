@@ -1,0 +1,174 @@
+{
+  "tool": "eslint.diagnostic.config.mjs",
+  "mode": "delimited-diagnostic",
+  "official_lint_scope": "npm run lint (não cobre .ts neste repositório)",
+  "command": "eslint --config eslint.diagnostic.config.mjs --no-inline-config --max-warnings 0 <files>",
+  "generated_at_utc": "2026-11-27T00:52:08.400Z",
+  "allow_inline_config": false,
+  "files": [
+    {
+      "file": "src/lib/credit/trial-offer/offer.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": 2,
+        "react-hooks/exhaustive-deps": 1
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "src/lib/credit/trial-offer/offer-contract.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": 2,
+        "react-hooks/exhaustive-deps": 1
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "src/lib/credit/__tests__/f63-offer-catalog-schema.postgres.test.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": null,
+        "react-hooks/exhaustive-deps": null
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "src/lib/credit/__tests__/f63-offer-catalog-calendar.postgres.test.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": null,
+        "react-hooks/exhaustive-deps": null
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "src/lib/credit/__tests__/f63-offer-catalog-concurrency.postgres.test.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": null,
+        "react-hooks/exhaustive-deps": null
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "src/lib/credit/__tests__/trial-offer-offer.test.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": null,
+        "react-hooks/exhaustive-deps": null
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "vitest.shared.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": null,
+        "react-hooks/exhaustive-deps": null
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "vitest.integration-f63.config.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": null,
+        "react-hooks/exhaustive-deps": null
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    },
+    {
+      "file": "src/lib/campaign/square-base/__tests__/regression.contract.test.ts",
+      "ignored": false,
+      "parser": "typescript-eslint/parser",
+      "parser_is_typescript": true,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/rules-of-hooks": null,
+        "react-hooks/exhaustive-deps": null
+      },
+      "error_count": 0,
+      "warning_count": 0,
+      "fatal_error_count": 0,
+      "suppressed_messages": 0,
+      "messages": [],
+      "pass": true
+    }
+  ],
+  "summary": {
+    "files": 9,
+    "ignored": 0,
+    "parser_ok": 9,
+    "rule_ok": 9,
+    "errors": 0,
+    "warnings": 0,
+    "fatal_errors": 0,
+    "suppressed": 0,
+    "pass": true
+  }
+}

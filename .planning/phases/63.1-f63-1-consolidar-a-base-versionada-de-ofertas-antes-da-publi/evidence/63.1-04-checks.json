@@ -1,0 +1,46 @@
+{
+  "read_only": true,
+  "db_writes": 0,
+  "captured_at_utc": "2026-11-27T17:06:20.156Z",
+  "ledger_before": {
+    "count": 161,
+    "sha256": "d95abc29958780f9021c8c9e9f5b5b2db33a8d4924cbbb2700cfc468c8dd0b0e",
+    "max_version": "20261126231022"
+  },
+  "ledger_after": {
+    "count": 161,
+    "sha256": "d95abc29958780f9021c8c9e9f5b5b2db33a8d4924cbbb2700cfc468c8dd0b0e",
+    "max_version": "20261126231022"
+  },
+  "consolidated_sql_path": "supabase/migrations/20261127162602_offer_catalog_consolidated_install.sql",
+  "consolidated_sql_sha256": "77421cced85a8f92d3eba16cafae2924d941072c7c3e90e074676a0505847acc",
+  "reconciler_sha256": "8cee75f9bb630e1840e5ec6e607d9ffd4ab637ba42e02c427c5a76a0327a47e0",
+  "apply_migration_sha256": "0708978f28c6b04e5025451508d134948b163d4a263749e6cb647e4875e4e063",
+  "preservation_stages_test_sha256": "85f5d789380a1cb75539368a92f62a47e5c8a19194db6eb753403b1e8d548ed2",
+  "node_check": {
+    "scripts/f63/reconcile-f63-homolog.mjs": 0,
+    "scripts/f63/apply-migration.mjs": 0,
+    "scripts/f63/preservation-report.mjs": 0,
+    "scripts/f63/validate-ts-lint.mjs": 0,
+    "scripts/f63/__tests__/consolidated-install.static.test.mjs": 0
+  },
+  "help": {
+    "reconcile": 0,
+    "apply": 0,
+    "preservation": 0
+  },
+  "static_test_exit": 0,
+  "preservation_test_exit": 0,
+  "inventory_exit": 0,
+  "lint_ts_exit": 0,
+  "dry_run_apply": {
+    "exit": 0,
+    "version_absent_from_ledger": true,
+    "stage_post_install": true
+  },
+  "dry_run_reconcile": {
+    "exit": 0,
+    "verdict_go": true,
+    "sql_printed": true
+  }
+}

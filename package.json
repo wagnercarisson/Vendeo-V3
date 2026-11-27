@@ -20,6 +20,7 @@
     "check:cnae": "tsx scripts/check-cnae.ts",
     "lint": "eslint .",
     "lint:diagnostic": "eslint --config eslint.diagnostic.config.mjs --no-inline-config --max-warnings 0 .",
+    "lint:f63": "node scripts/f63/validate-ts-lint.mjs",
     "lint:diagnostic:inventory": "node scripts/lint/build-inventory.mjs",
     "test:lint-config": "node --test tests/lint-config/lint-config.test.mjs",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit"
