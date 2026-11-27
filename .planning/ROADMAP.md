@@ -1062,21 +1062,21 @@ Plans:
 
 ### Phase 63.1: F63.1 - Consolidar a base versionada de ofertas antes da publicacao
 
-**Status (2026-11-27):** **HOMOLOG CONSOLIDADO; GATE 3/GIT PENDENTES; PRODUÇÃO NÃO AUTORIZADA.** R2 aplicou a migration consolidada, ledger 158→159; suíte F63 33/33. A/B/C/D foram arquivados fora de `supabase/migrations`; u83 preservada. Produção, push, merge e deploy não autorizados.
+**Status (2026-11-27):** **HOMOLOG CONSOLIDADO; COMMITS A/B CRIADOS; GATE 3 APROVADO; PRODUÇÃO NÃO AUTORIZADA.** R2 aplicou a migration consolidada, ledger 158→159; suíte F63 33/33. A/B/C/D foram arquivados fora de `supabase/migrations`; u83 preservada. Commit A `697e5c74` e Commit B `cc271f03` criados localmente; árvore limpa após o Commit B, com o fechamento documental ainda não commitado; Gate 3 aprovado para o homolog. Change sincronizada e arquivada em `openspec/changes/archive/2026-11-27-consolidar-base-versionada-de-ofertas-antes-da-publicacao/`. Produção, push, merge, deploy e publicação continuam não autorizados.
 
 **Goal:** Consolidar a implementacao funcional da F63/2A em uma unica migration de instalacao do estado final corrigido, reconciliar somente o homolog exclusivo e provar preservacao/contratos, para que o mesmo arquivo seja o candidato futuro a producao. Nao altera consumidores, concessoes, creditos, entitlements, Admin ou regras comerciais.
 
-**Fonte tecnica vinculante:** `openspec/changes/consolidar-base-versionada-de-ofertas-antes-da-publicacao/` (proposal, design, delta `trial-offer-catalog`, tasks). Spec funcional permanece `openspec/specs/trial-offer-catalog/spec.md`.
+**Fonte tecnica vinculante:** `openspec/changes/archive/2026-11-27-consolidar-base-versionada-de-ofertas-antes-da-publicacao/` (proposal, design, delta `trial-offer-catalog`, tasks; change arquivada). Spec funcional permanece `openspec/specs/trial-offer-catalog/spec.md`.
 
 **Requirements:** N/A — sem novos `REQ-*` funcionais; os requisitos tecnicos estao na change OpenSpec e os contratos funcionais sao os da F63/2A.
 
 **Autorizacoes separadas:**
 - Gate 1: aprovado; autoriza apenas planejamento.
-- Gate 2: deve revisar SQL consolidado, reconciliacao/recuperacao, harness/testes e procedimento completo antes de qualquer escrita no homolog.
-- Git: `git add`/commit exigem aprovacao especifica da lista exata de arquivos; nao implicitos.
-- Gate 3: revisao das evidencias finais antes de qualquer publicacao.
+- Gate 2: aprovado; autorizou R0/R1/pre-install/R2 no homolog exclusivo.
+- Git: aprovacoes especificas por lista exata; Commit A e Commit B criados localmente.
+- Gate 3: aprovado para o homolog; nao autoriza publicacao.
 
-**Plans:** 7 planos em 6 ondas, criados em 2026-11-27 e aguardando revisão; todos `autonomous: false` com Review Stop.
+**Plans:** 7 planos em 6 ondas, executados e concluidos em 2026-11-27; todos `autonomous: false` com Review Stop.
 
 - [x] `63.1-01-PLAN.md` — Preflight read-only, inventário, baseline, timestamp UTC único e scaffold de evidências. **Concluído em 2026-11-27.**
 - [x] `63.1-02-PLAN.md` — Migration consolidada, precondições fail-closed, comentários finais, seed/RLS/REVERT e teste estático. **Concluído em 2026-11-27.**
@@ -1084,7 +1084,7 @@ Plans:
 - [x] `63.1-04-PLAN.md` — Pacote completo do Gate 2, procedimento e dry-runs não escrituráveis. **Concluído em 2026-11-27.**
 - [x] `63.1-05-PLAN.md` — R0 read-only, R1 transacional, ledger 158/SHA e evidência `pre-install`. **Concluído em 2026-11-27.**
 - [x] `63.1-06-PLAN.md` — R2 consolidado, `post-install`, suíte F63 completa e `post-tests-consolidated`. **Concluído em 2026-11-27.**
-- [ ] `63.1-07-PLAN.md` — Arquivamento A/B/C/D + manifesto, destinação da u83, gates oficiais, aprovações Git específicas (Commit A e Commit B), árvore limpa final e Gate 3.
+- [x] `63.1-07-PLAN.md` — Arquivamento A/B/C/D + manifesto, destinação da u83, gates oficiais, aprovações Git específicas (Commit A e Commit B), árvore limpa final e Gate 3. **Concluído em 2026-11-27: Commit A `697e5c74`, Commit B `cc271f03`, Gate 3 aprovado; produção não autorizada.**
 
 **Fora de escopo:** alterar `trial_offer_enrollments`, creditos, RPCs existentes, constantes/status/completion, copy publica, landing, Admin, flags, backfill, producao ou qualquer banco remoto. Nao reescrever a change arquivada da 2A.
 

@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-27T00:13:18.285Z"
+last_updated: "2026-11-27T18:05:00.000Z"
 progress:
   total_phases: 20
   completed_phases: 15
   total_plans: 141
-  completed_plans: 130
+  completed_plans: 131
   percent: 75
 ---
 
@@ -16,7 +16,7 @@ progress:
 
 ## Consolidação F63.1 — 2026-11-27
 
-**HOMOLOG CONSOLIDADO; GATE 3/GIT PENDENTES; PRODUÇÃO NÃO AUTORIZADA.** A migration consolidada `20261127162602_offer_catalog_consolidated_install.sql` foi aplicada no homolog (ledger 158→159; SHA final `3a9b9825098a0c622f6be588a5b8b7853d14c13796d72eaad9189f8a7e45a474`). Suíte F63 3 arquivos/33 testes PASS; post-install e post-tests-consolidated com preservação igual ao baseline. A/B/C/D foram movidos byte a byte para `supabase/migration-archive/f63-2a/`; D permanece preparada e nunca aplicada. u83 preservada. Commit A/B e Gate 3 permanecem pendentes; produção, push, merge e deploy não autorizados. Nenhuma operação Git de mutação foi executada.
+**HOMOLOG CONSOLIDADO; COMMITS A/B CRIADOS; GATE 3 APROVADO; PRODUÇÃO NÃO AUTORIZADA.** A migration consolidada `20261127162602_offer_catalog_consolidated_install.sql` foi aplicada no homolog (ledger 158→159; SHA final `3a9b9825098a0c622f6be588a5b8b7853d14c13796d72eaad9189f8a7e45a474`). Suíte F63 3 arquivos/33 testes PASS; post-install e post-tests-consolidated com preservação igual ao baseline. A/B/C/D foram movidos byte a byte para `supabase/migration-archive/f63-2a/`; D permanece preparada e nunca aplicada. u83 preservada. Commit A `697e5c74c8421f86e65688433d167ad959c1bfe2` (87 caminhos) e Commit B `cc271f0302adaf72ac72030337b263eed27b5383` (7 documentos) criados localmente; árvore limpa após o Commit B, com o fechamento documental ainda não commitado; Gate 3 aprovado para o homolog. Fechamento documental completo: `63.1-07-SUMMARY.md`, `63.1-UAT.md` e `63.1-OPSX-VERIFY.md`. Change sincronizada e arquivada em `openspec/changes/archive/2026-11-27-consolidar-base-versionada-de-ofertas-antes-da-publicacao/` (7 requisitos adicionados à spec `trial-offer-catalog`, que passou a 19 requisitos/82 cenários). Commit documental ainda pendente. Produção, push, merge, deploy e publicação não autorizados; nenhuma operação Git remota foi executada.
 
 
 ## Planejamento F63 — subfatia 2A base versionada de ofertas — 2026-11-26
