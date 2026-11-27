@@ -3,7 +3,7 @@
  * Executa um perfil de integração, validando TODOS os pré-requisitos antes.
  *
  * Uso: node scripts/testing/run-integration.mjs <perfil>
- * Perfis: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60 | f60-1
+ * Perfis: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60 | f60-1 | f63
  *
  * `postgres` sem perfil é apenas status/recusa: imprime a prontidão dos três
  * perfis e sai 2, sem executar nada.
@@ -19,6 +19,7 @@ import {
   appEnvGateStatus,
   f60GateStatus,
   f601GateStatus,
+  f63GateStatus,
   gateLine,
   postgresF504GateStatus,
   postgresHomologGateStatus,
@@ -31,6 +32,7 @@ const POSTGRES_PROFILES = [
   ['postgres-homolog', 'PostgreSQL/homolog (F57.2)', postgresHomologGateStatus],
   ['postgres-local', 'PostgreSQL/local-disposable', postgresLocalGateStatus],
   ['postgres-f50-4', 'PostgreSQL/f50-4', postgresF504GateStatus],
+  ['f63', 'PostgreSQL/F63 catálogo', f63GateStatus],
 ];
 
 const PROFILES = {
@@ -69,6 +71,11 @@ const PROFILES = {
     config: 'vitest.integration-f60-1.config.ts',
     preflight: f601GateStatus,
   },
+  f63: {
+    label: 'PostgreSQL/F63 catálogo',
+    config: 'vitest.integration-f63.config.ts',
+    preflight: f63GateStatus,
+  },
 };
 
 const requested = process.argv[2];
@@ -78,7 +85,7 @@ if (requested === 'postgres') {
     console.error(gateLine(label, statusFn()));
   }
   console.error(
-    'GATE NÃO EXECUTADO — NÃO APROVADO (postgres): escolha um perfil — npm.cmd run test:integration:postgres:homolog | :local | :f50-4.',
+    'GATE NÃO EXECUTADO — NÃO APROVADO (postgres): escolha um perfil — npm.cmd run test:integration:postgres:homolog | :local | :f50-4 | test:integration:f63.',
   );
   process.exit(2);
 }
@@ -87,7 +94,7 @@ const profile = PROFILES[requested];
 
 if (!profile) {
   console.error(
-    `Perfil inválido: ${requested ?? '(vazio)'}. Use: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60 | f60-1`,
+    `Perfil inválido: ${requested ?? '(vazio)'}. Use: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60 | f60-1 | f63`,
   );
   process.exit(3);
 }

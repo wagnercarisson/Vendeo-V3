@@ -3,9 +3,9 @@
  * Validador e inventário da suíte global de testes.
  *
  * Fonte única: `scripts/testing/test-categories.json`.
- * Categorias: local (Vitest), scripts (`node:test`), três perfis PostgreSQL
- * (homolog, local/disposable e f50-4), integração por `.env.local` (app-env)
- * e integração isolada Produto 1:1.
+ * Categorias: local (Vitest), scripts (`node:test`), perfis PostgreSQL
+ * (homolog, local/disposable, f50-4 e F63), integração por `.env.local`
+ * (app-env) e integração isolada Produto 1:1.
  *
  * Uso: node scripts/testing/test-status.mjs
  * Exit 0 = mapa válido; exit 1 = falha estrutural do inventário.
@@ -36,6 +36,7 @@ const INTEGRATION_KEYS = [
   'integration.product-1-1',
   'integration.f60',
   'integration.f60-1',
+  'integration.f63',
 ];
 const INVENTORY_KEYS = ['nodeTest', ...INTEGRATION_KEYS];
 
@@ -327,6 +328,32 @@ export function product11GateStatus(env = process.env) {
   return { ready, reasons: ready ? [] : ['F562A_ISOLATED_* (API 127.0.0.1:56321 / DB 56322)'] };
 }
 
+export function f63GateStatus(env = process.env) {
+  const reasons = [];
+  const target = parsePostgresUrl(env.TEST_DATABASE_URL);
+  if (
+    !target ||
+    target.hostname !== '127.0.0.1' ||
+    target.port !== '57782' ||
+    target.pathname !== '/postgres'
+  ) {
+    reasons.push('TEST_DATABASE_URL (esperado 127.0.0.1:57782/postgres)');
+  }
+
+  const ledgerCount = Number(env.F63_EXPECTED_LEDGER_COUNT ?? '');
+  if (!Number.isInteger(ledgerCount) || ledgerCount < 1) {
+    reasons.push('F63_EXPECTED_LEDGER_COUNT (inteiro >= 1)');
+  }
+  if (!/^[0-9a-f]{64}$/.test((env.F63_EXPECTED_LEDGER_SHA256 ?? '').trim())) {
+    reasons.push('F63_EXPECTED_LEDGER_SHA256 (64 hex)');
+  }
+  if (env.SUPABASE_ACCESS_TOKEN || env.SUPABASE_DB_URL) {
+    reasons.push('SUPABASE_ACCESS_TOKEN/SUPABASE_DB_URL (devem estar ausentes)');
+  }
+
+  return { ready: reasons.length === 0, reasons };
+}
+
 export function gateLine(name, status) {
   return status.ready
     ? `[gates] ${name}: ambiente presente — NÃO EXECUTADO (use o comando dedicado)`
@@ -341,6 +368,7 @@ export const GATE_ROWS = [
   ['Produto 1:1', 'integration.product-1-1', product11GateStatus],
   ['F60 duas etapas', 'integration.f60', f60GateStatus],
   ['F60.1 artefatos de composição', 'integration.f60-1', f601GateStatus],
+  ['PostgreSQL/F63 catálogo', 'integration.f63', f63GateStatus],
 ];
 
 function printTable(inventory) {

@@ -57,5 +57,10 @@
   ],
   "integration.f60-1": [
     "src/lib/campaign/composition-artifacts/__tests__/composition-artifacts.integration.test.ts"
+  ],
+  "integration.f63": [
+    "src/lib/credit/__tests__/f63-offer-catalog-schema.postgres.test.ts",
+    "src/lib/credit/__tests__/f63-offer-catalog-calendar.postgres.test.ts",
+    "src/lib/credit/__tests__/f63-offer-catalog-concurrency.postgres.test.ts"
   ]
 }
