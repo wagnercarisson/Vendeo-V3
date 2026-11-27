@@ -1,0 +1,32 @@
+{
+  "commit_confirmed": true,
+  "head_sha": "697e5c74c8421f86e65688433d167ad959c1bfe2",
+  "failure_class": null,
+  "action_taken": "post_commit_verification_passed",
+  "lint_f63": 0,
+  "lint": 0,
+  "typecheck": 0,
+  "test_scripts": 0,
+  "test_gates": 0,
+  "global_test": 0,
+  "f63_suite": 0,
+  "openspec_strict": 0,
+  "diff_check": 0,
+  "worktree_clean": false,
+  "pending_evidence_files": [
+    ".planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/evidence/63.1-07-git-approval-a.md",
+    ".planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/evidence/63.1-07-commit-a.json",
+    ".planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/evidence/63.1-07-post-commit-a.json",
+    ".planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/evidence/63.1-07-final-report.md",
+    ".planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/evidence/63.1-07-git-file-list-b.md",
+    ".planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/evidence/63.1-07-git-approval-b.md",
+    ".planning/phases/63.1-f63-1-consolidar-a-base-versionada-de-ofertas-antes-da-publi/evidence/63.1-07-commit-b.json"
+  ],
+  "state_observed": {
+    "git_status": "2 untracked: approval A e commit A"
+  },
+  "pushed": false,
+  "merged": false,
+  "deployed": false,
+  "captured_at_utc": "2026-11-27T17:38:29.331Z"
+}

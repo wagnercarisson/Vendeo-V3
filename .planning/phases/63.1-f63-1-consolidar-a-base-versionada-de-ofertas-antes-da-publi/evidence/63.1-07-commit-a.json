@@ -1,0 +1,11 @@
+{
+  "head_sha": "697e5c74c8421f86e65688433d167ad959c1bfe2",
+  "parent_head": "4152777f74ba7b9399359a3f28bf057fe79c2733",
+  "files_count": 87,
+  "approved_list_sha256": "facebe7cb4d47245f31e885fbd1f4a336e9e178f6e4c6f6bc269468b24e2f8d5",
+  "message": "feat(63.1): consolidar base versionada de ofertas",
+  "pushed": false,
+  "merged": false,
+  "deployed": false,
+  "captured_at_utc": "2026-11-27T17:36:06.185Z"
+}
