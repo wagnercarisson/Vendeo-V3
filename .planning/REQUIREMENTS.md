@@ -378,3 +378,18 @@ ajuste; o contador conservador do piloto não precisa ser alterado para fechar a
 | REQ-60.6-06 | Migration forward-only planejada com rollback operacional não destrutivo; testes somente offline e gates typecheck/lint/build/diff/OpenSpec; sem migration aplicada, prova paga ou ativação | Testes offline, gates e revisão do diff/migration não aplicada |
 
 **Não executar nesta rodada de planejamento:** código, migration, SQL, banco, chamada paga, homolog, saldo, aprovação visual, ativação, deploy ou push.
+## F63 - Concluída no homolog (Base versionada de ofertas, subfatia 2A)
+
+**Fonte arquivada:** openspec/changes/archive/2026-11-26-fase-2a-base-versionada-de-ofertas/ (proposal, design, spec e tasks; --strict válido; tasks 74/74). **Status:** **CONCLUÍDA NO HOMOLOG, VERIFICADA, SINCRONIZADA E ARQUIVADA; NÃO APROVADA PARA PRODUÇÃO.** Spec principal openspec/specs/trial-offer-catalog/spec.md (12 requirements/59 cenários, strict válido). Migrations A 20261126223854 (ledger 159), B 20261126230735 (160) e C 20261126231022 (161) aplicadas no homolog; A intacta; preservação post-a/b/c OK. 63-04 contrato + offer.ts + 30 testes; 63-05 33/33 testes reais, preservação post-tests 10/10, v1 restaurada, 15 fixtures inertes. /gsd-verify-work 6/6 PASS (aceite técnico, sem reexecução DB); /opsx-verify 74/74 tasks, 12/12 reqs, 59/59 cenários, 0 CRITICAL, 2 WARNING (lint TS não validado; 3 falhas globais aceitas), 1 SUGGESTION (comentário SQL). **Ambiente:** homolog G:\\Vendeo-Homolog, container supabase_db_vendeo-homolog, PostgreSQL 127.0.0.1:57782, banco postgres; sem reset/backup/banco novo. Produção e remotos fora de escopo.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-63-01 | Confirmar identidade/estado do homolog, capturar baseline das tabelas preservadas e definir evidência antes de qualquer escrita; sem criar banco, reset ou backup | Preflight registrado com container, porta, banco, versão, ledger e contagens/checksums |
+| REQ-63-02 | Criar `trial_offer_versions` com condições versionadas (frequência + créditos por liberação), imutabilidade, publicação validada em insert/update, `id` imutável e política de autoria `SET NULL` | Migration A aplicada em transação + provas reais de constraints/triggers |
+| REQ-63-03 | Adicionar `trial_offer_settings.current_version_id` obrigatório após o seed, só para versão publicada do mesmo programa, com `enabled` independente | Migration A/B + testes de vigência e rejeição de rascunho/outro programa |
+| REQ-63-04 | Criar leituras centralizadas internas/públicas e calendário derivado sem contagem pública dependente de data; execução restrita a `service_role`, RLS/grants explícitos | Funções SQL + testes de permissão e projeção |
+| REQ-63-05 | Semear a versão v1 (28 dias, 20 créditos, semanal, 5 por liberação) publicada e vigente, com calendário 0/7/14/21 e total 20; sem tocar concessões/créditos | Migration B fail-closed + comparação de contagens/checksums |
+| REQ-63-06 | Aplicar cada migration em transação no homolog, com falha fail-closed; validar constraints, triggers, permissões, calendário e concorrência real | Evidência de aplicação e suite PostgreSQL/homolog |
+| REQ-63-07 | Entregar módulo TS server-only aditivo, sem religar consumidores, e separar efeitos da migration de dados criados pelos testes; produção e conferência remota permanecem pendentes | Testes contratuais/unitários, gates e relatório de preservação |
+
+**Status final:** concluída no homolog; não aprovada para produção. Conferência remota de estruturas/migrations/permissões, integração de offer_version_id, RPC/painel Admin e troca de fonte dos consumidores permanecem pendentes. Sem commit, push ou deploy.

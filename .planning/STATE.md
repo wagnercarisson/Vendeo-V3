@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-25T19:35:13.000Z"
+last_updated: "2026-11-27T00:13:18.285Z"
 progress:
   total_phases: 20
   completed_phases: 15
@@ -13,6 +13,10 @@ progress:
 ---
 
 # Project State
+
+## Planejamento F63 — subfatia 2A base versionada de ofertas — 2026-11-26
+
+**CONCLUÍDA NO HOMOLOG, VERIFICADA, SINCRONIZADA E ARQUIVADA; NÃO APROVADA PARA PRODUÇÃO.** Fase GSD `63` registrada em `.planning/ROADMAP.md`/`.planning/REQUIREMENTS.md` (`REQ-63-01..07`). Fonte arquivada em `openspec/changes/archive/2026-11-26-fase-2a-base-versionada-de-ofertas/` (proposal, design, spec, tasks; `--strict` válido). Spec principal criada em `openspec/specs/trial-offer-catalog/spec.md` (12 requirements, 59 cenários, validada em strict). Três migrations aplicadas no homolog: A `20261126223854` (ledger 159), B `20261126230735` (`post-b`, 160, v1 vigente/`NOT NULL`) e C `20261126231022` (`post-c`, 161, publisher); A intacta. `63-04` contrato + `offer.ts` + 30 testes. `63-05` perfil F63, **33/33 testes reais PASS**, preservação post-tests 10/10, v1 restaurada, 15 fixtures inertes/0 rascunhos. **`/gsd-verify-work`:** `63-UAT.md` complete, 6/6 PASS (aceite técnico do responsável; sem reexecução PostgreSQL). **`/opsx-verify`:** `63-OPSX-VERIFY.md` — 74/74 tasks, 12/12 requirements, 59/59 cenários mapeados, 0 CRITICAL, 2 WARNING (lint TS não validado; 3 falhas globais aceitas) e 1 SUGGESTION (comentário SQL desatualizado), pronto para arquivar com ressalvas. Gates: OpenSpec 0, typecheck 0, build 0, F63 33/33, scripts 119/119, gates 0, preservation 0; lint TS **NÃO VALIDADO**; `npm test` exit 1 com 3 falhas alheias, não corrigidas. Sem commit/push/deploy/produção. Homolog ≠ produção; conferência remota, integração de `offer_version_id`, RPC/painel Admin e troca de fonte dos consumidores permanecem pendentes.
 
 ## Quick changelog de formatos — 2026-11-24
 
@@ -492,6 +496,12 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | Stripe/monetização pública | Diferida para v1.7+, fora da numeração |
 
 ## Quick Tasks Completed
+
+- **261126-tmn (2026-11-26):** acabamento local da F63 e preparação da consolidação Git. Warning de lint eliminado em `scripts/f63/preservation-report.mjs` (parâmetro `stage` não usado removido de `buildSchemaComparison` e da chamada, sem supressão/mudança de comportamento); classificação corrigida — o warning foi **introduzido no 63-03 desta entrega**, não era anterior à F63. Worktree medido: **8 modificados + 61 não rastreados** (63 com PLAN/SUMMARY desta quick), classificados em tracking, planejamento/evidências, código/ferramentas, migrations, testes/config, OpenSpec e quicks de alinhamento (n4n/nwg + `docs/alinhamento-...`, fora da F63). Hashes A/B/C conferidos e idênticos às evidências (A `ed652a26…`, B `e511295e…`, C `817cbd8a…`); nenhuma migration/guarda/teste alterado e nenhum teste PostgreSQL reexecutado. Gates da quick: `npm run lint` 0, eslint do arquivo 0, `node --check`/import/`--help` 0, `test:scripts` 119/119, `test:gates` 0, `git diff --check` 0. Varredura sem credenciais/dumps/dados pessoais novos. **Codificação:** `STATE.md` normalizado para UTF-8 sem BOM, reaplicando apenas as mudanças legítimas sobre `HEAD` (diff de 11 inserções/1 remoção); histórico anterior preservado. Pendências preservadas: lint TS não validado, três falhas globais e comentário SQL desatualizado. **Review Stop:** nenhum `git add`, commit, push, merge, deploy ou migration executado. Plano/SUMMARY em `.planning/quick/261126-tmn-regularizar-acabamento-local-e-preparar-/`.
+
+- **261126-nwg (2026-11-26):** complemento documental em `docs/alinhamento-onboarding-responsavel-cnpj-opcional.md`: toda troca de CPF exige confirmação/aceite; navegação salva ao avançar e respeita dependências; base versionada de ofertas, inicial de 28 dias/20 créditos (5 nos dias 0/7/14/21), condições preservadas por concessão e painel Admin futuro. Fatia 2 dividida em 2A/2B, com integração dos consumidores na 4; transição da base continua na 9. Pendências anteriores reconciliadas. Verificação: 19 links locais, nove fatias principais + duas subfatias e whitespace. Sem implementação/commit/publicação/banco. Plano/SUMMARY em `.planning/quick/261126-nwg-complementar-alinhamento-onboarding-cpf-/`.
+
+- **261126-n4n (2026-11-26):** linha guia do onboarding com responsável identificado e CNPJ opcional registrada em `docs/alinhamento-onboarding-responsavel-cnpj-opcional.md`. Nove fatias com entrega/fechamento; transição dos usuários existentes por último (fatia 9), após publicação com exigência desativada (fatia 8). CPF repetível no cadastro; oferta única por conta e CPF, sem renovação por edição; dados pessoais isolados dos geradores e da direção visual. Documento de alinhamento, sem implementação, nova fase ou alteração do roadmap. Verificação: 16 links locais, nove fatias e whitespace. Sem commit/publicação/banco. Plano/SUMMARY em `.planning/quick/261126-n4n-registrar-linha-guia-do-onboarding-com-r/`.
 
 - **261125-i10 (2026-11-25):** fechamento local mínimo da branch `feat/apenas-duas-imagens-de-entrada`. Guard de fronteira reconciliado para `src/lib/lab/bench/domain/form-rules.ts` como exceção específica da quick 261125-eo7 (limite produtivo de 2 arquivos; bancada desacoplada 4/3; commit imutável `65d00e75`), preservando BASE_SHA, conjunto exato, comparação de conteúdo e testes negativos: **14/14 PASS após o commit**. Whitespace da i06 corrigido apenas nos 3 trailing spaces do PLAN e na linha extra no EOF do SUMMARY; `git diff main...HEAD --check` exit 0. Validação manual eo7 **declarada pelo usuário** para os 6 itens (1→2, teto 2 com mensagem, lote de 3 mantém 2, remoção da principal promove restante, orientação auxiliar, cenário original exige 1), sem geração paga. Gates: testes de teto/paridade **7 arquivos/210 PASS**; typecheck e lint exit 0; diff-checks exit 0; build não repetido (aprovado anteriormente; mudanças só de teste/doc). Implementação local; **publicação não executada** (sem merge/push/deploy/migration/banco/Storage/IA paga); `.f62-check/` preservada. Artefatos em `.planning/quick/261125-i10-fechamento-da-branch-apenas-duas-imagens/`.
 

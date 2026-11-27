@@ -1031,3 +1031,29 @@ Plans:
 **Depends on:** aprovacao da proposta OpenSpec; plan-check `VERIFICATION PASSED`; revisao/aprovacao dos planos. Migration, homolog, prova paga, validacao visual e producao exigem autorizacao explicita separada.
 
 **Directory:** `.planning/phases/62-adicionar-vertical-campanha-quadrada/`.
+
+---
+
+### Phase 63: F63 - Base versionada de ofertas (subfatia 2A)
+
+**Status (2026-11-26):** **CONCLUIDA NO HOMOLOG, VERIFICADA, SINCRONIZADA E ARQUIVADA; NAO APROVADA PARA PRODUCAO.** Fonte arquivada em `openspec/changes/archive/2026-11-26-fase-2a-base-versionada-de-ofertas/`; spec principal `openspec/specs/trial-offer-catalog/spec.md` (12 requirements/59 cenarios, strict valido). A `20261126223854` (159), B `20261126230735` (`post-b`, 160) e C `20261126231022` (`post-c`, 161) aplicadas no homolog; A intacta; preservacao post-a/b/c OK. `63-04` contrato + `offer.ts` + 30 testes. `63-05` 33/33 testes reais, preservacao post-tests 10/10, v1 restaurada, 15 fixtures inertes. `/gsd-verify-work`: UAT 6/6 PASS (aceite tecnico, sem reexecucao DB). `/opsx-verify`: 74/74 tasks, 12/12 reqs, 59/59 cenarios, 0 CRITICAL, 2 WARNING (lint TS nao validado; 3 falhas globais aceitas), 1 SUGGESTION (comentario SQL). Sem commit/push/deploy/producao. Homolog != producao; conferencia remota e fatias 4/6 pendentes.
+
+**Goal:** Criar o catalogo versionado de ofertas, a referencia vigente em `trial_offer_settings`, as validacoes/leituras e a oferta inicial v1, com aplicacao incremental no homolog local existente e sem alterar concessoes, saldos, transacoes, consumidores, paginas ou Admin.
+
+**Ambiente vinculante:** workdir `G:\Vendeo-Homolog`; container `supabase_db_vendeo-homolog`; PostgreSQL `127.0.0.1:57782`, banco `postgres`. Confirmar identidade/estado antes da escrita; nao criar outro banco, nao executar `db reset` e nao exigir backup. Cada migration roda em transacao propria; falha exige rollback, diagnostico e ajuste. Producao e bancos remotos ficam fora desta autorizacao; a conferencia remota de estruturas/migrations/permissoes e etapa separada.
+
+**Requisitos (grupos):** `REQ-63-01..07` (ver `.planning/REQUIREMENTS.md` e `63-CONTEXT.md`).
+**Requirements:** REQ-63-01, REQ-63-02, REQ-63-03, REQ-63-04, REQ-63-05, REQ-63-06, REQ-63-07.
+
+**Plans:** 5 waves sequenciais, cada uma com `## Review Stop` e `autonomous: false`:
+- [x] `63-01-PLAN.md` - Preflight do homolog, identidade/estado, baseline das tabelas preservadas e definicao de evidencia; sem escrita de schema. **Executado em 2026-11-26 somente leitura; ledger 158, baseline das quatro tabelas e guardas registrados; sem migration.**
+- [x] `63-02-PLAN.md` - Migration A estrutural: `trial_offer_versions`, checks, FKs, triggers de publicacao/imutabilidade, `current_version_id` e guarda de vigencia, RLS/grants e funcoes de leitura; aplicar em transacao no homolog. **Executado em 2026-11-26; Migration A `20261126223854_offer_catalog_versions.sql` aplicada, ledger 158→159, tabela vazia, `current_version_id` NULL, preservacao post-a OK; sem seed.**
+- [x] `63-03-PLAN.md` - Migration B: seed v1 publicado/vigente, validacao fail-closed do calendario e `NOT NULL`; aplicar em transacao; confirmar preservacao de dados. **Executado em 2026-11-26 junto com a Migration C forward-only do guard `published_by`: B `20261126230735` (ledger 160) e C `20261126231022` (ledger 161); publisher smoke 6/6 em rollback; preservacao post-b/post-c OK; A intacta.**
+- [x] `63-04-PLAN.md` - Modulo TypeScript server-only de leitura e contratos, sem religar consumidores; testes unitarios/contratuais e gates de codigo. **Executado em 2026-11-26: `offer-contract.ts` + `offer.ts`, 30 testes PASS, typecheck/lint 0, sem import de consumidor; `readTrialOfferSchedule` resolve/reutiliza o cliente uma vez, inclusive lazy.**
+- [x] `63-05-PLAN.md` - Suite de homolog: triggers, permissoes, calendario, concorrencia real, preservacao/efeitos esperados, evidencias, reconciliacao documental e gates finais. **Executado em 2026-11-26: perfil F63 + 33/33 testes reais PASS; preservacao post-tests 10/10; v1 restaurada; 15 fixtures inertes/0 rascunhos; lint TS nao validado; global com 3 falhas aceitas.**
+
+**Fora de escopo:** alterar `trial_offer_enrollments`, creditos, RPCs existentes, constantes/status/completion, copy publica, landing, Admin, flags, backfill, publicacao em producao ou qualquer banco remoto.
+
+**Depends on:** proposta OpenSpec revisada/aprovada; plan-check `PASS`; aprovacao explicita dos planos; autorizacao de execucao no homolog existente. Aplicacao em producao exige autorizacao posterior e conferencia remota.
+
+**Directory:** `.planning/phases/63-base-versionada-de-ofertas-2a/`.
